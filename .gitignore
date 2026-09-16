@@ -4,3 +4,6 @@ dist
 .env.local
 *.local
 .DS_Store
+tests/.token-cache.json
+__pycache__/
+*.pyc
