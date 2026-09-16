@@ -342,9 +342,22 @@ as $$
 $$;
 
 -- ------------------------------------------------------------
--- 10. 권한 — 익명 로그인 사용자가 RPC 를 호출할 수 있게 한다
+-- 10. 권한
 -- ------------------------------------------------------------
+-- 프로젝트 설정에서 "Automatically expose new tables" 를 꺼도 동작하도록
+-- 필요한 권한만 명시적으로 부여한다.
+--
+-- SELECT 만 주고 INSERT/UPDATE/DELETE 는 주지 않는다.
+-- RLS 정책과 별개인 2중 방어 — 실수로 쓰기 정책을 추가하더라도
+-- 권한 자체가 없어 클라이언트 직접 쓰기가 차단된다.
 
+grant select on public.rooms   to anon, authenticated;
+grant select on public.players to anon, authenticated;
+
+revoke insert, update, delete on public.rooms   from anon, authenticated;
+revoke insert, update, delete on public.players from anon, authenticated;
+
+-- 내부 헬퍼는 직접 호출을 막는다
 revoke all on function public.gen_room_code() from public, anon, authenticated;
 
 grant execute on function public.create_room(text)          to anon, authenticated;

@@ -15,9 +15,20 @@
 
 ### 1. Supabase 프로젝트 만들기
 
-1. [supabase.com](https://supabase.com) 에서 새 프로젝트 생성
-2. **Authentication → Sign In / Providers → Anonymous sign-ins 를 켠다**
-   (이 게임은 닉네임만으로 입장하므로 익명 로그인이 필수입니다)
+[supabase.com](https://supabase.com) 에서 새 프로젝트를 만듭니다.
+생성 화면에 아래 옵션이 있으면 이렇게 설정하세요.
+
+| 옵션 | 설정 | 이유 |
+|---|---|---|
+| Enable Data API | **켬** | `.from()` / `.rpc()` 가 모두 이 API 를 사용한다 |
+| Automatically expose new tables | **끔** | 2단계 비밀 테이블이 자동 노출되는 것을 막는다 |
+| Enable automatic RLS | **켬** | 새 테이블이 기본 잠김(fail-closed) 상태로 생성된다 |
+
+> 마이그레이션이 `rooms` / `players` 에 필요한 권한을 명시적으로 부여하므로
+> "자동 노출" 을 꺼도 정상 동작합니다.
+
+그다음 **Authentication → Sign In / Providers → Anonymous sign-ins 를 켭니다.**
+(닉네임만으로 입장하므로 익명 로그인이 필수입니다)
 
 ### 2. 스키마 적용
 
