@@ -13,6 +13,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 
 import GameOver from '../components/GameOver';
 import PlayerPicker from '../components/PlayerPicker';
+import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import { ABILITY_READY, roleInfo } from '../lib/roles';
 import { leaveRoom, submitDayVote, submitNightAction, tickPhase } from '../lib/api';
@@ -225,7 +226,9 @@ export default function GamePage({ roomId, uid, onLeave }) {
             </>
           ) : (
             <Paper sx={{ p: 3, textAlign: 'center' }}>
-              <Box sx={{ fontSize: 30 }}>{roleInfo(role).emoji}</Box>
+              <Stack alignItems="center">
+                <RoleAvatar role={role} size={52} />
+              </Stack>
               <Typography sx={{ mt: 1 }}>밤이 지나가길 기다리는 중…</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {ABILITY_READY.has(role)

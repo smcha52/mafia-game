@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
-import Avatar from '@mui/material/Avatar';
 import Box from '@mui/material/Box';
 import Chip from '@mui/material/Chip';
 import List from '@mui/material/List';
@@ -11,6 +10,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import RoleAvatar from './RoleAvatar';
 import { TEAMS, WINNERS, roleInfo } from '../lib/roles';
 import { finalRoles } from '../lib/api';
 
@@ -44,9 +44,7 @@ export default function GameOver({ roomId, winner }) {
               return (
                 <ListItem key={r.uid} divider>
                   <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: 'background.default', fontSize: 20 }}>
-                      {info.emoji}
-                    </Avatar>
+                    <RoleAvatar role={r.role} size={44} />
                   </ListItemAvatar>
                   <ListItemText
                     primary={

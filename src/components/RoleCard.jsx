@@ -4,6 +4,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import RoleAvatar from './RoleAvatar';
 import { TEAMS, roleInfo } from '../lib/roles';
 
 export default function RoleCard({ view }) {
@@ -15,7 +16,7 @@ export default function RoleCard({ view }) {
   return (
     <Paper sx={{ p: 2 }}>
       <Stack direction="row" spacing={1.5} alignItems="flex-start">
-        <Box sx={{ fontSize: 34, lineHeight: 1 }}>{info.emoji}</Box>
+        <RoleAvatar role={view.role} size={56} />
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
             <Typography variant="h6">{info.name}</Typography>
