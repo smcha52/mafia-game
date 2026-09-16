@@ -670,3 +670,51 @@ def test_doctor_cannot_save_execution():
 
 
 ALL.extend([test_role_doctor, test_doctor_cannot_save_execution])
+
+
+def test_tick_before_deadline_is_safe():
+    """마감 전 tick 을 여러 번 불러도 페이즈가 넘어가지 않고,
+    서버가 남은 시간을 돌려준다.
+
+    브라우저 시계가 서버보다 빠르면 클라이언트는 0초라고 보고 tick 을 부른다.
+    그때 서버가 남은 시간을 알려줘야 클라이언트가 다시 시도할 수 있다.
+    이 응답이 없으면 게임이 그 페이즈에서 영구히 멈춘다.
+    """
+    import time
+
+    toks, room_id = make_room(5, night=10, day=60)
+    if not room_id:
+        check("시계 어긋남 테스트 준비", False, "방 생성 실패")
+        return
+
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+
+    remains = []
+    for _ in range(4):
+        s, b = rpc("tick_phase", toks[1], {"p_room_id": room_id})
+        remains.append((s, b.get("resolved") if isinstance(b, dict) else None,
+                        b.get("remaining") if isinstance(b, dict) else None))
+
+    check("마감 전 반복 tick 안전",
+          all(r[0] == 200 and r[1] is False for r in remains),
+          str(remains[:2]))
+    check("남은 시간을 알려준다",
+          all(isinstance(r[2], int) and r[2] > 0 for r in remains),
+          "remaining=%s" % [r[2] for r in remains])
+
+    s, b = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
+    check("페이즈 유지", bool(b) and b[0]["phase"] == "NIGHT" and b[0]["day_number"] == 1,
+          "%s %s일차" % (b[0]["phase"], b[0]["day_number"]) if b else "?")
+
+    time.sleep(11)
+    s, b = rpc("tick_phase", toks[1], {"p_room_id": room_id})
+    check("마감 후에는 진행", isinstance(b, dict) and b.get("resolved") is True, str(b))
+
+    # 2일차 밤까지 tick 만으로 넘어가는지 (아무도 행동하지 않아도)
+    s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, toks[0])
+    check("1일차 낮 진입", bool(b) and b[0]["phase"] == "DAY", b[0]["phase"] if b else "?")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.append(test_tick_before_deadline_is_safe)

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -41,20 +41,43 @@ export default function GamePage({ roomId, uid, onLeave }) {
   const deadline = room?.phase_deadline ? new Date(room.phase_deadline).getTime() : null;
   const remaining = deadline === null ? null : Math.max(0, Math.round((deadline - now) / 1000));
 
-  // 마감이 지나면 서버에 처리를 요청한다.
-  // 여러 명이 동시에 불러도 서버가 방을 잠그고 한 번만 처리한다.
-  // 같은 페이즈에서 반복 호출하지 않도록 표시해 둔다.
-  const ticked = useRef('');
+  // 마감이 지난 것으로 보이면 서버에 처리를 요청한다.
+  //
+  // 마감 판정의 기준은 서버 시계다. 브라우저 시계가 조금이라도 앞서 있으면
+  // 클라이언트는 0초라고 보는데 서버는 아직 남았다고 답한다. 그때 한 번 부르고
+  // 끝내면 그 페이즈에서 다시는 시도하지 않아 게임이 영구히 멈춘다.
+  // 그래서 서버가 resolved 를 돌려줄 때까지, 서버가 알려준 남은 시간만큼
+  // 기다렸다가 다시 시도한다.
+  const expired = remaining !== null && remaining <= 0;
   useEffect(() => {
-    if (remaining !== 0) return;
-    if (phase !== 'NIGHT' && phase !== 'DAY') return;
-    const key = `${phase}:${day}`;
-    if (ticked.current === key) return;
-    ticked.current = key;
-    tickPhase(roomId).then(reload).catch(() => {
-      ticked.current = '';  // 실패하면 다음 초에 다시 시도한다
-    });
-  }, [remaining, phase, day, roomId, reload]);
+    if (phase !== 'NIGHT' && phase !== 'DAY') return undefined;
+    if (!expired) return undefined;
+
+    let stopped = false;
+    let timer = null;
+
+    const attempt = () => {
+      tickPhase(roomId)
+        .then((r) => {
+          if (stopped) return;
+          if (r?.resolved) {
+            reload();
+            return;                       // 페이즈가 바뀌면 이 effect 는 새로 돈다
+          }
+          const wait = Math.max(1, Number(r?.remaining) || 1);
+          timer = setTimeout(attempt, wait * 1000);
+        })
+        .catch(() => {
+          if (!stopped) timer = setTimeout(attempt, 3000);
+        });
+    };
+    attempt();
+
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [phase, day, expired, roomId, reload]);
 
   // 페이즈가 바뀌면 선택을 비운다
   useEffect(() => {
