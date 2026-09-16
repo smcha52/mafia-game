@@ -194,3 +194,164 @@ def test_night_tie():
 
 
 ALL = [test_roles_mafia_citizen, test_jester_win, test_night_tie]
+
+
+# ------------------------------------------------------------------
+# 진행 화면용 조회 (my_game_view) — UI 가 이 값으로 그려진다
+# ------------------------------------------------------------------
+
+def test_game_view():
+    toks, room_id, roles = make_game(7)
+    if not room_id:
+        check("화면조회 준비", False, "방 생성 실패")
+        return
+
+    mafia = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    plain = [t for t, r in roles.items() if r["role"] not in ("MAFIA", "SPY")]
+
+    # --- 밤 시작 직후 ---
+    s, v = rpc("my_game_view", mafia[0], {"p_room_id": room_id})
+    ok = (s == 200 and v.get("role") == "MAFIA" and v.get("team") == "MAFIA"
+          and v.get("alive") is True and v.get("nightSubmitted") is None)
+    check("마피아 초기 화면정보", ok, "role=%s night=%s" % (v.get("role"), v.get("nightSubmitted")))
+
+    check("마피아 진행표시 제공",
+          isinstance(v.get("nightProgress"), dict)
+          and v["nightProgress"].get("expected") == 2
+          and v["nightProgress"].get("submitted") == 0,
+          str(v.get("nightProgress")))
+
+    check("마피아 동료명단 포함",
+          isinstance(v.get("mafiaMembers"), list) and len(v["mafiaMembers"]) == 2,
+          "%d명" % len(v.get("mafiaMembers") or []))
+
+    s, v2 = rpc("my_game_view", plain[0], {"p_room_id": room_id})
+    check("시민 동료명단 없음", v2.get("mafiaMembers") is None, str(v2.get("mafiaMembers")))
+    check("시민 진행표시 없음", v2.get("nightProgress") is None, str(v2.get("nightProgress")))
+
+    # --- 한 명만 제출한 상태 ---
+    target_uid = uid_of(plain[0])
+    rpc("submit_night_action", mafia[0],
+        {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": target_uid})
+
+    s, v = rpc("my_game_view", mafia[0], {"p_room_id": room_id})
+    check("제출 후 내 선택 복원", v.get("nightSubmitted") == target_uid,
+          str(v.get("nightSubmitted"))[:36])
+    check("동료 진행 1/2 표시",
+          v.get("nightProgress", {}).get("submitted") == 1, str(v.get("nightProgress")))
+
+    # 다른 마피아에게는 "누구를 골랐는지" 가 보이지 않아야 한다
+    s, vm = rpc("my_game_view", mafia[1], {"p_room_id": room_id})
+    check("동료의 선택은 안 보인다", vm.get("nightSubmitted") is None, str(vm.get("nightSubmitted")))
+
+    # --- 낮으로 넘긴 뒤 ---
+    rpc("submit_night_action", mafia[1],
+        {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": target_uid})
+
+    s, v = rpc("my_game_view", mafia[0], {"p_room_id": room_id})
+    check("낮 투표 인원 6명", v.get("dayProgress", {}).get("expected") == 6,
+          str(v.get("dayProgress")))
+
+    # 사망자 화면
+    s, vd = rpc("my_game_view", plain[0], {"p_room_id": room_id})
+    check("사망자 alive=false", vd.get("alive") is False, str(vd.get("alive")))
+
+    voter = mafia[0]
+    rpc("submit_day_vote", voter, {"p_room_id": room_id, "p_target_uid": uid_of(mafia[1])})
+    s, v = rpc("my_game_view", voter, {"p_room_id": room_id})
+    check("낮 투표 후 내 표 복원", v.get("daySubmitted") == uid_of(mafia[1]),
+          str(v.get("daySubmitted"))[:36])
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.append(test_game_view)
+
+
+# ------------------------------------------------------------------
+# 페이즈 제한시간
+# ------------------------------------------------------------------
+
+def make_room(n, night=None, day=None):
+    """게임을 시작하지 않은 채로 방만 만든다. 필요하면 제한시간을 바꾼다."""
+    toks = user_pool(n)
+    s, b = rpc("create_room", toks[0], {"p_nickname": "P1"})
+    if s != 200:
+        return None, None
+    room_id, code = b["room_id"], b["room_code"]
+    for i, t in enumerate(toks[1:], start=2):
+        rpc("join_room", t, {"p_code": code, "p_nickname": "P%d" % i})
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+    if night is not None:
+        rpc("set_timers", toks[0], {"p_room_id": room_id, "p_night": night, "p_day": day or 180})
+    return toks, room_id
+
+
+def test_phase_timer():
+    import time
+
+    toks, room_id = make_room(5)
+    if not room_id:
+        check("제한시간 준비", False, "방 생성 실패")
+        return
+
+    # --- set_timers 권한 ---
+    s, b = rpc("set_timers", toks[1], {"p_room_id": room_id, "p_night": 30, "p_day": 60})
+    check("비방장 제한시간 변경 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_timers", toks[0], {"p_room_id": room_id, "p_night": 12, "p_day": 60})
+    check("방장 제한시간 변경", s in (200, 204), "HTTP %d" % s)
+
+    s, b = req("/rest/v1/rooms?select=night_seconds,day_seconds,phase_deadline&id=eq." + room_id,
+               toks[0])
+    check("대기실엔 마감 없음",
+          bool(b) and b[0]["night_seconds"] == 12 and b[0]["phase_deadline"] is None,
+          "night=%s deadline=%s" % (b[0]["night_seconds"], b[0]["phase_deadline"]) if b else "?")
+
+    # --- 시작하면 마감이 잡힌다 ---
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = req("/rest/v1/rooms?select=phase,phase_deadline&id=eq." + room_id, toks[0])
+    check("시작 시 마감 설정", bool(b) and b[0]["phase_deadline"] is not None,
+          str(b[0]["phase_deadline"])[:19] if b else "?")
+
+    s, b = rpc("set_timers", toks[0], {"p_room_id": room_id, "p_night": 30, "p_day": 60})
+    check("진행 중 제한시간 변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
+
+    # --- 마감 전에는 넘어가지 않는다 ---
+    s, b = rpc("tick_phase", toks[1], {"p_room_id": room_id})
+    check("마감 전 tick 은 무시", s == 200 and b.get("resolved") is False
+          and (b.get("remaining") or 0) > 0, str(b))
+
+    # --- 마감이 지나면 아무도 제출하지 않아도 넘어간다 ---
+    time.sleep(13)
+    s, b = rpc("tick_phase", toks[1], {"p_room_id": room_id})
+    check("마감 후 자동 진행", s == 200 and b.get("resolved") is True, str(b))
+
+    s, b = req("/rest/v1/players?select=alive&room_id=eq." + room_id, toks[0])
+    dead = sum(1 for p in b if not p["alive"]) if isinstance(b, list) else -1
+    check("미제출 밤은 사망자 없음", dead == 0, "사망 %d명" % dead)
+
+    s, b = req("/rest/v1/rooms?select=phase,day_number,phase_deadline&id=eq." + room_id, toks[0])
+    check("낮으로 전환 + 새 마감",
+          bool(b) and b[0]["phase"] == "DAY" and b[0]["phase_deadline"] is not None,
+          "%s / %s" % (b[0]["phase"], str(b[0]["phase_deadline"])[:19]) if b else "?")
+
+    # --- 중복 tick 은 한 번만 ---
+    s, b1 = rpc("tick_phase", toks[1], {"p_room_id": room_id})
+    s, b2 = rpc("tick_phase", toks[2], {"p_room_id": room_id})
+    check("중복 tick 무해", b1.get("resolved") is False and b2.get("resolved") is False,
+          "%s %s" % (b1.get("resolved"), b2.get("resolved")))
+
+    # --- 전원 제출하면 시간 안 기다리고 즉시 진행 ---
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, toks[0])
+    alive_uids = [p["uid"] for p in pl if p["alive"]]
+    last = None
+    for t in toks:
+        s, last = rpc("submit_day_vote", t, {"p_room_id": room_id, "p_target_uid": alive_uids[0]})
+    check("전원 제출 시 즉시 진행",
+          isinstance(last, dict) and last.get("resolved") is True, str(last))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.append(test_phase_timer)

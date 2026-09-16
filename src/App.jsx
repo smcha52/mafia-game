@@ -5,6 +5,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import HomePage from './pages/HomePage';
+import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
 import SetupNotice from './pages/SetupNotice';
 import { ensureSession, isConfigured, supabase } from './lib/supabase';
@@ -15,6 +16,7 @@ export default function App() {
   const [bootError, setBootError] = useState('');
   const [uid, setUid] = useState(null);
   const [roomId, setRoomId] = useState(null);
+  const [phase, setPhase] = useState(null);
 
   // 앱 시작 시 익명 로그인 후, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   useEffect(() => {
@@ -32,7 +34,10 @@ export default function App() {
 
         const active = await myActiveRoom();
         if (cancelled) return;
-        if (active) setRoomId(active.room_id);
+        if (active) {
+          setRoomId(active.room_id);
+          setPhase(active.phase);
+        }
       } catch (e) {
         if (!cancelled) setBootError(e.message);
       } finally {
@@ -45,7 +50,12 @@ export default function App() {
     };
   }, []);
 
-  const handleLeave = useCallback(() => setRoomId(null), []);
+  const handleLeave = useCallback(() => {
+    setRoomId(null);
+    setPhase(null);
+  }, []);
+
+  const handleStarted = useCallback(() => setPhase('NIGHT'), []);
 
   if (!isConfigured) return <SetupNotice />;
 
@@ -74,10 +84,17 @@ export default function App() {
 
   return (
     <Box sx={{ minHeight: '100dvh', px: 2, py: 4 }}>
-      {roomId ? (
-        <LobbyPage roomId={roomId} uid={uid} onLeave={handleLeave} />
-      ) : (
+      {!roomId ? (
         <HomePage onEntered={setRoomId} />
+      ) : phase && phase !== 'LOBBY' ? (
+        <GamePage roomId={roomId} uid={uid} onLeave={handleLeave} />
+      ) : (
+        <LobbyPage
+          roomId={roomId}
+          uid={uid}
+          onLeave={handleLeave}
+          onStarted={handleStarted}
+        />
       )}
     </Box>
   );

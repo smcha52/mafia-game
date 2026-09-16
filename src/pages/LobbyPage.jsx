@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -19,14 +19,26 @@ import { leaveRoom, setReady, startGame } from '../lib/api';
 const MIN_PLAYERS = 5;
 const MAX_PLAYERS = 15;
 
-export default function LobbyPage({ roomId, uid, onLeave }) {
+export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
   const { room, players, loading, error } = useRoom(roomId);
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
   const [copied, setCopied] = useState(false);
 
+  const started = Boolean(room) && room.phase !== 'LOBBY';
+
+  // 방이 시작되면 상위에서 게임 화면으로 바꾼다.
+  // 렌더 중에 부모 state 를 건드리면 안 되므로 effect 에서 알린다.
+  useEffect(() => {
+    if (started) onStarted?.();
+  }, [started, onStarted]);
+
   const me = players.find((p) => p.uid === uid) ?? null;
-  const isHost = me?.is_host ?? false;
+  // 방장 판정은 rooms.host_uid 를 기준으로 한다.
+  // 참가자 목록에서 나를 찾는 방식은 목록이 늦게 오면 조용히 틀린 답을 낸다.
+  const isHost = Boolean(room) && room.host_uid === uid;
+  // 목록은 왔는데 내가 없으면 세션이 어긋난 것이다. 조용히 넘기지 않는다.
+  const sessionMismatch = players.length > 0 && !me;
   const total = players.length;
   const readyCount = players.filter((p) => p.is_ready).length;
   const canStart = total >= MIN_PLAYERS && total <= MAX_PLAYERS && readyCount === total;
@@ -72,28 +84,10 @@ export default function LobbyPage({ roomId, uid, onLeave }) {
     );
   }
 
-  // 2단계(직업 배정)에서 이 화면이 밤/낮 화면으로 교체된다
-  if (room.phase !== 'LOBBY') {
+  if (started) {
     return (
-      <Stack spacing={2} sx={{ maxWidth: 420, mx: 'auto' }} alignItems="center">
-        <Typography variant="h6">게임이 시작되었습니다</Typography>
-        <Typography color="text.secondary" variant="body2" textAlign="center">
-          {room.day_number}일차 · {room.phase === 'NIGHT' ? '밤' : '낮'}
-        </Typography>
-        <Alert severity="info" sx={{ width: '100%' }}>
-          직업 배정과 밤/낮 진행은 2단계에서 구현됩니다.
-        </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<LogoutIcon />}
-          loading={busy === 'leave'}
-          onClick={() => run('leave', async () => {
-            await leaveRoom(roomId);
-            onLeave();
-          })}
-        >
-          나가기
-        </Button>
+      <Stack sx={{ minHeight: '40dvh' }} alignItems="center" justifyContent="center">
+        <CircularProgress />
       </Stack>
     );
   }
@@ -132,6 +126,20 @@ export default function LobbyPage({ roomId, uid, onLeave }) {
       {total < MIN_PLAYERS && (
         <Alert severity="info">
           {MIN_PLAYERS - total}명이 더 필요합니다. (최소 {MIN_PLAYERS}명 · 최대 {MAX_PLAYERS}명)
+        </Alert>
+      )}
+
+      {sessionMismatch && (
+        <Alert
+          severity="warning"
+          action={
+            <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+              새로고침
+            </Button>
+          }
+        >
+          이 브라우저의 로그인 정보가 참가자 목록과 맞지 않습니다.
+          새로고침해도 같으면 나갔다가 다시 입장해 주세요.
         </Alert>
       )}
 
