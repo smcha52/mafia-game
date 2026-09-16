@@ -110,8 +110,11 @@ $$;
 -- 4. RPC — 방 만들기
 -- ------------------------------------------------------------
 
+-- 반환 컬럼명이 테이블 컬럼과 충돌하지 않도록 json 으로 반환한다
+drop function if exists public.create_room(text);
+
 create or replace function public.create_room(p_nickname text)
-returns table (room_id uuid, room_code text)
+returns json
 language plpgsql
 security definer
 set search_path = public
@@ -137,7 +140,7 @@ begin
   insert into public.players (room_id, uid, nickname, is_host, is_ready)
   values (v_id, v_uid, btrim(p_nickname), true, true);
 
-  return query select v_id, v_code;
+  return json_build_object('room_id', v_id, 'room_code', v_code);
 end;
 $$;
 
@@ -145,8 +148,10 @@ $$;
 -- 5. RPC — 방 입장 (재입장 포함)
 -- ------------------------------------------------------------
 
+drop function if exists public.join_room(text, text);
+
 create or replace function public.join_room(p_code text, p_nickname text)
-returns table (room_id uuid, room_code text)
+returns json
 language plpgsql
 security definer
 set search_path = public
@@ -164,34 +169,39 @@ begin
     raise exception '닉네임을 입력해 주세요.';
   end if;
 
-  select * into v_room from public.rooms where code = upper(btrim(p_code));
+  select * into v_room from public.rooms r where r.code = upper(btrim(p_code));
   if not found then
     raise exception '존재하지 않는 방 코드입니다.';
   end if;
 
   -- 이미 참가한 방이면 그대로 재입장시킨다 (새로고침·재접속 대응)
-  if exists (select 1 from public.players where room_id = v_room.id and uid = v_uid) then
-    return query select v_room.id, v_room.code;
-    return;
+  if exists (
+    select 1 from public.players p
+     where p.room_id = v_room.id and p.uid = v_uid
+  ) then
+    return json_build_object('room_id', v_room.id, 'room_code', v_room.code);
   end if;
 
   if v_room.phase <> 'LOBBY' then
     raise exception '이미 시작된 게임에는 입장할 수 없습니다.';
   end if;
 
-  select count(*) into v_count from public.players where room_id = v_room.id;
+  select count(*) into v_count from public.players p where p.room_id = v_room.id;
   if v_count >= 15 then
     raise exception '정원이 가득 찼습니다. (최대 15명)';
   end if;
 
-  if exists (select 1 from public.players where room_id = v_room.id and nickname = v_nick) then
+  if exists (
+    select 1 from public.players p
+     where p.room_id = v_room.id and p.nickname = v_nick
+  ) then
     raise exception '이미 사용 중인 닉네임입니다.';
   end if;
 
   insert into public.players (room_id, uid, nickname)
   values (v_room.id, v_uid, v_nick);
 
-  return query select v_room.id, v_room.code;
+  return json_build_object('room_id', v_room.id, 'room_code', v_room.code);
 end;
 $$;
 
@@ -326,19 +336,31 @@ $$;
 -- 9. RPC — 재접속: 내가 참가 중인 방 찾기
 -- ------------------------------------------------------------
 
+drop function if exists public.my_active_room();
+
 create or replace function public.my_active_room()
-returns table (room_id uuid, room_code text, phase text)
-language sql
+returns json
+language plpgsql
 security definer
 set search_path = public
 as $$
-  select r.id, r.code, r.phase
+declare
+  v_row record;
+begin
+  select r.id, r.code, r.phase into v_row
     from public.rooms r
     join public.players p on p.room_id = r.id
    where p.uid = auth.uid()
      and r.phase <> 'ENDED'
    order by r.created_at desc
    limit 1;
+
+  if not found then
+    return null;
+  end if;
+
+  return json_build_object('room_id', v_row.id, 'room_code', v_row.code, 'phase', v_row.phase);
+end;
 $$;
 
 -- ------------------------------------------------------------

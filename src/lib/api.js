@@ -7,15 +7,11 @@ function unwrap({ data, error }) {
 }
 
 export async function createRoom(nickname) {
-  const rows = unwrap(await supabase.rpc('create_room', { p_nickname: nickname }));
-  return rows[0];
+  return unwrap(await supabase.rpc('create_room', { p_nickname: nickname }));
 }
 
 export async function joinRoom(code, nickname) {
-  const rows = unwrap(
-    await supabase.rpc('join_room', { p_code: code, p_nickname: nickname }),
-  );
-  return rows[0];
+  return unwrap(await supabase.rpc('join_room', { p_code: code, p_nickname: nickname }));
 }
 
 export async function setReady(roomId, ready) {
@@ -32,8 +28,7 @@ export async function startGame(roomId) {
 
 // 재접속 시 내가 아직 참가 중인 방이 있는지 확인한다
 export async function myActiveRoom() {
-  const rows = unwrap(await supabase.rpc('my_active_room'));
-  return rows[0] ?? null;
+  return unwrap(await supabase.rpc('my_active_room')) ?? null;
 }
 
 export async function fetchRoom(roomId) {
