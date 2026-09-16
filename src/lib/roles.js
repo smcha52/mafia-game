@@ -26,5 +26,24 @@ export const WINNERS = {
 
 export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', desc: '' };
 
-// 아직 능력이 구현되지 않은 직업 (§8.2 순서로 하나씩 열린다)
-export const ABILITY_READY = new Set(['MAFIA']);
+// 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
+export const ABILITY_READY = new Set(['MAFIA', 'POLICE']);
+
+// 밤에 행동하는 직업 -> 서버가 받는 action 코드
+export const NIGHT_ACTION = {
+  MAFIA: 'MAFIA_VOTE',
+  POLICE: 'POLICE',
+};
+
+// 밤 화면에서 보여줄 안내 문구
+export const NIGHT_PROMPT = {
+  MAFIA: '제거할 대상을 고르세요',
+  POLICE: '진영을 조사할 사람을 고르세요',
+};
+
+// 경찰 조사 결과 표시
+export const TEAM_RESULT = {
+  CITIZEN: { label: '시민 진영', color: 'info' },
+  MAFIA: { label: '마피아 진영', color: 'error' },
+  NEUTRAL: { label: '중립 진영', color: 'warning' },
+};

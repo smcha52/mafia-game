@@ -13,9 +13,10 @@ import LogoutIcon from '@mui/icons-material/Logout';
 
 import GameOver from '../components/GameOver';
 import PlayerPicker from '../components/PlayerPicker';
+import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
-import { ABILITY_READY, roleInfo } from '../lib/roles';
+import { ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, roleInfo } from '../lib/roles';
 import { leaveRoom, submitDayVote, submitNightAction, tickPhase } from '../lib/api';
 import { useGame } from '../lib/useGame';
 
@@ -120,7 +121,8 @@ export default function GamePage({ roomId, uid, onLeave }) {
   const isNight = phase === 'NIGHT';
   const alive = view?.alive ?? false;
   const role = view?.role;
-  const canAct = isNight ? role === 'MAFIA' : true;
+  const nightAction = NIGHT_ACTION[role] ?? null;
+  const canAct = isNight ? Boolean(nightAction) : true;
   const submitted = isNight ? view?.nightSubmitted : view?.daySubmitted;
   const progress = isNight ? view?.nightProgress : view?.dayProgress;
 
@@ -157,6 +159,8 @@ export default function GamePage({ roomId, uid, onLeave }) {
 
       <RoleCard view={view} />
 
+      <PrivateResults results={view?.privateResults} />
+
       {/* 지난 밤 결과 */}
       {phase === 'DAY' && (
         <Alert severity={deaths.length ? 'error' : 'success'}>
@@ -180,7 +184,9 @@ export default function GamePage({ roomId, uid, onLeave }) {
             <>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Typography variant="subtitle1">
-                  {isNight ? '제거할 대상을 고르세요' : '처형할 사람에게 투표하세요'}
+                  {isNight
+                    ? (NIGHT_PROMPT[role] ?? '대상을 고르세요')
+                    : '처형할 사람에게 투표하세요'}
                 </Typography>
                 {progress && (
                   <Chip
@@ -194,7 +200,11 @@ export default function GamePage({ roomId, uid, onLeave }) {
               {submitted && (
                 <Alert severity="success">
                   <strong>{nickOf(submitted)}</strong>님을 선택했습니다.
-                  {isNight ? ' 동료들을 기다리는 중입니다.' : ' 투표는 변경할 수 없습니다.'}
+                  {!isNight
+                    ? ' 투표는 변경할 수 없습니다.'
+                    : role === 'POLICE'
+                      ? ' 아침에 결과를 알려드립니다.'
+                      : ' 동료들을 기다리는 중입니다.'}
                 </Alert>
               )}
 
@@ -204,7 +214,7 @@ export default function GamePage({ roomId, uid, onLeave }) {
                 value={submitted ?? pick}
                 onChange={setPick}
                 locked={Boolean(submitted)}
-                excludeSelf={isNight}
+                excludeSelf={isNight && role === 'MAFIA'}
               />
 
               {actionError && <Alert severity="error">{actionError}</Alert>}
@@ -217,10 +227,10 @@ export default function GamePage({ roomId, uid, onLeave }) {
                   loading={busy === 'submit'}
                   onClick={() => run('submit', () =>
                     isNight
-                      ? submitNightAction(roomId, 'MAFIA_VOTE', pick)
+                      ? submitNightAction(roomId, nightAction, pick)
                       : submitDayVote(roomId, pick))}
                 >
-                  {isNight ? '공격 확정' : '투표 확정'}
+                  {!isNight ? '투표 확정' : role === 'POLICE' ? '조사 확정' : '공격 확정'}
                 </Button>
               )}
             </>
