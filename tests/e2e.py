@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""
+마피아 게임 · 종단간 테스트
+
+실제 Supabase 인스턴스를 대상으로 서버 규칙을 검증한다.
+요구사항 §8.3 체크리스트 중 서버에서 확인 가능한 항목을 다룬다.
+
+실행:
+    npm run test:e2e
+    python tests/e2e.py
+
+접속 정보는 프로젝트 루트의 .env 에서 읽는다.
+환경변수 VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY 로 덮어쓸 수 있다.
+
+주의: 실행할 때마다 익명 사용자가 생성된다. 방과 참가자는 끝에서 정리하지만
+      auth.users 행은 남는다 (삭제에 service_role 키가 필요하므로 하지 않는다).
+"""
+
+import io
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def load_env():
+    """.env 를 읽어 URL 과 키를 돌려준다. 환경변수가 있으면 그쪽이 우선."""
+    values = {}
+    path = os.path.join(ROOT, ".env")
+    if os.path.exists(path):
+        with io.open(path, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                values[k.strip()] = v.strip().strip('"').strip("'")
+
+    url = os.environ.get("VITE_SUPABASE_URL") or values.get("VITE_SUPABASE_URL", "")
+    key = os.environ.get("VITE_SUPABASE_ANON_KEY") or values.get("VITE_SUPABASE_ANON_KEY", "")
+
+    if not url or not key:
+        sys.exit(
+            "접속 정보를 찾을 수 없습니다.\n"
+            "  .env 에 VITE_SUPABASE_URL 과 VITE_SUPABASE_ANON_KEY 를 채워 주세요.\n"
+            "  (.env.example 참고)"
+        )
+    return url.rstrip("/"), key
+
+
+URL, KEY = load_env()
+
+
+def req(path, token=None, body=None, method=None):
+    data = json.dumps(body).encode() if body is not None else None
+    r = urllib.request.Request(
+        URL + path, data=data, method=method or ("POST" if data is not None else "GET")
+    )
+    r.add_header("apikey", KEY)
+    r.add_header("Authorization", "Bearer " + (token or KEY))
+    r.add_header("Content-Type", "application/json")
+    try:
+        with urllib.request.urlopen(r) as resp:
+            raw = resp.read().decode()
+            return resp.status, (json.loads(raw) if raw.strip() else None)
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode()
+        try:
+            return e.code, json.loads(raw)
+        except ValueError:
+            return e.code, raw
+
+
+def signin():
+    """익명 로그인. 대시보드에서 Anonymous sign-ins 가 켜져 있어야 한다."""
+    s, b = req("/auth/v1/signup", body={})
+    if s != 200:
+        sys.exit("익명 로그인 실패 (%s): %s\n  Authentication > Sign In / Providers 에서 "
+                 "Anonymous sign-ins 를 켜 주세요." % (s, b))
+    return b["access_token"]
+
+
+def rpc(fn, token, args):
+    return req("/rest/v1/rpc/" + fn, token, args)
+
+
+def msg(b):
+    return b.get("message") if isinstance(b, dict) else b
+
+
+RESULTS = []
+
+
+def check(name, cond, detail=""):
+    RESULTS.append((name, bool(cond), detail))
+
+
+# ------------------------------------------------------------------
+# 1단계 — 온라인 방 / 대기실 / 준비 / 시작 / 재접속
+# ------------------------------------------------------------------
+
+def test_lobby():
+    toks = [signin() for _ in range(5)]
+    check("익명 로그인 5명", len(toks) == 5 and all(toks), "토큰 5개 발급")
+
+    s, b = rpc("create_room", toks[0], {"p_nickname": "방장"})
+    good = s == 200 and isinstance(b, dict) and len(b.get("room_code", "")) == 6
+    check("방 만들기", good, ("코드 %s" % b["room_code"]) if good else msg(b))
+    if not good:
+        return
+    room_id, code = b["room_id"], b["room_code"]
+
+    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    check("5명 미만 시작 차단", s >= 400 and "최소 5명" in str(msg(b)), msg(b))
+
+    joined, errs = 0, []
+    for i, t in enumerate(toks[1:], start=2):
+        s, b = rpc("join_room", t, {"p_code": code, "p_nickname": "참가자%d" % i})
+        if s == 200:
+            joined += 1
+        else:
+            errs.append(msg(b))
+    check("참가자 4명 입장", joined == 4, "%d/4 입장  %s" % (joined, errs[:1]))
+
+    # 새로고침·재접속 시 같은 사람은 그대로 들어가야 한다
+    s, b = rpc("join_room", toks[3], {"p_code": code, "p_nickname": "다른이름"})
+    check("같은 사람 재입장 허용",
+          s == 200 and isinstance(b, dict) and b.get("room_code") == code, "HTTP %d" % s)
+
+    t_extra = signin()
+    s, b = rpc("join_room", t_extra, {"p_code": code, "p_nickname": "참가자2"})
+    check("닉네임 중복 차단", s >= 400 and "이미 사용" in str(msg(b)), msg(b))
+
+    s, b = rpc("join_room", t_extra, {"p_code": "ZZZZZZ", "p_nickname": "없는방"})
+    check("없는 코드 차단", s >= 400 and "존재하지 않는" in str(msg(b)), msg(b))
+
+    s, b = req("/rest/v1/players?select=nickname,is_ready,is_host&room_id=eq." + room_id, toks[0])
+    n = len(b) if isinstance(b, list) else -1
+    check("참가자 목록 조회", s == 200 and n == 5, "%d명 조회됨" % n)
+
+    # --- 보안 (요구사항 §6.2) ---
+    t_out = signin()
+    s, b = req("/rest/v1/players?select=nickname&room_id=eq." + room_id, t_out)
+    check("외부인 목록 차단(RLS)", s == 200 and b == [], "조회 결과 %s" % b)
+
+    s, b = req("/rest/v1/players?room_id=eq." + room_id, toks[1],
+               body={"is_ready": True}, method="PATCH")
+    check("직접 UPDATE 차단", s >= 400, "HTTP %d %s" % (s, str(msg(b))[:50]))
+
+    s, b = req("/rest/v1/rooms", toks[1],
+               body={"code": "HACKED", "host_uid": "00000000-0000-0000-0000-000000000000"})
+    check("직접 INSERT 차단", s >= 400, "HTTP %d %s" % (s, str(msg(b))[:50]))
+
+    # --- 시작 조건 ---
+    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    check("미준비 상태 시작 차단", s >= 400 and "준비하지 않은" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_ready", toks[0], {"p_room_id": room_id, "p_ready": False})
+    check("방장 준비토글 차단", s >= 400 and "방장은" in str(msg(b)), msg(b))
+
+    for t in toks[1:]:
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+    s, b = req("/rest/v1/players?select=is_ready&room_id=eq." + room_id, toks[0])
+    ready = sum(1 for p in b if p["is_ready"]) if isinstance(b, list) else -1
+    check("전원 준비 완료", ready == 5, "%d/5 준비" % ready)
+
+    s, b = rpc("start_game", toks[1], {"p_room_id": room_id})
+    check("비방장 시작 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
+
+    s, b = rpc("my_active_room", toks[2], {})
+    check("재접속 방 복원",
+          s == 200 and isinstance(b, dict) and b.get("room_code") == code,
+          "코드 %s" % (b.get("room_code") if isinstance(b, dict) else None))
+
+    # void 를 반환하는 RPC 는 PostgREST 가 204 No Content 로 응답한다
+    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    check("게임 시작", s in (200, 204), "HTTP %d %s" % (s, str(msg(b))[:40] if s >= 400 else ""))
+
+    s, b = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
+    okp = isinstance(b, list) and b and b[0]["phase"] == "NIGHT" and b[0]["day_number"] == 1
+    check("phase 전환", okp, ("%s %s일차" % (b[0]["phase"], b[0]["day_number"])) if b else "?")
+
+    s, b = rpc("join_room", t_extra, {"p_code": code, "p_nickname": "지각생"})
+    check("시작 후 입장 차단", s >= 400 and "이미 시작" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_ready", toks[1], {"p_room_id": room_id, "p_ready": False})
+    check("시작 후 준비변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
+
+    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    check("중복 시작 차단", s >= 400 and "이미 시작" in str(msg(b)), msg(b))
+
+    # 정리 — 방장이 나가면 방과 참가자가 함께 삭제된다
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    s, b = req("/rest/v1/rooms?select=id&id=eq." + room_id, toks[1])
+    check("방장 퇴장 시 방 삭제", b == [], "남은 방 %s" % b)
+
+
+# ------------------------------------------------------------------
+# 2단계 — 직업 (구현하면서 하나씩 추가한다. 요구사항 §8.2 순서)
+# ------------------------------------------------------------------
+# def test_roles_mafia_citizen(): ...
+# def test_role_police(): ...
+
+
+def main():
+    print("\n  대상: %s" % URL)
+    test_lobby()
+
+    print()
+    width = max(len(n) for n, _, _ in RESULTS)
+    passed = sum(1 for _, c, _ in RESULTS if c)
+    for name, cond, detail in RESULTS:
+        print("  [%s] %-*s  %s" % ("PASS" if cond else "FAIL", width, name, str(detail)[:64]))
+    print("\n  %d/%d 통과\n" % (passed, len(RESULTS)))
+    return 0 if passed == len(RESULTS) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

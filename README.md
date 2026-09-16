@@ -60,6 +60,25 @@ npm install
 npm run dev
 ```
 
+## 테스트
+
+실제 Supabase 인스턴스를 대상으로 서버 규칙을 검증합니다.
+`.env` 가 채워져 있어야 하며, 접속 정보는 거기서 읽습니다.
+
+```bash
+npm run test:e2e
+```
+
+요구사항 §8.3 체크리스트 중 서버에서 확인 가능한 항목을 다룹니다 —
+입장 규칙, 권한 검증, RLS 차단, 클라이언트 직접 쓰기 차단, 재접속 복원.
+
+2단계에서 직업을 하나씩 추가할 때마다 `tests/e2e.py` 하단에 해당 직업의
+테스트를 추가합니다.
+
+> 실행할 때마다 익명 사용자가 생성됩니다. 방과 참가자는 테스트 끝에서
+> 정리하지만 `auth.users` 행은 남습니다 (삭제하려면 `service_role` 키가
+> 필요하므로 하지 않습니다).
+
 ## 배포
 
 GitHub Actions → GitHub Pages 로 배포됩니다.
@@ -84,6 +103,8 @@ src/
     PlayerList.jsx  참가자 목록
 supabase/migrations/
   0001_lobby.sql  테이블 · RLS · RPC
+tests/
+  e2e.py          종단간 테스트
 ```
 
 ## 보안 설계
