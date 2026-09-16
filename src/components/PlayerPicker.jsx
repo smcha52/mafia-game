@@ -12,6 +12,7 @@ import Stack from '@mui/material/Stack';
 // locked 이면 이미 제출한 상태라 바꿀 수 없다.
 export default function PlayerPicker({
   players, uid, value, onChange, locked = false, excludeSelf = false,
+  blockedUid = null, blockedNote = '',
 }) {
   const candidates = players.filter(
     (p) => p.alive && (!excludeSelf || p.uid !== uid),
@@ -22,13 +23,14 @@ export default function PlayerPicker({
       <List disablePadding>
         {candidates.map((p) => {
           const selected = value === p.uid;
+          const blocked = blockedUid != null && p.uid === blockedUid;
           return (
             <ListItemButton
               key={p.uid}
               divider
               selected={selected}
-              disabled={locked && !selected}
-              onClick={() => !locked && onChange(p.uid)}
+              disabled={blocked || (locked && !selected)}
+              onClick={() => !locked && !blocked && onChange(p.uid)}
             >
               <ListItemAvatar>
                 <Avatar sx={{ bgcolor: selected ? 'primary.main' : 'secondary.main' }}>
@@ -40,10 +42,11 @@ export default function PlayerPicker({
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <span>{p.nickname}</span>
                     {p.uid === uid && <Chip size="small" label="나" />}
+                    {blocked && blockedNote && <Chip size="small" label={blockedNote} />}
                   </Stack>
                 }
               />
-              <Radio checked={selected} disabled={locked} tabIndex={-1} />
+              <Radio checked={selected} disabled={locked || blocked} tabIndex={-1} />
             </ListItemButton>
           );
         })}

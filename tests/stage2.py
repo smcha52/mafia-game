@@ -17,7 +17,7 @@ def alive_uids(room_id, token):
     return {p["uid"] for p in b if p["alive"]} if isinstance(b, list) else set()
 
 
-def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None):
+def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None, doctor_uid=None):
     """밤에 행동하는 직업(마피아·경찰)을 모두 제출시켜 밤을 넘긴다.
 
     victim_uid 를 주지 않으면 마피아는 살아 있는 아무나를 공격한다.
@@ -29,9 +29,15 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None):
         victim_uid = None
     if police_uid not in alive:
         police_uid = None
+    if doctor_uid not in alive:
+        doctor_uid = None
 
     last = None
     for t, r in roles.items():
+        # 밤이 이미 끝났으면 더 제출하지 않는다.
+        # 계속 보내면 "밤에만 능력을 사용할 수 있습니다" 오류가 마지막 응답이 된다.
+        if isinstance(last, dict) and last.get("resolved") is True:
+            break
         if uids[t] not in alive:
             continue
         if r["role"] == "MAFIA":
@@ -42,6 +48,15 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None):
             tgt = police_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": tgt})
+        elif r["role"] == "DOCTOR":
+            # 연속 치료 금지에 걸리지 않도록 직전 대상이 아닌 사람을 고른다
+            s, mv = rpc("my_game_view", t, {"p_room_id": room_id})
+            last_t = mv.get("lastTargetId") if s == 200 else None
+            tgt = doctor_uid if doctor_uid and doctor_uid != last_t else None
+            if tgt is None:
+                tgt = next(u for u in alive if u != last_t)
+            s, last = rpc("submit_night_action", t,
+                          {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": tgt})
     return last
 
 
@@ -51,6 +66,8 @@ def pass_day(room_id, roles, uids, target_uid):
     alive = alive_uids(room_id, any_tok)
     last = None
     for t in roles:
+        if isinstance(last, dict) and last.get("resolved") is True:
+            break
         if uids[t] not in alive:
             continue
         s, last = rpc("submit_day_vote", t,
@@ -131,12 +148,15 @@ def test_roles_mafia_citizen():
                {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": victim_uid})
     check("마피아만 제출 시 밤 유지", s == 200 and b.get("resolved") is False, str(b))
 
-    # 5명 구성에는 경찰이 있으므로 경찰까지 제출해야 밤이 끝난다
-    police_tok = next(t for t, r in roles.items() if r["role"] == "POLICE")
-    s, b = rpc("submit_night_action", police_tok,
-               {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uid_of(mafia_tok)})
-    check("경찰까지 제출하면 밤 종료",
-          s == 200 and isinstance(b, dict) and b.get("resolved") is True, str(b))
+    # 5명 구성에는 경찰·의사가 있으므로 그들까지 제출해야 밤이 끝난다.
+    # 의사는 공격 대상이 아닌 사람을 치료해야 victim 이 실제로 죽는다.
+    uids = uid_map(roles)
+    b = pass_night(room_id, roles, uids,
+                   victim_uid=victim_uid,
+                   police_uid=uids[mafia_tok],
+                   doctor_uid=uids[mafia_tok])
+    check("밤 행동 직업 전원 제출 시 종료",
+          isinstance(b, dict) and b.get("resolved") is True, str(b))
 
     s, b = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, mafia_tok)
     dead = [p for p in b if not p["alive"]] if isinstance(b, list) else []
@@ -236,10 +256,12 @@ def test_night_tie():
         {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uid_of(others[0])})
     rpc("submit_night_action", mafia_toks[1],
         {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uid_of(others[1])})
-    # 경찰도 제출해야 밤이 끝난다
-    police_tok = next(t for t, r in roles.items() if r["role"] == "POLICE")
-    rpc("submit_night_action", police_tok,
-        {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uid_of(others[0])})
+    # 나머지 밤 직업(경찰·의사)도 제출해야 밤이 끝난다.
+    # 마피아 표는 이미 갈라놓았으므로 pass_night 이 덮어써도 동점이 유지되도록
+    # 마피아를 제외하고 제출시킨다.
+    uids = uid_map(roles)
+    non_mafia = {t: r for t, r in roles.items() if r["role"] != "MAFIA"}
+    pass_night(room_id, non_mafia, uids, police_uid=uids[others[0]])
 
     s, b = req("/rest/v1/players?select=alive&room_id=eq." + room_id, mafia_toks[0])
     dead = sum(1 for p in b if not p["alive"]) if isinstance(b, list) else -1
@@ -303,12 +325,11 @@ def test_game_view():
     s, vm = rpc("my_game_view", mafia[1], {"p_room_id": room_id})
     check("동료의 선택은 안 보인다", vm.get("nightSubmitted") is None, str(vm.get("nightSubmitted")))
 
-    # --- 낮으로 넘긴 뒤 (마피아 나머지 + 경찰까지 제출) ---
-    rpc("submit_night_action", mafia[1],
-        {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": target_uid})
-    police_tok = next(t for t, r in roles.items() if r["role"] == "POLICE")
-    rpc("submit_night_action", police_tok,
-        {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": target_uid})
+    # --- 낮으로 넘긴 뒤 (밤 직업 전원 제출) ---
+    uids = uid_map(roles)
+    # 의사가 대상을 치료하면 죽지 않으므로 다른 사람을 치료시킨다
+    pass_night(room_id, roles, uids,
+               victim_uid=target_uid, doctor_uid=uids[mafia[0]])
 
     s, v = rpc("my_game_view", mafia[0], {"p_room_id": room_id})
     check("낮 투표 인원 6명", v.get("dayProgress", {}).get("expected") == 6,
@@ -439,18 +460,23 @@ def test_role_police():
                {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uid_of(mafias[0])})
     check("비경찰 조사 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
 
-    # --- 마피아만 제출해도 밤이 끝나면 안 된다 (경찰 대기) ---
+    uids = uid_map(roles)
+    citizen = next(t for t, r in roles.items() if r["role"] == "CITIZEN")
+
+    # --- 마피아만 제출해도 밤이 끝나면 안 된다 ---
     for t in mafias:
         s, b = rpc("submit_night_action", t,
-                   {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uid_of(doctor)})
+                   {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[citizen]})
     check("경찰 미제출 시 밤 유지", isinstance(b, dict) and b.get("resolved") is False, str(b))
 
     s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, police)
     check("아직 밤", bool(b) and b[0]["phase"] == "NIGHT", b[0]["phase"] if b else "?")
 
-    # --- 경찰이 마피아를 조사 ---
-    s, b = rpc("submit_night_action", police,
-               {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uid_of(mafias[0])})
+    # --- 경찰이 마피아를 조사, 의사는 다른 사람을 치료 ---
+    b = pass_night(room_id, roles, uids,
+                   victim_uid=uids[citizen],
+                   police_uid=uids[mafias[0]],
+                   doctor_uid=uids[doctor])
     check("경찰 제출로 밤 종료", isinstance(b, dict) and b.get("resolved") is True, str(b))
 
     s, v = rpc("my_game_view", police, {"p_room_id": room_id})
@@ -470,7 +496,6 @@ def test_role_police():
 
     # --- 2일차: 광대를 조사하면 중립 진영 (§2.3) ---
     # 광대를 처형하면 게임이 끝나므로(§4.1) 마피아 한 명을 처형한다
-    uids = uid_map(roles)
     pass_day(room_id, roles, uids, uids[mafias[0]])
 
     s, b = req("/rest/v1/rooms?select=phase,day_number,winner&id=eq." + room_id, police)
@@ -512,12 +537,13 @@ def test_police_dead_blocked():
     # 광대를 처형하면 게임이 끝나므로(§4.1) 처형 대상은 시민으로 고른다
     victim_day = next(t for t, r in roles.items() if r["role"] == "CITIZEN")
 
-    # 마피아가 경찰을 공격, 경찰은 조사 후 사망
-    for t in mafias:
-        rpc("submit_night_action", t,
-            {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[police]})
-    rpc("submit_night_action", police,
-        {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uids[mafias[0]]})
+    # 마피아가 경찰을 공격, 경찰은 조사 후 사망.
+    # 의사가 경찰을 치료하면 살아나므로 의사 자신을 치료시킨다 (§2.4 자가 치료 허용)
+    doctor_tok = next(t for t, r in roles.items() if r["role"] == "DOCTOR")
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[police],
+               police_uid=uids[mafias[0]],
+               doctor_uid=uids[doctor_tok])
 
     s, v = rpc("my_game_view", police, {"p_room_id": room_id})
     check("조사한 밤에 죽어도 결과는 받는다",
@@ -541,3 +567,106 @@ def test_police_dead_blocked():
 
 
 ALL.extend([test_role_police, test_police_dead_blocked])
+
+
+# ------------------------------------------------------------------
+# §8.2-3  의사
+# ------------------------------------------------------------------
+
+def test_role_doctor():
+    toks, room_id, roles = make_game(7)
+    if not room_id:
+        check("의사 테스트 준비", False, "방 생성 실패")
+        return
+
+    uids = uid_map(roles)
+    doctor = next(t for t, r in roles.items() if r["role"] == "DOCTOR")
+    police = next(t for t, r in roles.items() if r["role"] == "POLICE")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizen = next(t for t, r in roles.items() if r["role"] == "CITIZEN")
+
+    # --- 권한 ---
+    s, b = rpc("submit_night_action", citizen,
+               {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[citizen]})
+    check("비의사 치료 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    # --- 자기 자신 치료 가능 (§2.4) ---
+    s, b = rpc("submit_night_action", doctor,
+               {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[doctor]})
+    check("의사 자가 치료 허용", s == 200, str(b)[:40])
+
+    # --- 치료 대상을 공격 대상으로 바꿔 살려낸다 ---
+    s, b = rpc("submit_night_action", doctor,
+               {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[citizen]})
+    check("치료 대상 변경 가능", s == 200, str(b)[:40])
+
+    for t in mafias:
+        rpc("submit_night_action", t,
+            {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[citizen]})
+    s, b = rpc("submit_night_action", police,
+               {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uids[mafias[0]]})
+    check("밤 종료", isinstance(b, dict) and b.get("resolved") is True, str(b))
+
+    s, b = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, doctor)
+    dead = [p for p in b if not p["alive"]] if isinstance(b, list) else []
+    check("치료로 공격 무효 (§2.4)", len(dead) == 0, "사망 %d명" % len(dead))
+
+    s, b = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+               + "&kind=eq.NIGHT&day_number=eq.1", citizen)
+    check("공개 결과엔 사망자 없음만",
+          bool(b) and b[0]["payload"]["nightDeaths"] == [], str(b[0]["payload"]) if b else "?")
+
+    s, v = rpc("my_game_view", doctor, {"p_room_id": room_id})
+    heal = [r for r in (v.get("privateResults") or []) if r["kind"] == "DOCTOR"]
+    check("의사만 치료 성공을 안다", len(heal) == 1, "%d건" % len(heal))
+
+    s, v2 = rpc("my_game_view", citizen, {"p_room_id": room_id})
+    check("살아난 본인도 모른다", not (v2.get("privateResults") or []),
+          str(v2.get("privateResults")))
+
+    # --- 연속 치료 금지 (§2.4, §6.3) ---
+    check("직전 대상 기록됨", v.get("lastTargetId") == uids[citizen],
+          str(v.get("lastTargetId"))[:36])
+
+    pass_day(room_id, roles, uids, uids[mafias[0]])
+    s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, doctor)
+    if b and b[0]["phase"] == "NIGHT":
+        s, b2 = rpc("submit_night_action", doctor,
+                    {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[citizen]})
+        check("연속 치료 차단 (§2.4)",
+              s >= 400 and "연속해서 치료할 수 없습니다" in str(msg(b2)), msg(b2))
+
+        s, b3 = rpc("submit_night_action", doctor,
+                    {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[doctor]})
+        check("다른 사람은 치료 가능", s == 200, str(b3)[:40])
+    else:
+        check("연속 치료 차단 (§2.4)", False, "2일차 밤 진입 실패")
+        check("다른 사람은 치료 가능", False, "건너뜀")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_doctor_cannot_save_execution():
+    """치료는 밤 공격만 막는다. 낮 처형은 막지 못한다."""
+    toks, room_id, roles = make_game(7)
+    if not room_id:
+        check("처형 방어 테스트 준비", False, "방 생성 실패")
+        return
+
+    uids = uid_map(roles)
+    doctor = next(t for t, r in roles.items() if r["role"] == "DOCTOR")
+    citizen = next(t for t, r in roles.items() if r["role"] == "CITIZEN")
+
+    # 밤에 시민을 치료해 두고, 낮에 그 시민을 처형한다
+    pass_night(room_id, roles, uids, doctor_uid=uids[citizen])
+    pass_day(room_id, roles, uids, uids[citizen])
+
+    s, b = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, doctor)
+    target = next((p for p in b if p["uid"] == uids[citizen]), None) if isinstance(b, list) else None
+    check("치료해도 처형은 막지 못한다", target is not None and target["alive"] is False,
+          "alive=%s" % (target["alive"] if target else "?"))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_role_doctor, test_doctor_cannot_save_execution])

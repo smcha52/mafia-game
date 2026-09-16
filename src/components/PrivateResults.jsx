@@ -13,6 +13,19 @@ export default function PrivateResults({ results }) {
   return (
     <Stack spacing={1}>
       {results.map((r) => {
+        if (r.kind === 'DOCTOR') {
+          return (
+            <Alert key={`${r.kind}-${r.day}`} severity="success" icon={false}>
+              <AlertTitle sx={{ mb: 0.5 }}>{r.day}일차 밤 · 치료 성공</AlertTitle>
+              <div>
+                <strong>{r.payload.savedNickname}</strong>님이 공격받았지만 살려냈습니다.
+              </div>
+              <Typography variant="caption" color="text.secondary">
+                이 정보는 당신에게만 보입니다.
+              </Typography>
+            </Alert>
+          );
+        }
         if (r.kind !== 'POLICE') return null;
         const t = TEAM_RESULT[r.payload.team] ?? { label: r.payload.team, color: 'default' };
         return (

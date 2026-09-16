@@ -16,7 +16,9 @@ import PlayerPicker from '../components/PlayerPicker';
 import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
-import { ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, roleInfo } from '../lib/roles';
+import {
+  ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, SUBMITTED_NOTE, SUBMIT_LABEL, roleInfo,
+} from '../lib/roles';
 import { leaveRoom, submitDayVote, submitNightAction, tickPhase } from '../lib/api';
 import { useGame } from '../lib/useGame';
 
@@ -202,9 +204,7 @@ export default function GamePage({ roomId, uid, onLeave }) {
                   <strong>{nickOf(submitted)}</strong>님을 선택했습니다.
                   {!isNight
                     ? ' 투표는 변경할 수 없습니다.'
-                    : role === 'POLICE'
-                      ? ' 아침에 결과를 알려드립니다.'
-                      : ' 동료들을 기다리는 중입니다.'}
+                    : (SUBMITTED_NOTE[role] ?? ' 밤이 끝나기를 기다리는 중입니다.')}
                 </Alert>
               )}
 
@@ -215,6 +215,8 @@ export default function GamePage({ roomId, uid, onLeave }) {
                 onChange={setPick}
                 locked={Boolean(submitted)}
                 excludeSelf={isNight && role === 'MAFIA'}
+                blockedUid={isNight && role === 'DOCTOR' ? view?.lastTargetId : null}
+                blockedNote="어젯밤에 치료함" 
               />
 
               {actionError && <Alert severity="error">{actionError}</Alert>}
@@ -230,7 +232,7 @@ export default function GamePage({ roomId, uid, onLeave }) {
                       ? submitNightAction(roomId, nightAction, pick)
                       : submitDayVote(roomId, pick))}
                 >
-                  {!isNight ? '투표 확정' : role === 'POLICE' ? '조사 확정' : '공격 확정'}
+                  {!isNight ? '투표 확정' : (SUBMIT_LABEL[role] ?? '확정')}
                 </Button>
               )}
             </>
