@@ -5,7 +5,7 @@ export const ROLES = {
   POLICE:    { name: '경찰',   emoji: '🔎', desc: '밤마다 한 명의 진영을 조사합니다.' },
   DOCTOR:    { name: '의사',   emoji: '💉', desc: '밤마다 한 명을 치료해 죽음을 막습니다.' },
   BODYGUARD: { name: '경호원', emoji: '🛡️', desc: '보호 대상이 공격받으면 대신 사망합니다.' },
-  DETECTIVE: { name: '탐정',   emoji: '🕵️', desc: '두 사람이 같은 진영인지 확인합니다.' },
+  DETECTIVE: { name: '탐정',   emoji: '🕵️', desc: '한 명의 직업 후보를 알아냅니다. 그중 하나만 진짜입니다.' },
   REPORTER:  { name: '기자',   emoji: '📰', desc: '단 한 번, 한 사람의 직업을 모두에게 공개합니다.' },
   MEDIUM:    { name: '영매',   emoji: '🔮', desc: '밤마다 사망자 한 명의 직업을 확인합니다.' },
   SPY:       { name: '스파이', emoji: '🎭', desc: '마피아 진영입니다. 낮 투표로 상대의 직업을 알아냅니다.' },
@@ -27,7 +27,7 @@ export const WINNERS = {
 export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', desc: '' };
 
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
-export const ABILITY_READY = new Set(['MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD']);
+export const ABILITY_READY = new Set(['MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE']);
 
 // 밤에 행동하는 직업 -> 서버가 받는 action 코드
 export const NIGHT_ACTION = {
@@ -35,6 +35,7 @@ export const NIGHT_ACTION = {
   POLICE: 'POLICE',
   DOCTOR: 'DOCTOR',
   BODYGUARD: 'BODYGUARD',
+  DETECTIVE: 'DETECTIVE',
 };
 
 // 밤 화면에서 보여줄 안내 문구
@@ -43,6 +44,7 @@ export const NIGHT_PROMPT = {
   POLICE: '진영을 조사할 사람을 고르세요',
   DOCTOR: '치료할 사람을 고르세요',
   BODYGUARD: '보호할 사람을 고르세요',
+  DETECTIVE: '직업을 추리할 사람을 고르세요',
 };
 
 // 확정 버튼 문구
@@ -51,6 +53,7 @@ export const SUBMIT_LABEL = {
   POLICE: '조사 확정',
   DOCTOR: '치료 확정',
   BODYGUARD: '보호 확정',
+  DETECTIVE: '추리 확정',
 };
 
 // 제출 후 안내
@@ -59,6 +62,7 @@ export const SUBMITTED_NOTE = {
   POLICE: ' 아침에 결과를 알려드립니다.',
   DOCTOR: ' 오늘 밤 공격을 막을 수 있습니다.',
   BODYGUARD: ' 공격받으면 당신이 대신 죽습니다.',
+  DETECTIVE: ' 아침에 직업 후보를 알려드립니다.',
 };
 
 // 자신을 지목할 수 없는 직업

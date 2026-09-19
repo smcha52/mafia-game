@@ -18,7 +18,7 @@ def alive_uids(room_id, token):
 
 
 def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
-               doctor_uid=None, guard_uid=None):
+               doctor_uid=None, guard_uid=None, detective_uid=None):
     """밤에 행동하는 직업(마피아·경찰)을 모두 제출시켜 밤을 넘긴다.
 
     victim_uid 를 주지 않으면 마피아는 살아 있는 아무나를 공격한다.
@@ -34,6 +34,8 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
         doctor_uid = None
     if guard_uid not in alive:
         guard_uid = None
+    if detective_uid not in alive:
+        detective_uid = None
 
     last = None
     for t, r in roles.items():
@@ -51,6 +53,11 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
             tgt = police_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": tgt})
+        elif r["role"] == "DETECTIVE":
+            tgt = detective_uid or next(iter(alive))
+            s, last = rpc("submit_night_action", t,
+                          {"p_room_id": room_id, "p_action": "DETECTIVE",
+                           "p_target_uid": tgt})
         elif r["role"] == "BODYGUARD":
             # 자기 자신 금지 + 직전 대상 금지
             s, mv = rpc("my_game_view", t, {"p_room_id": room_id})
@@ -897,3 +904,119 @@ def test_bodyguard_private_result():
 
 ALL.extend([test_bodyguard_rules, test_combo_table,
             test_bodyguard_repeat, test_bodyguard_private_result])
+
+
+# ------------------------------------------------------------------
+# §8.2-5  탐정 (능력 변경판)
+# ------------------------------------------------------------------
+
+def test_detective():
+    """9명 게임: 후보 2개, 그중 하나는 반드시 진짜"""
+    toks, room_id, roles = make_game(9)
+    if not room_id:
+        check("탐정 테스트 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    det = _pick(roles, "DETECTIVE")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    target = mafias[0]
+
+    # 권한
+    s, b = rpc("submit_night_action", citizens[0],
+               {"p_room_id": room_id, "p_action": "DETECTIVE", "p_target_uid": uids[target]})
+    check("비탐정 추리 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    # 탐정은 자기 자신도 지목할 수 있다 (경찰과 동일)
+    s, b = rpc("submit_night_action", det,
+               {"p_room_id": room_id, "p_action": "DETECTIVE", "p_target_uid": uids[det]})
+    check("탐정 자기 지목 허용", s == 200, str(b)[:40])
+
+    # 실제 대상으로 바꿔 제출하고 밤을 넘긴다
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]],
+               doctor_uid=uids[det],
+               detective_uid=uids[target])
+
+    s, v = rpc("my_game_view", det, {"p_room_id": room_id})
+    res = [r for r in (v.get("privateResults") or []) if r["kind"] == "DETECTIVE"]
+    check("탐정 결과 도착", len(res) == 1, "%d건" % len(res))
+    if not res:
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    cands = res[0]["payload"].get("candidates") or []
+    check("9명은 후보 2개", len(cands) == 2, "후보 %s" % cands)
+    check("진짜가 후보에 포함", "MAFIA" in cands, "대상=MAFIA 후보=%s" % cands)
+    check("후보에 중복 없음", len(set(cands)) == len(cands), str(cands))
+
+    # 가짜는 이 판에 실제로 있는 직업이어야 한다
+    in_game = {r["role"] for r in roles.values()}
+    check("후보가 모두 이 판에 있는 직업", set(cands) <= in_game,
+          "후보=%s 판에있음=%s" % (cands, sorted(in_game)))
+
+    # 결과는 탐정에게만
+    s, v2 = rpc("my_game_view", mafias[0], {"p_room_id": room_id})
+    others = [r for r in (v2.get("privateResults") or []) if r["kind"] == "DETECTIVE"]
+    check("다른 사람은 추리 결과 없음", not others, str(others))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_detective_candidate_count_large():
+    """12명 게임: 후보 3개"""
+    toks, room_id, roles = make_game(12)
+    if not room_id:
+        check("12명 탐정 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    det = _pick(roles, "DETECTIVE")
+    police = _pick(roles, "POLICE")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]],
+               doctor_uid=uids[det],
+               detective_uid=uids[police])
+
+    s, v = rpc("my_game_view", det, {"p_room_id": room_id})
+    res = [r for r in (v.get("privateResults") or []) if r["kind"] == "DETECTIVE"]
+    cands = res[0]["payload"].get("candidates") if res else []
+    check("10명 이상은 후보 3개", len(cands or []) == 3, "후보 %s" % cands)
+    check("12명에서도 진짜 포함", "POLICE" in (cands or []), "대상=POLICE 후보=%s" % cands)
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_detective_result_is_stable():
+    """새로고침해도 후보가 바뀌지 않는다 (§8.3 새로고침 후 결과 복원)"""
+    toks, room_id, roles = make_game(9)
+    if not room_id:
+        check("탐정 결과 고정 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    det = _pick(roles, "DETECTIVE")
+    doctor = _pick(roles, "DOCTOR")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]],
+               doctor_uid=uids[det],
+               detective_uid=uids[doctor])
+
+    reads = []
+    for _ in range(3):
+        s, v = rpc("my_game_view", det, {"p_room_id": room_id})
+        r = [x for x in (v.get("privateResults") or []) if x["kind"] == "DETECTIVE"]
+        reads.append(tuple(r[0]["payload"].get("candidates") or []) if r else None)
+
+    check("여러 번 읽어도 후보 동일", len(set(reads)) == 1, str(reads[0]))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_detective, test_detective_candidate_count_large,
+            test_detective_result_is_stable])

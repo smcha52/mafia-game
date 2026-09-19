@@ -4,7 +4,7 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { TEAM_RESULT } from '../lib/roles';
+import { TEAM_RESULT, roleInfo } from '../lib/roles';
 
 // 나에게만 보이는 조사 결과. 최신 것이 위에 온다.
 export default function PrivateResults({ results }) {
@@ -22,6 +22,25 @@ export default function PrivateResults({ results }) {
               </div>
               <Typography variant="caption" color="text.secondary">
                 이 정보는 당신에게만 보입니다.
+              </Typography>
+            </Alert>
+          );
+        }
+        if (r.kind === 'DETECTIVE') {
+          const cands = r.payload.candidates ?? [];
+          return (
+            <Alert key={`${r.kind}-${r.day}`} severity="info" icon={false}>
+              <AlertTitle sx={{ mb: 0.5 }}>{r.day}일차 밤 · 추리 결과</AlertTitle>
+              <div>
+                <strong>{r.payload.targetNickname}</strong>님의 직업은 다음 중 하나입니다.
+              </div>
+              <Stack direction="row" spacing={0.75} sx={{ mt: 1 }} flexWrap="wrap" useFlexGap>
+                {cands.map((c) => (
+                  <Chip key={c} size="small" label={roleInfo(c).name} />
+                ))}
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                이 중 하나만 진짜입니다. 이 정보는 당신에게만 보입니다.
               </Typography>
             </Alert>
           );
