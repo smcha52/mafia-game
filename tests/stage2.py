@@ -17,7 +17,8 @@ def alive_uids(room_id, token):
     return {p["uid"] for p in b if p["alive"]} if isinstance(b, list) else set()
 
 
-def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None, doctor_uid=None):
+def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
+               doctor_uid=None, guard_uid=None):
     """밤에 행동하는 직업(마피아·경찰)을 모두 제출시켜 밤을 넘긴다.
 
     victim_uid 를 주지 않으면 마피아는 살아 있는 아무나를 공격한다.
@@ -31,6 +32,8 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None, doctor_ui
         police_uid = None
     if doctor_uid not in alive:
         doctor_uid = None
+    if guard_uid not in alive:
+        guard_uid = None
 
     last = None
     for t, r in roles.items():
@@ -48,6 +51,17 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None, doctor_ui
             tgt = police_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": tgt})
+        elif r["role"] == "BODYGUARD":
+            # 자기 자신 금지 + 직전 대상 금지
+            s, mv = rpc("my_game_view", t, {"p_room_id": room_id})
+            last_t = mv.get("lastTargetId") if s == 200 else None
+            tgt = guard_uid if guard_uid not in (None, last_t, uids[t]) else None
+            if tgt is None:
+                tgt = next((u for u in alive if u != last_t and u != uids[t]), None)
+            if tgt is not None:
+                s, last = rpc("submit_night_action", t,
+                              {"p_room_id": room_id, "p_action": "BODYGUARD",
+                               "p_target_uid": tgt})
         elif r["role"] == "DOCTOR":
             # 연속 치료 금지에 걸리지 않도록 직전 대상이 아닌 사람을 고른다
             s, mv = rpc("my_game_view", t, {"p_room_id": room_id})
@@ -718,3 +732,168 @@ def test_tick_before_deadline_is_safe():
 
 
 ALL.append(test_tick_before_deadline_is_safe)
+
+
+# ------------------------------------------------------------------
+# §8.2-4  경호원 · §3.2 조합표
+# ------------------------------------------------------------------
+
+def _setup_guard_game():
+    """6명 구성: 마피아1 경찰1 의사1 경호원1 시민2"""
+    toks, room_id, roles = make_game(6)
+    if not room_id:
+        return None, None, None, None
+    return toks, room_id, roles, uid_map(roles)
+
+
+def _pick(roles, role):
+    return next(t for t, r in roles.items() if r["role"] == role)
+
+
+def test_bodyguard_rules():
+    toks, room_id, roles, uids = _setup_guard_game()
+    if not room_id:
+        check("경호원 테스트 준비", False, "방 생성 실패")
+        return
+
+    guard = _pick(roles, "BODYGUARD")
+    citizen = _pick(roles, "CITIZEN")
+
+    s, b = rpc("submit_night_action", citizen,
+               {"p_room_id": room_id, "p_action": "BODYGUARD", "p_target_uid": uids[guard]})
+    check("비경호원 보호 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    s, b = rpc("submit_night_action", guard,
+               {"p_room_id": room_id, "p_action": "BODYGUARD", "p_target_uid": uids[guard]})
+    check("경호원 자기 보호 차단 (§2.5)",
+          s >= 400 and "자신을 지목할 수 없습니다" in str(msg(b)), msg(b))
+
+    s, b = rpc("submit_night_action", guard,
+               {"p_room_id": room_id, "p_action": "BODYGUARD", "p_target_uid": uids[citizen]})
+    check("경호원 보호 제출", s == 200, str(b)[:40])
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def _combo(label, heal, protect, expect_target_alive, expect_guard_alive, expect_deaths):
+    """§3.2 조합표 한 줄을 검증한다."""
+    toks, room_id, roles, uids = _setup_guard_game()
+    if not room_id:
+        check(label, False, "방 생성 실패")
+        return
+
+    mafia = _pick(roles, "MAFIA")
+    guard = _pick(roles, "BODYGUARD")
+    doctor = _pick(roles, "DOCTOR")
+    police = _pick(roles, "POLICE")
+    victim = _pick(roles, "CITIZEN")
+
+    rpc("submit_night_action", mafia,
+        {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[victim]})
+    rpc("submit_night_action", police,
+        {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uids[mafia]})
+    rpc("submit_night_action", doctor,
+        {"p_room_id": room_id, "p_action": "DOCTOR",
+         "p_target_uid": uids[victim] if heal else uids[doctor]})
+    rpc("submit_night_action", guard,
+        {"p_room_id": room_id, "p_action": "BODYGUARD",
+         "p_target_uid": uids[victim] if protect else uids[mafia]})
+
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, mafia)
+    alive = {p["uid"]: p["alive"] for p in pl} if isinstance(pl, list) else {}
+    dead = [u for u, a in alive.items() if not a]
+
+    ok = (alive.get(uids[victim]) is expect_target_alive
+          and alive.get(uids[guard]) is expect_guard_alive
+          and len(dead) == expect_deaths)
+    check(label, ok,
+          "대상생존=%s 경호원생존=%s 사망%d명"
+          % (alive.get(uids[victim]), alive.get(uids[guard]), len(dead)))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_combo_table():
+    _combo("§3.2 공격만 -> 대상 사망", False, False, False, True, 1)
+    _combo("§3.2 공격+치료 -> 대상 생존", True, False, True, True, 0)
+    _combo("§3.2 공격+보호 -> 경호원 대신 사망", False, True, True, False, 1)
+    _combo("§3.2 공격+치료+보호 -> 둘 다 생존", True, True, True, True, 0)
+
+
+def test_bodyguard_repeat():
+    toks, room_id, roles, uids = _setup_guard_game()
+    if not room_id:
+        check("경호원 연속 보호 준비", False, "방 생성 실패")
+        return
+
+    mafia = _pick(roles, "MAFIA")
+    guard = _pick(roles, "BODYGUARD")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    victim = citizens[0]
+
+    # 1일차: 경호원이 대신 죽지 않도록 공격 대상과 다른 사람을 보호
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[victim], guard_uid=uids[mafia], doctor_uid=uids[guard])
+
+    s, v = rpc("my_game_view", guard, {"p_room_id": room_id})
+    check("경호원 직전 대상 기록", v.get("lastTargetId") == uids[mafia],
+          str(v.get("lastTargetId"))[:36])
+
+    # 6명 구성은 마피아가 1명뿐이라 마피아를 처형하면 바로 시민 승리로 끝난다.
+    # 2일차 밤을 보려면 시민을 처형해야 한다.
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+
+    s, b = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, guard)
+    if b and b[0]["phase"] == "NIGHT":
+        s, b2 = rpc("submit_night_action", guard,
+                    {"p_room_id": room_id, "p_action": "BODYGUARD", "p_target_uid": uids[mafia]})
+        check("연속 보호 차단 (§2.5)",
+              s >= 400 and "연속해서 보호할 수 없습니다" in str(msg(b2)), msg(b2))
+    else:
+        check("연속 보호 차단 (§2.5)", False,
+              ("2일차 밤 진입 실패 %s/%s" % (b[0]["phase"], b[0]["winner"])) if b else "?")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_bodyguard_private_result():
+    """경호원 본인만 경호 결과를 안다"""
+    toks, room_id, roles, uids = _setup_guard_game()
+    if not room_id:
+        check("경호 결과 준비", False, "방 생성 실패")
+        return
+
+    mafia = _pick(roles, "MAFIA")
+    guard = _pick(roles, "BODYGUARD")
+    doctor = _pick(roles, "DOCTOR")
+    police = _pick(roles, "POLICE")
+    victim = _pick(roles, "CITIZEN")
+
+    rpc("submit_night_action", mafia,
+        {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[victim]})
+    rpc("submit_night_action", police,
+        {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uids[mafia]})
+    rpc("submit_night_action", doctor,
+        {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[doctor]})
+    rpc("submit_night_action", guard,
+        {"p_room_id": room_id, "p_action": "BODYGUARD", "p_target_uid": uids[victim]})
+
+    s, v = rpc("my_game_view", guard, {"p_room_id": room_id})
+    res = [r for r in (v.get("privateResults") or []) if r["kind"] == "BODYGUARD"]
+    check("경호원이 결과를 받는다", len(res) == 1 and res[0]["payload"]["sacrificed"] is True,
+          str(res[0]["payload"]) if res else "없음")
+
+    s, v2 = rpc("my_game_view", victim, {"p_room_id": room_id})
+    check("지켜진 사람은 모른다", not (v2.get("privateResults") or []),
+          str(v2.get("privateResults")))
+
+    s, b = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+               + "&kind=eq.NIGHT&day_number=eq.1", victim)
+    deaths = b[0]["payload"]["nightDeaths"] if b else []
+    check("공개 결과엔 경호원만 사망", deaths == [uids[guard]], "사망 %d명" % len(deaths))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_bodyguard_rules, test_combo_table,
+            test_bodyguard_repeat, test_bodyguard_private_result])

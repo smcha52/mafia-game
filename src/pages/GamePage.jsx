@@ -17,7 +17,8 @@ import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
-  ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, SUBMITTED_NOTE, SUBMIT_LABEL, roleInfo,
+  ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, REPEAT_BLOCKED,
+  SUBMITTED_NOTE, SUBMIT_LABEL, roleInfo,
 } from '../lib/roles';
 import { leaveRoom, submitDayVote, submitNightAction, tickPhase } from '../lib/api';
 import { useGame } from '../lib/useGame';
@@ -237,9 +238,9 @@ export default function GamePage({ roomId, uid, onLeave }) {
                 value={submitted ?? pick}
                 onChange={setPick}
                 locked={Boolean(submitted)}
-                excludeSelf={isNight && role === 'MAFIA'}
-                blockedUid={isNight && role === 'DOCTOR' ? view?.lastTargetId : null}
-                blockedNote="어젯밤에 치료함" 
+                excludeSelf={isNight && NO_SELF_TARGET.has(role)}
+                blockedUid={isNight && REPEAT_BLOCKED[role] ? view?.lastTargetId : null}
+                blockedNote={REPEAT_BLOCKED[role] ?? ''}
               />
 
               {actionError && <Alert severity="error">{actionError}</Alert>}

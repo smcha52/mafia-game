@@ -26,6 +26,25 @@ export default function PrivateResults({ results }) {
             </Alert>
           );
         }
+        if (r.kind === 'BODYGUARD') {
+          return (
+            <Alert
+              key={`${r.kind}-${r.day}`}
+              severity={r.payload.sacrificed ? 'warning' : 'success'}
+              icon={false}
+            >
+              <AlertTitle sx={{ mb: 0.5 }}>{r.day}일차 밤 · 경호 결과</AlertTitle>
+              <div>
+                {r.payload.sacrificed
+                  ? <><strong>{r.payload.protectedNickname}</strong>님을 지키고 대신 사망했습니다.</>
+                  : <><strong>{r.payload.protectedNickname}</strong>님이 공격받았지만 의사의 치료로 둘 다 살았습니다.</>}
+              </div>
+              <Typography variant="caption" color="text.secondary">
+                이 정보는 당신에게만 보입니다.
+              </Typography>
+            </Alert>
+          );
+        }
         if (r.kind !== 'POLICE') return null;
         const t = TEAM_RESULT[r.payload.team] ?? { label: r.payload.team, color: 'default' };
         return (
