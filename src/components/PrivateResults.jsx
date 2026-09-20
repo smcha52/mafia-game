@@ -26,6 +26,23 @@ export default function PrivateResults({ results }) {
             </Alert>
           );
         }
+        if (r.kind === 'SPY') {
+          return (
+            <Alert key={`${r.kind}-${r.day}`} severity="info" icon={false}>
+              <AlertTitle sx={{ mb: 0.5 }}>{r.day}일차 낮 · 투표 결과</AlertTitle>
+              <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                <span>당신이 투표한</span>
+                <strong>{r.payload.targetNickname}</strong>
+                <span>님의 직업은</span>
+                <Chip size="small" color="error" label={roleInfo(r.payload.role).name} />
+                <span>입니다.</span>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                이 정보는 스파이에게만 보입니다.
+              </Typography>
+            </Alert>
+          );
+        }
         if (r.kind === 'MEDIUM') {
           return (
             <Alert key={`${r.kind}-${r.day}`} severity="info" icon={false}>

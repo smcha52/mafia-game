@@ -8,7 +8,7 @@ export const ROLES = {
   DETECTIVE: { name: '탐정',   emoji: '🕵️', desc: '한 명의 직업 후보를 알아냅니다. 그중 하나만 진짜입니다.' },
   REPORTER:  { name: '기자',   emoji: '📰', desc: '단 한 번, 한 사람의 진영을 모두에게 공개합니다. 성공률은 절반입니다.' },
   MEDIUM:    { name: '영매',   emoji: '🔮', desc: '밤마다 사망자 한 명의 직업을 확인합니다.' },
-  SPY:       { name: '스파이', emoji: '🎭', desc: '마피아 진영입니다. 낮 투표로 상대의 직업을 알아냅니다.' },
+  SPY:       { name: '스파이', emoji: '🎭', desc: '마피아 진영입니다. 낮에 투표한 사람의 직업을 반드시 알아냅니다.' },
   JESTER:    { name: '광대',   emoji: '🤡', desc: '낮에 처형당하면 당신 혼자 승리합니다.' },
 };
 
@@ -28,12 +28,13 @@ export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', des
 
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
 export const ABILITY_READY = new Set([
-  'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
+  'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
 ]);
 
 // 밤에 행동하는 직업 -> 서버가 받는 action 코드
 export const NIGHT_ACTION = {
   MAFIA: 'MAFIA_VOTE',
+  SPY: 'MAFIA_VOTE',
   POLICE: 'POLICE',
   DOCTOR: 'DOCTOR',
   BODYGUARD: 'BODYGUARD',
@@ -45,6 +46,7 @@ export const NIGHT_ACTION = {
 // 밤 화면에서 보여줄 안내 문구
 export const NIGHT_PROMPT = {
   MAFIA: '제거할 대상을 고르세요',
+  SPY: '제거할 대상을 고르세요',
   POLICE: '진영을 조사할 사람을 고르세요',
   DOCTOR: '치료할 사람을 고르세요',
   BODYGUARD: '보호할 사람을 고르세요',
@@ -56,6 +58,7 @@ export const NIGHT_PROMPT = {
 // 확정 버튼 문구
 export const SUBMIT_LABEL = {
   MAFIA: '공격 확정',
+  SPY: '공격 확정',
   POLICE: '조사 확정',
   DOCTOR: '치료 확정',
   BODYGUARD: '보호 확정',
@@ -67,6 +70,7 @@ export const SUBMIT_LABEL = {
 // 제출 후 안내
 export const SUBMITTED_NOTE = {
   MAFIA: ' 동료들을 기다리는 중입니다.',
+  SPY: ' 동료들을 기다리는 중입니다.',
   POLICE: ' 아침에 결과를 알려드립니다.',
   DOCTOR: ' 오늘 밤 공격을 막을 수 있습니다.',
   BODYGUARD: ' 공격받으면 당신이 대신 죽습니다.',
@@ -82,7 +86,7 @@ export const TARGETS_DEAD = new Set(['MEDIUM']);
 export const ONE_SHOT = new Set(['REPORTER']);
 
 // 자신을 지목할 수 없는 직업
-export const NO_SELF_TARGET = new Set(['MAFIA', 'BODYGUARD']);
+export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'BODYGUARD']);
 
 // 같은 사람을 연속으로 지목할 수 없는 직업 -> 화면에 표시할 사유
 export const REPEAT_BLOCKED = {

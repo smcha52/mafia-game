@@ -52,7 +52,7 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
         s, mv0 = rpc("my_game_view", t, {"p_room_id": room_id})
         if s == 200 and mv0.get("nightActed"):
             continue
-        if r["role"] == "MAFIA":
+        if r["role"] in ("MAFIA", "SPY"):
             tgt = victim_uid or next(u for u in alive if u != uids[t])
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": tgt})
@@ -1271,3 +1271,128 @@ def test_medium_reads_executed_role():
 
 
 ALL.extend([test_medium, test_medium_reads_executed_role])
+
+
+# ------------------------------------------------------------------
+# §8.2-8  스파이 (능력 변경판)
+# ------------------------------------------------------------------
+
+def test_spy():
+    """9명 구성에 스파이가 있다."""
+    toks, room_id, roles = make_game(9)
+    if not room_id:
+        check("스파이 테스트 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    spy = _pick(roles, "SPY")
+    police = _pick(roles, "POLICE")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # --- 진영과 명단 ---
+    s, v = rpc("my_game_view", spy, {"p_room_id": room_id})
+    check("스파이는 마피아 진영", v.get("team") == "MAFIA", str(v.get("team")))
+    mates = v.get("mafiaMembers") or []
+    check("스파이가 마피아 명단을 본다", len(mates) == 3,
+          "%d명 (마피아2+스파이1)" % len(mates))
+
+    s, vm = rpc("my_game_view", mafias[0], {"p_room_id": room_id})
+    roles_in_list = sorted(m["role"] for m in (vm.get("mafiaMembers") or []))
+    check("마피아도 스파이를 안다", "SPY" in roles_in_list, str(roles_in_list))
+
+    # --- 밤: 스파이도 공격 투표에 참여한다 (바뀐 §2.9) ---
+    check("스파이도 공격 진행표시를 본다",
+          isinstance(v.get("nightProgress"), dict)
+          and v["nightProgress"].get("expected") == 3,
+          str(v.get("nightProgress")))
+
+    s, b = rpc("submit_night_action", spy,
+               {"p_room_id": room_id, "p_action": "MAFIA_VOTE",
+                "p_target_uid": uids[citizens[0]]})
+    check("스파이 공격 투표 제출 (바뀐 §2.9)", s == 200, str(b)[:40])
+
+    s, b = rpc("submit_night_action", spy,
+               {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[spy]})
+    check("스파이 자기 지목 차단", s >= 400 and "자신을 지목" in str(msg(b)), msg(b))
+
+    # 마피아와 스파이가 같은 대상에 몰면 그 사람이 죽는다
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], doctor_uid=uids[spy])
+
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, spy)
+    dead = [p["uid"] for p in pl if not p["alive"]] if isinstance(pl, list) else []
+    check("스파이 표가 공격에 반영된다", dead == [uids[citizens[0]]], "사망 %d명" % len(dead))
+
+    # --- 낮: 투표하면 그 사람의 직업이 보인다 ---
+    s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, spy)
+    if not (b and b[0]["phase"] == "DAY"):
+        check("스파이 투표 시 직업 확인 (§2.9)", False, "낮 진입 실패")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    s, b = rpc("submit_day_vote", spy, {"p_room_id": room_id, "p_target_uid": uids[police]})
+    check("스파이 투표 제출", s == 200, str(b)[:40])
+
+    s, v = rpc("my_game_view", spy, {"p_room_id": room_id})
+    res = [r for r in (v.get("privateResults") or []) if r["kind"] == "SPY"]
+    check("스파이 투표 결과 도착", len(res) == 1, "%d건" % len(res))
+    if res:
+        check("정확한 직업을 무조건 보여준다 (§2.9)",
+              res[0]["payload"].get("role") == "POLICE",
+              "role=%s (대상은 경찰)" % res[0]["payload"].get("role"))
+
+    # 다른 사람이 투표해도 결과는 생기지 않는다
+    s, b = rpc("submit_day_vote", mafias[0], {"p_room_id": room_id, "p_target_uid": uids[police]})
+    s, vm2 = rpc("my_game_view", mafias[0], {"p_room_id": room_id})
+    check("마피아는 투표해도 직업을 못 본다",
+          not [r for r in (vm2.get("privateResults") or []) if r["kind"] == "SPY"],
+          str(vm2.get("privateResults")))
+
+    # 투표 변경 불가 (§2.9)
+    s, b = rpc("submit_day_vote", spy, {"p_room_id": room_id, "p_target_uid": uids[mafias[0]]})
+    check("스파이 투표 변경 차단", s >= 400 and "변경할 수 없습니다" in str(msg(b)), msg(b))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_spy_counts_for_mafia_win():
+    """마피아가 전멸해도 스파이가 살아 있으면 시민이 이기지 않는다 (§4.2)"""
+    toks, room_id, roles = make_game(9)
+    if not room_id:
+        check("스파이 승리조건 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    spy = _pick(roles, "SPY")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 마피아 두 명을 이틀에 걸쳐 처형한다
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], doctor_uid=uids[spy])
+    pass_day(room_id, roles, uids, uids[mafias[0]])
+
+    s, b = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, spy)
+    check("마피아 1명 처형 후 계속 진행",
+          bool(b) and b[0]["winner"] is None, str(b[0]) if b else "?")
+
+    if b and b[0]["phase"] == "NIGHT":
+        pass_night(room_id, roles, uids, victim_uid=uids[citizens[1]], doctor_uid=uids[spy])
+        pass_day(room_id, roles, uids, uids[mafias[1]])
+
+        s, b2 = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, spy)
+        s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, spy)
+        spy_alive = next((p["alive"] for p in pl if p["uid"] == uids[spy]), None)
+        # 스파이가 살아 있으면 시민 승리가 아니어야 한다
+        if spy_alive:
+            check("스파이 생존 시 시민 승리 아님 (§4.2)",
+                  b2[0]["winner"] != "CITIZEN",
+                  "winner=%s spy_alive=%s" % (b2[0]["winner"], spy_alive))
+        else:
+            check("스파이 생존 시 시민 승리 아님 (§4.2)", True, "스파이 사망으로 판정 생략")
+    else:
+        check("스파이 생존 시 시민 승리 아님 (§4.2)", False, "2일차 진입 실패")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_spy, test_spy_counts_for_mafia_win])
