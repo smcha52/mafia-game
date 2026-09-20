@@ -26,10 +26,12 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 import harness  # noqa: E402
 import stage1  # noqa: E402
 import stage2  # noqa: E402
+import stage3  # noqa: E402
 
 SUITES = [
     ("1단계 · 대기실", stage1.ALL),
-    ("2단계-1 · 직업 배정 · 마피아/시민 · 밤낮 진행", stage2.ALL),
+    ("2단계 · 직업별 능력", stage2.ALL),
+    ("2단계-10 · 전체 조합과 승리 조건", stage3.ALL),
 ]
 
 

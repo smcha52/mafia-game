@@ -1,0 +1,295 @@
+"""
+§8.2-10  전체 직업 조합과 승리 조건 테스트
+
+개별 직업은 stage2 에서 검증했다. 여기서는 직업들이 서로 얽혔을 때를 본다.
+  · 5~15명 11개 구성 전부에서 배정이 구성표와 일치하는가
+  · 9개 능력이 같은 밤에 동시에 작동해도 §3 순서가 지켜지는가
+  · 세 가지 승리 경로(시민·마피아·광대)에 모두 도달하는가
+  · 게임이 무한히 이어지지 않고 끝나는가
+"""
+
+from harness import check, msg, req, rpc
+from stage2 import _pick, alive_uids, make_game, pass_day, pass_night, uid_map
+
+# §5 인원별 기본 직업 구성. 서버의 role_composition() 과 일치해야 한다.
+ROLE_TABLE = {
+    5:  ['MAFIA', 'POLICE', 'DOCTOR', 'CITIZEN', 'CITIZEN'],
+    6:  ['MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'CITIZEN', 'CITIZEN'],
+    7:  ['MAFIA', 'MAFIA', 'POLICE', 'DOCTOR', 'JESTER', 'CITIZEN', 'CITIZEN'],
+    8:  ['MAFIA', 'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'JESTER',
+         'CITIZEN', 'CITIZEN'],
+    9:  ['MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'DETECTIVE',
+         'CITIZEN', 'CITIZEN', 'CITIZEN'],
+    10: ['MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
+         'CITIZEN', 'CITIZEN', 'CITIZEN'],
+    11: ['MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
+         'REPORTER', 'CITIZEN', 'CITIZEN', 'CITIZEN'],
+    12: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+         'DETECTIVE', 'REPORTER', 'JESTER', 'CITIZEN', 'CITIZEN'],
+    13: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'CITIZEN', 'CITIZEN'],
+    14: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER',
+         'CITIZEN', 'CITIZEN', 'CITIZEN'],
+    15: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER',
+         'CITIZEN', 'CITIZEN', 'CITIZEN', 'CITIZEN'],
+}
+
+
+def team_of(role):
+    if role in ("MAFIA", "SPY"):
+        return "MAFIA"
+    if role == "JESTER":
+        return "NEUTRAL"
+    return "CITIZEN"
+
+
+def pick_alive(roles, uids, alive, team):
+    """살아 있는 사람 중 해당 진영 한 명의 uid"""
+    for t, r in roles.items():
+        if uids[t] in alive and team_of(r["role"]) == team:
+            return uids[t]
+    return None
+
+
+# ------------------------------------------------------------------
+# 1. 11개 구성 전부에서 배정이 구성표와 일치하는가 (§5)
+# ------------------------------------------------------------------
+
+def test_all_compositions():
+    from collections import Counter
+
+    bad = []
+    for n in range(5, 16):
+        toks, room_id, roles = make_game(n)
+        if not room_id:
+            bad.append("%d명: 방 생성 실패" % n)
+            continue
+
+        got = Counter(r["role"] for r in roles.values())
+        want = Counter(ROLE_TABLE[n])
+        if got != want:
+            bad.append("%d명: %s" % (n, dict(got)))
+        elif len(roles) != n:
+            bad.append("%d명: %d명만 배정" % (n, len(roles)))
+
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+    check("5~15명 전 구성 배정 일치 (§5)", not bad, "; ".join(bad) if bad else "11개 구성 모두 일치")
+
+
+# ------------------------------------------------------------------
+# 2. 9개 능력이 같은 밤에 동시에 작동 (§3 순서)
+# ------------------------------------------------------------------
+
+def test_all_abilities_same_night():
+    toks, room_id, roles = make_game(15)
+    if not room_id:
+        check("15명 동시 능력 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    spy = _pick(roles, "SPY")
+    police = _pick(roles, "POLICE")
+    doctor = _pick(roles, "DOCTOR")
+    guard = _pick(roles, "BODYGUARD")
+    det = _pick(roles, "DETECTIVE")
+    rep = _pick(roles, "REPORTER")
+    med = _pick(roles, "MEDIUM")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    victim = citizens[0]
+
+    # 영매는 사망자가 없어 제출할 수 없다 (§2.8).
+    # 밤이 끝나기 전에 먼저 시도해야 올바른 오류를 확인할 수 있다.
+    s, b = rpc("submit_night_action", med,
+               {"p_room_id": room_id, "p_action": "MEDIUM", "p_target_uid": uids[citizens[1]]})
+    check("15명 밤: 영매는 1일차에 못 쓴다",
+          s >= 400 and "사망한 참가자만" in str(msg(b)), msg(b))
+
+    # 마피아 3 + 스파이 1 이 같은 사람을 공격
+    for t in mafias + [spy]:
+        rpc("submit_night_action", t,
+            {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[victim]})
+
+    # 의사와 경호원이 같은 대상에 겹친다 (§3.1)
+    rpc("submit_night_action", doctor,
+        {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[victim]})
+    rpc("submit_night_action", guard,
+        {"p_room_id": room_id, "p_action": "BODYGUARD", "p_target_uid": uids[victim]})
+
+    rpc("submit_night_action", police,
+        {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": uids[mafias[0]]})
+    rpc("submit_night_action", det,
+        {"p_room_id": room_id, "p_action": "DETECTIVE", "p_target_uid": uids[spy]})
+    s, last = rpc("submit_night_action", rep,
+                  {"p_room_id": room_id, "p_action": "REPORTER", "p_target_uid": uids[mafias[1]]})
+
+    s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, police)
+    check("8개 능력 제출로 밤 종료", bool(r) and r[0]["phase"] == "DAY",
+          r[0]["phase"] if r else "?")
+
+    # §3.1 — 치료가 우선이므로 대상도 경호원도 살아야 한다
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, police)
+    alive = {p["uid"]: p["alive"] for p in pl} if isinstance(pl, list) else {}
+    check("§3.1 치료 우선: 대상 생존", alive.get(uids[victim]) is True,
+          str(alive.get(uids[victim])))
+    check("§3.1 치료 우선: 경호원 생존", alive.get(uids[guard]) is True,
+          str(alive.get(uids[guard])))
+    check("사망자 없음", sum(1 for a in alive.values() if not a) == 0,
+          "사망 %d명" % sum(1 for a in alive.values() if not a))
+
+    # 각 직업이 자기 결과만 받았는가
+    def kinds(tok):
+        s2, v = rpc("my_game_view", tok, {"p_room_id": room_id})
+        return sorted({x["kind"] for x in (v.get("privateResults") or [])})
+
+    check("경찰 결과만 경찰에게", kinds(police) == ["POLICE"], str(kinds(police)))
+    check("의사 결과만 의사에게", kinds(doctor) == ["DOCTOR"], str(kinds(doctor)))
+    check("경호원 결과만 경호원에게", kinds(guard) == ["BODYGUARD"], str(kinds(guard)))
+    check("탐정 결과만 탐정에게", kinds(det) == ["DETECTIVE"], str(kinds(det)))
+    check("기자 결과만 기자에게", kinds(rep) == ["REPORTER"], str(kinds(rep)))
+    check("시민은 아무 결과도 없다", kinds(citizens[2]) == [], str(kinds(citizens[2])))
+
+    # 15명이므로 탐정 후보는 3개
+    s, v = rpc("my_game_view", det, {"p_room_id": room_id})
+    dres = [x for x in (v.get("privateResults") or []) if x["kind"] == "DETECTIVE"]
+    cands = dres[0]["payload"]["candidates"] if dres else []
+    check("15명 탐정 후보 3개", len(cands) == 3, str(cands))
+    check("15명 탐정 후보에 진짜 포함", "SPY" in cands, str(cands))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+# ------------------------------------------------------------------
+# 3. 게임을 끝까지 진행해 승리 경로에 도달하는가
+# ------------------------------------------------------------------
+
+def play_to_end(room_id, roles, uids, execute_team, max_rounds=30):
+    """매 낮 execute_team 진영을 한 명씩 처형하며 끝까지 진행한다.
+    돌려주는 값: 승자 문자열, 또는 'TIMEOUT'
+    """
+    any_tok = next(iter(roles))
+    for _ in range(max_rounds):
+        s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, any_tok)
+        if not r:
+            return "NO_ROOM"
+        if r[0]["phase"] == "ENDED":
+            return r[0]["winner"]
+
+        alive = alive_uids(room_id, any_tok)
+        if r[0]["phase"] == "NIGHT":
+            victim = pick_alive(roles, uids, alive, "CITIZEN")
+            # 의사·경호원이 공격 대상에 겹치지 않도록 마피아 쪽으로 돌린다
+            aside = pick_alive(roles, uids, alive, "MAFIA")
+            pass_night(room_id, roles, uids, victim_uid=victim,
+                       doctor_uid=aside, guard_uid=aside)
+        else:
+            target = pick_alive(roles, uids, alive, execute_team)
+            if target is None:
+                return "NO_TARGET"
+            pass_day(room_id, roles, uids, target)
+    return "TIMEOUT"
+
+
+def test_citizen_victory_path():
+    """마피아 진영을 모두 처형하면 시민이 이긴다 (§4.2)"""
+    toks, room_id, roles = make_game(15)
+    if not room_id:
+        check("시민 승리 경로 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    winner = play_to_end(room_id, roles, uids, execute_team="MAFIA")
+    check("마피아 진영 전멸 -> 시민 승리 (§4.2)", winner == "CITIZEN", "winner=%s" % winner)
+
+    if winner == "CITIZEN":
+        s, pl = req("/rest/v1/players?select=team,alive&room_id=eq." + room_id, toks[0])
+        mafia_alive = sum(1 for p in pl if p["team"] == "MAFIA" and p["alive"])
+        check("승리 시점에 마피아 진영 0명", mafia_alive == 0, "%d명" % mafia_alive)
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_mafia_victory_path():
+    """시민을 계속 잃으면 마피아가 이긴다 (§4.3)"""
+    toks, room_id, roles = make_game(15)
+    if not room_id:
+        check("마피아 승리 경로 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    winner = play_to_end(room_id, roles, uids, execute_team="CITIZEN")
+    check("시민 감소 -> 마피아 승리 (§4.3)", winner == "MAFIA", "winner=%s" % winner)
+
+    if winner == "MAFIA":
+        s, pl = req("/rest/v1/players?select=team,alive&room_id=eq." + room_id, toks[0])
+        m = sum(1 for p in pl if p["team"] == "MAFIA" and p["alive"])
+        c = sum(1 for p in pl if p["team"] == "CITIZEN" and p["alive"])
+        check("승리 시점에 마피아 >= 시민 (광대 제외)", m >= c, "마피아%d vs 시민%d" % (m, c))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_jester_victory_beats_others():
+    """광대 처형은 다른 승리 조건보다 먼저 판정된다 (§4.1)"""
+    toks, room_id, roles = make_game(12)
+    if not room_id:
+        check("광대 우선 판정 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    jester = _pick(roles, "JESTER")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 광대를 밤에 죽이면 안 된다 (§2.10) — 다른 사람을 공격
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]],
+               doctor_uid=uids[jester], guard_uid=uids[jester])
+    pass_day(room_id, roles, uids, uids[jester])
+
+    s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, jester)
+    check("광대 처형 -> 광대 단독 승리 (§4.1)",
+          bool(r) and r[0]["winner"] == "JESTER",
+          "winner=%s" % (r[0]["winner"] if r else "?"))
+
+    # 이 시점에 마피아도 시민도 살아 있는데 광대가 이겼어야 한다
+    if r and r[0]["winner"] == "JESTER":
+        s, pl = req("/rest/v1/players?select=team,alive&room_id=eq." + room_id, jester)
+        m = sum(1 for p in pl if p["team"] == "MAFIA" and p["alive"])
+        c = sum(1 for p in pl if p["team"] == "CITIZEN" and p["alive"])
+        check("양 진영이 남아 있어도 광대가 우선",
+              m > 0 and c > 0, "마피아%d 시민%d" % (m, c))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_jester_killed_at_night_does_not_win():
+    """밤에 살해된 광대는 승리하지 못한다 (§2.10)"""
+    toks, room_id, roles = make_game(12)
+    if not room_id:
+        check("광대 밤 사망 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    jester = _pick(roles, "JESTER")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+
+    # 광대를 밤에 공격한다. 의사·경호원이 막지 않도록 다른 쪽으로 돌린다
+    pass_night(room_id, roles, uids, victim_uid=uids[jester],
+               doctor_uid=uids[mafias[0]], guard_uid=uids[mafias[0]])
+
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, jester)
+    j_alive = next((p["alive"] for p in pl if p["uid"] == uids[jester]), None)
+    s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, jester)
+
+    check("밤에 죽은 광대는 승리하지 못한다 (§2.10)",
+          j_alive is False and (not r or r[0]["winner"] != "JESTER"),
+          "광대생존=%s winner=%s" % (j_alive, r[0]["winner"] if r else "?"))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL = [test_all_compositions, test_all_abilities_same_night,
+       test_citizen_victory_path, test_mafia_victory_path,
+       test_jester_victory_beats_others, test_jester_killed_at_night_does_not_win]
