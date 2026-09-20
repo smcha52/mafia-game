@@ -59,7 +59,12 @@ export function useGame(roomId) {
         reload)
       .subscribe();
 
+    // Realtime 알림을 놓쳐도 화면이 지난 페이즈에 멈추지 않도록
+    // 주기적으로 다시 읽는다. 구독이 정상이면 대체로 변화가 없다.
+    const poll = setInterval(reload, 10000);
+
     return () => {
+      clearInterval(poll);
       supabase.removeChannel(channel);
     };
   }, [roomId, reload]);

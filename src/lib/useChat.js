@@ -31,7 +31,10 @@ export function useChat(roomId) {
       )
       .subscribe();
 
+    const poll = setInterval(reload, 10000);
+
     return () => {
+      clearInterval(poll);
       supabase.removeChannel(channel);
     };
   }, [roomId, reload]);

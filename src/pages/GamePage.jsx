@@ -67,10 +67,12 @@ export default function GamePage({ roomId, uid, onLeave }) {
       tickPhase(roomId)
         .then((r) => {
           if (stopped) return;
-          if (r?.resolved) {
-            reload();
-            return;                       // 페이즈가 바뀌면 이 effect 는 새로 돈다
-          }
+          // 결과와 무관하게 다시 읽는다.
+          // 다른 쪽에서 이미 페이즈를 넘긴 경우 서버는 resolved:false 와
+          // 새 페이즈의 남은 시간을 돌려준다. 그때 읽지 않으면 화면이
+          // 지난 페이즈에 멈춘 채로 남는다.
+          reload();
+          if (r?.resolved) return;        // 페이즈가 바뀌면 이 effect 는 새로 돈다
           const wait = Math.max(1, Number(r?.remaining) || 1);
           timer = setTimeout(attempt, wait * 1000);
         })
