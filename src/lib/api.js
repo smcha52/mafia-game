@@ -99,3 +99,15 @@ export async function skipNightAction(roomId, action) {
     }),
   );
 }
+
+// 방장이 대기실에서 진행 설정을 바꾼다
+export async function setTimers(roomId, night, day, maxDays) {
+  return unwrap(
+    await supabase.rpc('set_timers', {
+      p_room_id: roomId,
+      p_night: night,
+      p_day: day,
+      p_max_days: maxDays,
+    }),
+  );
+}

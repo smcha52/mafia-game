@@ -13,6 +13,7 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LogoutIcon from '@mui/icons-material/Logout';
 
 import PlayerList from '../components/PlayerList';
+import RoomSettings from '../components/RoomSettings';
 import { useRoom } from '../lib/useRoom';
 import { leaveRoom, setReady, startGame } from '../lib/api';
 
@@ -111,6 +112,8 @@ export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
           </Tooltip>
         </Stack>
       </Paper>
+
+      <RoomSettings room={room} isHost={isHost} />
 
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography variant="h6">참가자</Typography>
