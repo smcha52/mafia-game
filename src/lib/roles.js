@@ -22,6 +22,7 @@ export const WINNERS = {
   CITIZEN: { title: '시민 진영 승리', emoji: '🎉', color: 'info.main' },
   MAFIA:   { title: '마피아 진영 승리', emoji: '🔪', color: 'error.main' },
   JESTER:  { title: '광대 단독 승리', emoji: '🤡', color: 'warning.main' },
+  DRAW:    { title: '무승부', emoji: '🤝', color: 'text.secondary' },
 };
 
 export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', desc: '' };

@@ -293,3 +293,131 @@ def test_jester_killed_at_night_does_not_win():
 ALL = [test_all_compositions, test_all_abilities_same_night,
        test_citizen_victory_path, test_mafia_victory_path,
        test_jester_victory_beats_others, test_jester_killed_at_night_does_not_win]
+
+
+# ------------------------------------------------------------------
+# 무승부 종료 (§4.4, 요구사항 외 추가)
+# ------------------------------------------------------------------
+
+def _game_with_max_days(n, max_days):
+    """최대 일수를 정해 두고 시작한 게임"""
+    from stage2 import make_room
+    toks, room_id = make_room(n)
+    if not room_id:
+        return None, None, None, None
+    rpc("set_timers", toks[0],
+        {"p_room_id": room_id, "p_night": 30, "p_day": 60, "p_max_days": max_days})
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+
+    roles = {}
+    for t in toks:
+        s, b = rpc("my_role", t, {"p_room_id": room_id})
+        if s == 200:
+            roles[t] = b
+    return toks, room_id, roles, uid_map(roles)
+
+
+def test_default_settings():
+    """새 방의 기본값: 밤 30초 / 낮 60초 / 15일차"""
+    from stage2 import make_room
+    toks, room_id = make_room(5)
+    if not room_id:
+        check("기본 설정 준비", False, "방 생성 실패")
+        return
+
+    s, r = req("/rest/v1/rooms?select=night_seconds,day_seconds,max_days&id=eq." + room_id,
+               toks[0])
+    ok = bool(r) and r[0]["night_seconds"] == 30 and r[0]["day_seconds"] == 60 \
+        and r[0]["max_days"] == 15
+    check("기본값 밤30초/낮60초/15일차", ok, str(r[0]) if r else "?")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_draw_on_max_day():
+    """최대 일수에 도달하면 무승부 (§4.4)"""
+    toks, room_id, roles, uids = _game_with_max_days(7, 1)
+    if not room_id:
+        check("무승부 테스트 준비", False, "방 생성 실패")
+        return
+
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 1일차 밤: 의사가 공격 대상을 치료해 아무도 죽지 않게 한다.
+    # 사망자가 생기면 인원이 줄어 마피아 승리로 끝날 수 있다.
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[citizens[0]])
+
+    s, pl = req("/rest/v1/players?select=alive&room_id=eq." + room_id, toks[0])
+    dead = sum(1 for p in pl if not p["alive"]) if isinstance(pl, list) else -1
+    check("무승부 준비: 1일차 사망자 없음", dead == 0, "사망 %d명" % dead)
+
+    # 1일차 낮: 시민을 처형해도 승부가 나지 않는다 (마피아2 vs 시민3)
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+
+    s, r = req("/rest/v1/rooms?select=phase,winner,day_number&id=eq." + room_id, toks[0])
+    check("최대 일수 도달 -> 무승부 (§4.4)",
+          bool(r) and r[0]["phase"] == "ENDED" and r[0]["winner"] == "DRAW",
+          "%s / %s" % (r[0]["phase"], r[0]["winner"]) if r else "?")
+
+    # 무승부여도 전체 직업은 공개된다
+    s, b = rpc("final_roles", toks[1], {"p_room_id": room_id})
+    check("무승부 후에도 직업 공개", s == 200 and isinstance(b, list) and len(b) == 7,
+          "%d명" % (len(b) if isinstance(b, list) else -1))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_victory_beats_draw():
+    """마지막 날이어도 승리 조건이 먼저다 (§4.1 > §4.4)"""
+    toks, room_id, roles, uids = _game_with_max_days(7, 1)
+    if not room_id:
+        check("승리 우선 준비", False, "방 생성 실패")
+        return
+
+    jester = _pick(roles, "JESTER")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[citizens[0]])
+    # 마지막 날에 광대를 처형한다 -> 무승부가 아니라 광대 승리여야 한다
+    pass_day(room_id, roles, uids, uids[jester])
+
+    s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, jester)
+    check("마지막 날 광대 처형 -> 무승부 아닌 광대 승리",
+          bool(r) and r[0]["winner"] == "JESTER",
+          "winner=%s" % (r[0]["winner"] if r else "?"))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_max_days_permission():
+    """최대 일수도 방장만, 대기실에서만 바꿀 수 있다"""
+    from stage2 import make_room
+    toks, room_id = make_room(5)
+    if not room_id:
+        check("최대 일수 권한 준비", False, "방 생성 실패")
+        return
+
+    s, b = rpc("set_timers", toks[1],
+               {"p_room_id": room_id, "p_night": 30, "p_day": 60, "p_max_days": 3})
+    check("비방장 최대 일수 변경 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_timers", toks[0],
+               {"p_room_id": room_id, "p_night": 30, "p_day": 60, "p_max_days": 3})
+    check("방장 최대 일수 변경", s in (200, 204), "HTTP %d" % s)
+
+    s, r = req("/rest/v1/rooms?select=max_days&id=eq." + room_id, toks[0])
+    check("최대 일수 저장됨", bool(r) and r[0]["max_days"] == 3,
+          str(r[0]["max_days"]) if r else "?")
+
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = rpc("set_timers", toks[0],
+               {"p_room_id": room_id, "p_night": 30, "p_day": 60, "p_max_days": 9})
+    check("진행 중 최대 일수 변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_default_settings, test_draw_on_max_day,
+            test_victory_beats_draw, test_max_days_permission])

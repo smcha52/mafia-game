@@ -31,6 +31,11 @@ export default function GameOver({ roomId, winner }) {
         <Typography variant="h5" sx={{ mt: 1, color: w.color }}>
           {w.title}
         </Typography>
+        {winner === 'DRAW' && (
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            마지막 날까지 승부가 나지 않았습니다.
+          </Typography>
+        )}
       </Paper>
 
       {error && <Alert severity="error">{error}</Alert>}
