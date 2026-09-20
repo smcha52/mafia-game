@@ -71,24 +71,32 @@ def req(path, token=None, body=None, method=None):
 # 사용자 풀
 # ------------------------------------------------------------------
 
-_pool = []
+_sessions = []
 _loaded = False
 
 
 def _read_cache():
+    """[{access, refresh}, ...] 를 돌려준다. 옛 형식(문자열 목록)도 읽는다."""
     if not os.path.exists(CACHE):
         return []
     try:
         with io.open(CACHE, encoding="utf-8") as f:
-            return json.load(f).get("tokens", [])
+            raw = json.load(f).get("tokens", [])
     except (ValueError, OSError):
         return []
+    out = []
+    for x in raw:
+        if isinstance(x, dict):
+            out.append(x)
+        else:
+            out.append({"access": x, "refresh": None})
+    return out
 
 
 def _write_cache():
     try:
         with io.open(CACHE, "w", encoding="utf-8") as f:
-            json.dump({"tokens": _pool}, f)
+            json.dump({"tokens": _sessions}, f)
     except OSError:
         pass
 
@@ -98,7 +106,23 @@ def _valid(token):
     return s == 200
 
 
+def _refresh(sess):
+    """만료된 access 토큰을 refresh 토큰으로 되살린다.
+
+    되살리지 못하고 새 사용자를 만들면 봇 번호와 실제 참가자가 어긋나
+    잘못된 대상에게 능력을 쓰게 된다.
+    """
+    if not sess.get("refresh"):
+        return None
+    s, b = req("/auth/v1/token?grant_type=refresh_token",
+               body={"refresh_token": sess["refresh"]})
+    if s == 200 and b.get("access_token"):
+        return {"access": b["access_token"], "refresh": b.get("refresh_token")}
+    return None
+
+
 def _new_user():
+    """새 익명 사용자. access 와 refresh 를 함께 보관한다."""
     s, b = req("/auth/v1/signup", body={})
     if s == 429:
         sys.exit(
@@ -111,23 +135,40 @@ def _new_user():
             "익명 로그인 실패 (%s): %s\n"
             "  Authentication > Sign In / Providers 에서 Anonymous sign-ins 를 켜 주세요." % (s, b)
         )
-    return b["access_token"]
+    return {"access": b["access_token"], "refresh": b.get("refresh_token")}
 
 
 def user_pool(n):
-    """n명의 토큰을 돌려준다. 캐시에 있으면 재사용한다."""
-    global _pool, _loaded
+    """n명의 토큰을 돌려준다.
+
+    캐시된 세션을 재사용하고, access 토큰이 만료됐으면 refresh 로 되살린다.
+    되살리지 못한 것만 새 사용자로 대체한다.
+    """
+    global _sessions, _loaded
+    changed = False
+
     if not _loaded:
-        _pool = [t for t in _read_cache() if _valid(t)]
+        kept = []
+        for sess in _read_cache():
+            if _valid(sess.get("access")):
+                kept.append(sess)
+                continue
+            renewed = _refresh(sess)
+            if renewed:
+                kept.append(renewed)
+                changed = True
+            else:
+                changed = True          # 살리지 못한 세션은 버린다
+        _sessions = kept
         _loaded = True
 
-    grew = False
-    while len(_pool) < n:
-        _pool.append(_new_user())
-        grew = True
-    if grew:
+    while len(_sessions) < n:
+        _sessions.append(_new_user())
+        changed = True
+
+    if changed:
         _write_cache()
-    return _pool[:n]
+    return [x["access"] for x in _sessions[:n]]
 
 
 def uid_of(token):

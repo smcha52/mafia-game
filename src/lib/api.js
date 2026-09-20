@@ -134,3 +134,21 @@ export async function fetchChat(roomId) {
 export async function restartGame(roomId) {
   unwrap(await supabase.rpc('restart_game', { p_room_id: roomId }));
 }
+
+// --- 직업 켜기/끄기 ---
+
+export async function setDisabledRoles(roomId, disabled) {
+  unwrap(await supabase.rpc('set_disabled_roles', {
+    p_room_id: roomId,
+    p_disabled: disabled,
+  }));
+}
+
+// 지금 인원과 설정으로 나오는 구성을 서버에 물어본다.
+// 구성표를 화면에 또 적어두면 서버와 어긋날 수 있다.
+export async function roleComposition(count, disabled) {
+  return unwrap(await supabase.rpc('role_composition', {
+    p_count: count,
+    p_disabled: disabled,
+  }));
+}

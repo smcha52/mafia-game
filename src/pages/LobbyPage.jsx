@@ -14,6 +14,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 
 import ChatPanel from '../components/ChatPanel';
 import PlayerList from '../components/PlayerList';
+import RoleToggles from '../components/RoleToggles';
 import RoomSettings from '../components/RoomSettings';
 import { useChat } from '../lib/useChat';
 import { useRoom } from '../lib/useRoom';
@@ -117,6 +118,8 @@ export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
       </Paper>
 
       <RoomSettings room={room} isHost={isHost} />
+
+      <RoleToggles room={room} isHost={isHost} playerCount={total} />
 
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography variant="h6">참가자</Typography>

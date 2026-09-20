@@ -718,3 +718,151 @@ def test_restart_game():
 
 
 ALL.append(test_restart_game)
+
+
+# ------------------------------------------------------------------
+# 직업 켜기/끄기 (요구사항 외 추가)
+# ------------------------------------------------------------------
+
+def test_role_toggle_composition():
+    """끈 직업은 시민으로 대체되고 인원수는 유지된다"""
+    from collections import Counter
+    from harness import KEY
+
+    # 기본 (아무것도 끄지 않음)
+    s, base = rpc("role_composition", KEY, {"p_count": 13, "p_disabled": []})
+    check("끄지 않으면 기존 구성", s == 200 and Counter(base) == Counter(ROLE_TABLE[13]),
+          str(Counter(base)) if s == 200 else str(base))
+
+    # 광대·기자를 끄면 그 자리가 시민이 된다
+    s, off = rpc("role_composition", KEY,
+                 {"p_count": 13, "p_disabled": ["JESTER", "REPORTER"]})
+    c = Counter(off) if s == 200 else Counter()
+    check("끈 직업은 사라진다", "JESTER" not in c and "REPORTER" not in c, str(dict(c)))
+    check("끈 자리는 시민이 채운다",
+          c.get("CITIZEN") == Counter(ROLE_TABLE[13]).get("CITIZEN", 0) + 2,
+          "시민 %s명 (원래 %s명)"
+          % (c.get("CITIZEN"), Counter(ROLE_TABLE[13]).get("CITIZEN", 0)))
+    check("인원수 유지 (§5.1)", len(off or []) == 13, "%d개" % len(off or []))
+
+    # 8개 전부 끄면 마피아 + 시민만 남는다
+    s, all_off = rpc("role_composition", KEY,
+                     {"p_count": 15, "p_disabled": ["POLICE", "DOCTOR", "BODYGUARD",
+                                                    "DETECTIVE", "REPORTER", "MEDIUM",
+                                                    "SPY", "JESTER"]})
+    c2 = Counter(all_off) if s == 200 else Counter()
+    check("전부 끄면 마피아+시민만",
+          set(c2.keys()) == {"MAFIA", "CITIZEN"} and len(all_off) == 15,
+          str(dict(c2)))
+    check("마피아는 남는다", c2.get("MAFIA", 0) >= 1, "마피아 %d명" % c2.get("MAFIA", 0))
+
+
+def test_role_toggle_permission():
+    """방장만, 대기실에서만, 끌 수 있는 직업만"""
+    from stage2 import make_room
+    toks, room_id = make_room(5)
+    if not room_id:
+        check("직업 설정 권한 준비", False, "방 생성 실패")
+        return
+
+    s, b = rpc("set_disabled_roles", toks[1],
+               {"p_room_id": room_id, "p_disabled": ["POLICE"]})
+    check("비방장 직업 변경 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_disabled_roles", toks[0],
+               {"p_room_id": room_id, "p_disabled": ["MAFIA"]})
+    check("마피아는 끌 수 없다", s >= 400 and "끌 수 없는" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_disabled_roles", toks[0],
+               {"p_room_id": room_id, "p_disabled": ["CITIZEN"]})
+    check("시민은 끌 수 없다", s >= 400 and "끌 수 없는" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_disabled_roles", toks[0],
+               {"p_room_id": room_id, "p_disabled": ["POLICE", "DOCTOR"]})
+    check("방장 직업 변경", s in (200, 204), "HTTP %d" % s)
+
+    s, r = req("/rest/v1/rooms?select=disabled_roles&id=eq." + room_id, toks[0])
+    check("설정 저장됨",
+          bool(r) and sorted(r[0]["disabled_roles"]) == ["DOCTOR", "POLICE"],
+          str(r[0]["disabled_roles"]) if r else "?")
+
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = rpc("set_disabled_roles", toks[0],
+               {"p_room_id": room_id, "p_disabled": ["POLICE"]})
+    check("진행 중 직업 변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_role_toggle_applies_to_game():
+    """끈 직업이 실제 배정에서 빠진다"""
+    from collections import Counter
+    from stage2 import make_room
+
+    toks, room_id = make_room(7)
+    if not room_id:
+        check("직업 끄기 적용 준비", False, "방 생성 실패")
+        return
+
+    # 7명 기본 구성: MAFIA2 POLICE DOCTOR JESTER CITIZEN2
+    # 광대와 의사를 끄면 -> MAFIA2 POLICE CITIZEN4
+    rpc("set_disabled_roles", toks[0],
+        {"p_room_id": room_id, "p_disabled": ["JESTER", "DOCTOR"]})
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+
+    roles = {}
+    for t in toks:
+        s, v = rpc("my_role", t, {"p_room_id": room_id})
+        if s == 200:
+            roles[t] = v["role"]
+
+    c = Counter(roles.values())
+    check("배정에 광대가 없다", "JESTER" not in c, str(dict(c)))
+    check("배정에 의사가 없다", "DOCTOR" not in c, str(dict(c)))
+    check("대신 시민이 늘었다", c.get("CITIZEN") == 4, "시민 %s명" % c.get("CITIZEN"))
+    check("마피아는 그대로 2명", c.get("MAFIA") == 2, "마피아 %s명" % c.get("MAFIA"))
+    check("전원 배정", len(roles) == 7, "%d/7" % len(roles))
+
+    # 광대가 없으니 jester_uid 도 비어 있어야 한다
+    s, r = req("/rest/v1/rooms?select=jester_uid&id=eq." + room_id, toks[0])
+    check("광대 없으면 jester_uid 비어 있음", bool(r) and r[0]["jester_uid"] is None,
+          str(r[0]["jester_uid"]) if r else "?")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_role_toggle_survives_restart():
+    """다시하기 후에도 직업 설정이 유지된다"""
+    toks, room_id, roles, uids = _game_with_max_days(7, 1)
+    if not room_id:
+        check("다시하기 후 설정 유지 준비", False, "방 생성 실패")
+        return
+
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[citizens[0]])
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+
+    s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, toks[0])
+    if not (r and r[0]["phase"] == "ENDED"):
+        check("다시하기 후 설정 유지", False, "종료되지 않음")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    rpc("restart_game", toks[0], {"p_room_id": room_id})
+    rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": ["JESTER"]})
+
+    # 한 판 더 돌린 뒤 설정이 남아 있는지
+    for t in toks[1:]:
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+
+    s, r = req("/rest/v1/rooms?select=disabled_roles&id=eq." + room_id, toks[0])
+    check("다시하기 후 설정 유지", bool(r) and r[0]["disabled_roles"] == ["JESTER"],
+          str(r[0]["disabled_roles"]) if r else "?")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_role_toggle_composition, test_role_toggle_permission,
+            test_role_toggle_applies_to_game, test_role_toggle_survives_restart])

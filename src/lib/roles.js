@@ -80,6 +80,13 @@ export const SUBMITTED_NOTE = {
   MEDIUM: ' 아침에 직업을 알려드립니다.',
 };
 
+// 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
+// 마피아와 시민은 끌 수 없다 — 마피아가 0명이면 게임이 성립하지 않고,
+// 시민은 끈 직업을 대체하는 자리다.
+export const TOGGLEABLE = [
+  'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'SPY', 'JESTER',
+];
+
 // 살아 있는 사람이 아니라 사망자를 지목하는 직업
 export const TARGETS_DEAD = new Set(['MEDIUM']);
 

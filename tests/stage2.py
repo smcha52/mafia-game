@@ -144,12 +144,12 @@ def test_roles_mafia_citizen():
     # --- 구성표 (§5.1) ---
     bad = []
     for n in range(5, 16):
-        s, b = rpc("role_composition", KEY, {"p_count": n})
+        s, b = rpc("role_composition", KEY, {"p_count": n, "p_disabled": []})
         if s != 200 or not isinstance(b, list) or len(b) != n:
             bad.append(n)
     check("구성표 5~15명 합계 일치", not bad, "불일치 %s" % (bad or "없음"))
 
-    s, b = rpc("role_composition", KEY, {"p_count": 4})
+    s, b = rpc("role_composition", KEY, {"p_count": 4, "p_disabled": []})
     check("4명 구성표 거부", s >= 400 and "지원하지 않습니다" in str(msg(b)), msg(b))
 
     toks, room_id, roles = make_game(5)
