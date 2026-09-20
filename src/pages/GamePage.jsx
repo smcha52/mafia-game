@@ -403,7 +403,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
                   {role === 'ASSASSIN' && view?.canAssassinate === false
                     && !view?.assassin?.done && (
                     <Typography variant="caption" color="text.secondary">
-                      살아 있는 사람이 모두 시민이면 저격할 수 없습니다.
+                      같은 편을 뺀 상대가 모두 시민이면 저격할 수 없습니다.
                     </Typography>
                   )}
                 </Stack>

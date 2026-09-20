@@ -1058,5 +1058,83 @@ def test_assassin_rules():
     rpc("leave_room", toks[0], {"p_room_id": room_id})
 
 
+
+
+def test_assassin_all_citizens_blocked():
+    """같은 편을 뺀 상대가 전부 시민이면 저격할 수 없다 (0021)
+
+    암살자는 mafiaMembers 로 같은 편을 전부 안다. 팀원이 살아 있다는 이유로
+    판정을 통과시키면, 남은 대상이 전원 시민이어도 "시민"이라고만 찍어서
+    무위험 저격을 반복할 수 있다. 실제 판(YUX83H)에서 이렇게 끝났다.
+    """
+    from harness import user_pool
+
+    n = 7
+    toks = user_pool(n)
+    s, b = rpc("create_room", toks[0], {"p_nickname": "P1"})
+    if s != 200:
+        check("전원시민 저격차단 준비", False, "방 생성 실패")
+        return
+    room_id, code = b["room_id"], b["room_code"]
+    for i, t in enumerate(toks[1:], start=2):
+        rpc("join_room", t, {"p_code": code, "p_nickname": "P%d" % i})
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+
+    # 암살자만 남기고 전부 끈다 -> 마피아1 + 암살자1 + 시민5
+    off = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE",
+           "REPORTER", "MEDIUM", "SPY", "JESTER"]
+    s, b = rpc("set_disabled_roles", toks[0],
+               {"p_room_id": room_id, "p_disabled": off})
+    check("직업 끄기 성공", s in (200, 204), str(b)[:60])
+
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+
+    roles = {}
+    for t in toks:
+        s, b = rpc("my_role", t, {"p_room_id": room_id})
+        if s == 200:
+            roles[t] = b
+    uids = uid_map(roles)
+
+    from collections import Counter
+    cc = Counter(r["role"] for r in roles.values())
+    check("구성: 마피아1 + 암살자1 + 시민5",
+          cc.get("MAFIA") == 1 and cc.get("ASSASSIN") == 1 and cc.get("CITIZEN") == 5,
+          str(dict(cc)))
+
+    killer = _pick(roles, "ASSASSIN")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 팀원(마피아)이 살아 있어도, 상대가 전원 시민이므로 막혀야 한다
+    s, v = rpc("my_game_view", killer, {"p_room_id": room_id})
+    check("전원 시민이면 canAssassinate=false",
+          v.get("canAssassinate") is False, str(v.get("canAssassinate")))
+
+    s, b = rpc("submit_assassination", killer,
+               {"p_room_id": room_id, "p_target_uid": uids[citizens[0]],
+                "p_guess": "CITIZEN"})
+    check("전원 시민이면 저격 제출 차단",
+          s >= 400 and "모두 시민" in str(msg(b)), msg(b))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_assassin_guard_allows_real_target():
+    """시민팀 능력자가 한 명이라도 살아 있으면 저격할 수 있다 (0021)"""
+    toks, room_id, roles, uids = _assassin_game(7)
+    if not room_id:
+        check("저격 허용 준비", False, "방 생성 실패")
+        return
+
+    killer = _pick(roles, "ASSASSIN")
+    s, v = rpc("my_game_view", killer, {"p_room_id": room_id})
+    check("경찰·의사가 살아 있으면 canAssassinate=true",
+          v.get("canAssassinate") is True, str(v.get("canAssassinate")))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
 ALL.extend([test_assassin_composition, test_assassin_hit_and_miss,
-            test_assassin_day_immediate, test_assassin_rules])
+            test_assassin_day_immediate, test_assassin_rules,
+            test_assassin_all_citizens_blocked,
+            test_assassin_guard_allows_real_target])
