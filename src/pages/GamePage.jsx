@@ -18,7 +18,8 @@ import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
   ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
-  REPEAT_BLOCKED, SUBMITTED_NOTE, SUBMIT_LABEL, TEAM_RESULT, roleInfo,
+  REPEAT_BLOCKED, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
+  roleInfo,
 } from '../lib/roles';
 import {
   leaveRoom, skipNightAction, submitDayVote, submitNightAction, tickPhase,
@@ -152,7 +153,12 @@ export default function GamePage({ roomId, uid, onLeave }) {
   const role = view?.role;
   const nightAction = NIGHT_ACTION[role] ?? null;
   const spentOneShot = ONE_SHOT.has(role) && view?.abilityUsed;
-  const canAct = isNight ? Boolean(nightAction) && !spentOneShot : true;
+  const needsDead = TARGETS_DEAD.has(role);
+  const deadCount = players.filter((p) => !p.alive).length;
+  const noTargets = needsDead && deadCount === 0;
+  const canAct = isNight
+    ? Boolean(nightAction) && !spentOneShot && !noTargets
+    : true;
   // 기자는 대상 없이 넘길 수 있다. 그때 nightSubmitted 는 null 이라 별도 표시가 필요하다
   const skipped = isNight && view?.nightActed && !view?.nightSubmitted;
   const submitted = isNight ? view?.nightSubmitted : view?.daySubmitted;
@@ -266,6 +272,7 @@ export default function GamePage({ roomId, uid, onLeave }) {
                 value={submitted ?? pick}
                 onChange={setPick}
                 locked={Boolean(submitted)}
+                dead={isNight && needsDead}
                 excludeSelf={isNight && NO_SELF_TARGET.has(role)}
                 blockedUid={isNight && REPEAT_BLOCKED[role] ? view?.lastTargetId : null}
                 blockedNote={REPEAT_BLOCKED[role] ?? ''}
@@ -308,9 +315,13 @@ export default function GamePage({ roomId, uid, onLeave }) {
               </Stack>
               <Typography sx={{ mt: 1 }}>밤이 지나가길 기다리는 중…</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                {ABILITY_READY.has(role)
-                  ? '오늘 밤 당신이 할 일은 없습니다.'
-                  : `${roleInfo(role).name}의 능력은 아직 준비 중입니다.`}
+                {noTargets
+                  ? '아직 사망자가 없어 능력을 쓸 수 없습니다.'
+                  : spentOneShot
+                    ? '능력을 이미 사용했습니다.'
+                    : ABILITY_READY.has(role)
+                      ? '오늘 밤 당신이 할 일은 없습니다.'
+                      : `${roleInfo(role).name}의 능력은 아직 준비 중입니다.`}
               </Typography>
               <LinearProgress
                 sx={{ mt: 2 }}

@@ -26,6 +26,22 @@ export default function PrivateResults({ results }) {
             </Alert>
           );
         }
+        if (r.kind === 'MEDIUM') {
+          return (
+            <Alert key={`${r.kind}-${r.day}`} severity="info" icon={false}>
+              <AlertTitle sx={{ mb: 0.5 }}>{r.day}일차 밤 · 교신 결과</AlertTitle>
+              <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                <strong>{r.payload.targetNickname}</strong>
+                <span>님의 직업은</span>
+                <Chip size="small" label={roleInfo(r.payload.role).name} />
+                <span>이었습니다.</span>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                이 정보는 당신에게만 보입니다.
+              </Typography>
+            </Alert>
+          );
+        }
         if (r.kind === 'REPORTER') {
           const t = TEAM_RESULT[r.payload.team] ?? null;
           return (

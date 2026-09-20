@@ -28,7 +28,7 @@ export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', des
 
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
 export const ABILITY_READY = new Set([
-  'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER',
+  'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
 ]);
 
 // 밤에 행동하는 직업 -> 서버가 받는 action 코드
@@ -39,6 +39,7 @@ export const NIGHT_ACTION = {
   BODYGUARD: 'BODYGUARD',
   DETECTIVE: 'DETECTIVE',
   REPORTER: 'REPORTER',
+  MEDIUM: 'MEDIUM',
 };
 
 // 밤 화면에서 보여줄 안내 문구
@@ -49,6 +50,7 @@ export const NIGHT_PROMPT = {
   BODYGUARD: '보호할 사람을 고르세요',
   DETECTIVE: '직업을 추리할 사람을 고르세요',
   REPORTER: '취재할 사람을 고르세요',
+  MEDIUM: '직업을 확인할 사망자를 고르세요',
 };
 
 // 확정 버튼 문구
@@ -59,6 +61,7 @@ export const SUBMIT_LABEL = {
   BODYGUARD: '보호 확정',
   DETECTIVE: '추리 확정',
   REPORTER: '취재 확정',
+  MEDIUM: '교신 확정',
 };
 
 // 제출 후 안내
@@ -69,7 +72,11 @@ export const SUBMITTED_NOTE = {
   BODYGUARD: ' 공격받으면 당신이 대신 죽습니다.',
   DETECTIVE: ' 아침에 직업 후보를 알려드립니다.',
   REPORTER: ' 아침에 취재 결과가 나옵니다.',
+  MEDIUM: ' 아침에 직업을 알려드립니다.',
 };
+
+// 살아 있는 사람이 아니라 사망자를 지목하는 직업
+export const TARGETS_DEAD = new Set(['MEDIUM']);
 
 // 게임 중 한 번만 쓸 수 있는 직업
 export const ONE_SHOT = new Set(['REPORTER']);

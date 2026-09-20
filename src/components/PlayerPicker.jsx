@@ -12,10 +12,11 @@ import Stack from '@mui/material/Stack';
 // locked 이면 이미 제출한 상태라 바꿀 수 없다.
 export default function PlayerPicker({
   players, uid, value, onChange, locked = false, excludeSelf = false,
-  blockedUid = null, blockedNote = '',
+  blockedUid = null, blockedNote = '', dead = false,
 }) {
+  // 영매처럼 사망자를 지목하는 직업은 dead 로 목록을 뒤집는다
   const candidates = players.filter(
-    (p) => p.alive && (!excludeSelf || p.uid !== uid),
+    (p) => p.alive === !dead && (!excludeSelf || p.uid !== uid),
   );
 
   return (
