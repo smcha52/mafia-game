@@ -10,6 +10,7 @@ export function useGame(roomId) {
   const [players, setPlayers] = useState([]);
   const [results, setResults] = useState([]);
   const [view, setView] = useState(null);
+  const [viewError, setViewError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -29,8 +30,12 @@ export function useGame(roomId) {
       if (r && r.phase !== 'LOBBY') {
         try {
           setView(await myGameView(roomId));
-        } catch {
+          setViewError('');
+        } catch (e) {
+          // 조용히 넘기면 직업 카드와 채팅이 이유 없이 사라진다.
+          // 사유를 남겨 화면에 보여준다.
           setView(null);
+          setViewError(e.message || '내 정보를 불러오지 못했습니다.');
         }
       }
       setError('');
@@ -69,5 +74,5 @@ export function useGame(roomId) {
     };
   }, [roomId, reload]);
 
-  return { room, players, results, view, loading, error, reload };
+  return { room, players, results, view, viewError, loading, error, reload };
 }

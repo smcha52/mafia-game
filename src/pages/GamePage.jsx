@@ -29,7 +29,7 @@ import { useChat } from '../lib/useChat';
 import { useGame } from '../lib/useGame';
 
 export default function GamePage({ roomId, uid, onLeave }) {
-  const { room, players, results, view, loading, error, reload } = useGame(roomId);
+  const { room, players, results, view, viewError, loading, error, reload } = useGame(roomId);
   const { messages } = useChat(roomId);
   const [pick, setPick] = useState(null);
   const [busy, setBusy] = useState('');
@@ -208,6 +208,21 @@ export default function GamePage({ roomId, uid, onLeave }) {
           </Stack>
         </Stack>
       </Paper>
+
+      {!view && (
+        <Alert
+          severity="warning"
+          action={
+            <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+              새로고침
+            </Button>
+          }
+        >
+          내 직업 정보를 불러오지 못했습니다.
+          {viewError ? ` (${viewError})` : ''}
+          {' '}새로고침해도 같으면 나갔다가 다시 입장해 주세요.
+        </Alert>
+      )}
 
       <RoleCard view={view} />
 
