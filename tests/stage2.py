@@ -1189,8 +1189,11 @@ def test_medium():
     check("산 사람은 확인 불가 (§2.8)",
           s >= 400 and "사망한 참가자만" in str(msg(b)), msg(b))
 
-    # 영매가 제출하지 못해도 밤은 끝나야 한다
-    last = pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]])
+    # 영매가 제출하지 못해도 밤은 끝나야 한다.
+    # 의사가 공격 대상을 치료하면 사망자가 생기지 않아 2일차 영매 검사가
+    # 성립하지 않으므로, 치료 대상을 영매로 못박는다.
+    last = pass_night(room_id, roles, uids,
+                      victim_uid=uids[citizens[0]], doctor_uid=uids[med])
     check("사망자 없는 밤에 영매가 막지 않는다",
           isinstance(last, dict) and last.get("resolved") is True, str(last))
 
@@ -1247,7 +1250,8 @@ def test_medium_reads_executed_role():
     citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
 
     # 1일차 밤은 그냥 넘기고, 낮에 경찰을 처형한다
-    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]])
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[med])
     pass_day(room_id, roles, uids, uids[police])
 
     s, b = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, med)

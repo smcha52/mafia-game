@@ -71,6 +71,9 @@ export default function ChatPanel({ roomId, phase, uid, alive = true, team = nul
         {isMafiaChannel && (
           <Chip size="small" color="error" label="마피아 진영에게만 보입니다" />
         )}
+        {phase === 'ENDED' && (
+          <Chip size="small" variant="outlined" label="밤 대화까지 모두 공개" />
+        )}
       </Stack>
 
       <Box
@@ -91,14 +94,27 @@ export default function ChatPanel({ roomId, phase, uid, alive = true, team = nul
           <Stack spacing={0.75}>
             {messages.map((m) => {
               const mine = m.sender_uid === uid;
+              // 종료 후에는 두 채널이 섞여 보이므로 출처를 표시한다
+              const tagMafia = m.channel === 'MAFIA' && !isMafiaChannel;
               return (
                 <Box key={m.id}>
-                  <Typography
-                    variant="caption"
-                    sx={{ color: mine ? 'primary.main' : 'text.secondary', fontWeight: 700 }}
-                  >
-                    {m.sender_nickname}
-                  </Typography>
+                  <Stack direction="row" spacing={0.5} alignItems="center">
+                    <Typography
+                      variant="caption"
+                      sx={{ color: mine ? 'primary.main' : 'text.secondary', fontWeight: 700 }}
+                    >
+                      {m.sender_nickname}
+                    </Typography>
+                    {tagMafia && (
+                      <Chip
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        label={`${m.day_number}일차 밤 · 마피아`}
+                        sx={{ height: 18, '& .MuiChip-label': { px: 0.75, fontSize: 10 } }}
+                      />
+                    )}
+                  </Stack>
                   <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
                     {m.body}
                   </Typography>

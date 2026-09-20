@@ -576,3 +576,50 @@ def test_chat_after_end():
 
 ALL.extend([test_chat_lobby, test_chat_night_mafia_only,
             test_chat_day_and_dead, test_chat_after_end])
+
+
+def test_chat_revealed_only_after_end():
+    """마피아 대화는 진행 중엔 막히고 종료 후에만 공개된다"""
+    toks, room_id, roles, uids = _game_with_max_days(7, 1)
+    if not room_id:
+        check("종료 후 공개 준비", False, "방 생성 실패")
+        return
+
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    police = _pick(roles, "POLICE")
+
+    # 밤에 마피아가 대화한다
+    s, b = rpc("send_chat", mafias[0], {"p_room_id": room_id, "p_body": "작전 회의"})
+    check("밤 마피아 전송", s == 200 and b.get("channel") == "MAFIA", str(b))
+
+    # 진행 중에는 시민·경찰이 못 읽는다
+    def maf_count(tok):
+        s2, m = req("/rest/v1/chat_messages?select=channel&room_id=eq." + room_id
+                    + "&channel=eq.MAFIA", tok)
+        return len(m) if isinstance(m, list) else -1
+
+    check("진행 중: 시민은 못 읽는다", maf_count(citizens[0]) == 0,
+          "%d건" % maf_count(citizens[0]))
+    check("진행 중: 경찰은 못 읽는다", maf_count(police) == 0, "%d건" % maf_count(police))
+    check("진행 중: 마피아는 읽는다", maf_count(mafias[0]) == 1, "%d건" % maf_count(mafias[0]))
+
+    # 게임을 끝낸다 (max_days=1 이므로 낮 처리 후 무승부 또는 승부)
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[citizens[0]])
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+
+    s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, police)
+    if not (r and r[0]["phase"] == "ENDED"):
+        check("종료 후: 시민도 읽는다", False, "종료되지 않음")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    check("종료 후: 시민도 읽는다", maf_count(citizens[0]) >= 1,
+          "%d건" % maf_count(citizens[0]))
+    check("종료 후: 경찰도 읽는다", maf_count(police) >= 1, "%d건" % maf_count(police))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.append(test_chat_revealed_only_after_end)
