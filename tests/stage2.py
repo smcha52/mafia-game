@@ -18,7 +18,8 @@ def alive_uids(room_id, token):
 
 
 def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
-               doctor_uid=None, guard_uid=None, detective_uid=None):
+               doctor_uid=None, guard_uid=None, detective_uid=None,
+               reporter_uid=None):
     """밤에 행동하는 직업(마피아·경찰)을 모두 제출시켜 밤을 넘긴다.
 
     victim_uid 를 주지 않으면 마피아는 살아 있는 아무나를 공격한다.
@@ -36,6 +37,8 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
         guard_uid = None
     if detective_uid not in alive:
         detective_uid = None
+    if reporter_uid not in alive:
+        reporter_uid = None
 
     last = None
     for t, r in roles.items():
@@ -45,6 +48,10 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
             break
         if uids[t] not in alive:
             continue
+        # 테스트가 일부러 제출해 둔 행동을 덮어쓰지 않는다
+        s, mv0 = rpc("my_game_view", t, {"p_room_id": room_id})
+        if s == 200 and mv0.get("nightActed"):
+            continue
         if r["role"] == "MAFIA":
             tgt = victim_uid or next(u for u in alive if u != uids[t])
             s, last = rpc("submit_night_action", t,
@@ -53,6 +60,12 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
             tgt = police_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "POLICE", "p_target_uid": tgt})
+        elif r["role"] == "REPORTER":
+            # 이미 1회를 썼으면 제출 대상이 아니다. 안 썼으면 건너뛰기로 넘긴다.
+            if not mv0.get("abilityUsed"):
+                s, last = rpc("submit_night_action", t,
+                              {"p_room_id": room_id, "p_action": "REPORTER",
+                               "p_target_uid": reporter_uid})
         elif r["role"] == "DETECTIVE":
             tgt = detective_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,
@@ -60,8 +73,7 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
                            "p_target_uid": tgt})
         elif r["role"] == "BODYGUARD":
             # 자기 자신 금지 + 직전 대상 금지
-            s, mv = rpc("my_game_view", t, {"p_room_id": room_id})
-            last_t = mv.get("lastTargetId") if s == 200 else None
+            last_t = mv0.get("lastTargetId")
             tgt = guard_uid if guard_uid not in (None, last_t, uids[t]) else None
             if tgt is None:
                 tgt = next((u for u in alive if u != last_t and u != uids[t]), None)
@@ -71,8 +83,7 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
                                "p_target_uid": tgt})
         elif r["role"] == "DOCTOR":
             # 연속 치료 금지에 걸리지 않도록 직전 대상이 아닌 사람을 고른다
-            s, mv = rpc("my_game_view", t, {"p_room_id": room_id})
-            last_t = mv.get("lastTargetId") if s == 200 else None
+            last_t = mv0.get("lastTargetId")
             tgt = doctor_uid if doctor_uid and doctor_uid != last_t else None
             if tgt is None:
                 tgt = next(u for u in alive if u != last_t)
@@ -933,11 +944,15 @@ def test_detective():
                {"p_room_id": room_id, "p_action": "DETECTIVE", "p_target_uid": uids[det]})
     check("탐정 자기 지목 허용", s == 200, str(b)[:40])
 
-    # 실제 대상으로 바꿔 제출하고 밤을 넘긴다
+    # 자기 지목 상태를 실제 대상으로 덮어쓴다.
+    # pass_night 은 이미 제출한 사람을 건드리지 않으므로 여기서 직접 바꾼다.
+    s, b = rpc("submit_night_action", det,
+               {"p_room_id": room_id, "p_action": "DETECTIVE", "p_target_uid": uids[target]})
+    check("탐정 대상 변경 가능", s == 200, str(b)[:40])
+
     pass_night(room_id, roles, uids,
                victim_uid=uids[citizens[0]],
-               doctor_uid=uids[det],
-               detective_uid=uids[target])
+               doctor_uid=uids[det])
 
     s, v = rpc("my_game_view", det, {"p_room_id": room_id})
     res = [r for r in (v.get("privateResults") or []) if r["kind"] == "DETECTIVE"]
@@ -1020,3 +1035,124 @@ def test_detective_result_is_stable():
 
 ALL.extend([test_detective, test_detective_candidate_count_large,
             test_detective_result_is_stable])
+
+
+# ------------------------------------------------------------------
+# §8.2-6  기자 (능력 변경판 — 성공률 50%, 진영 공개)
+# ------------------------------------------------------------------
+
+def test_reporter():
+    """11명 구성에 기자가 있다."""
+    toks, room_id, roles = make_game(11)
+    if not room_id:
+        check("기자 테스트 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    rep = _pick(roles, "REPORTER")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, b = rpc("submit_night_action", citizens[0],
+               {"p_room_id": room_id, "p_action": "REPORTER", "p_target_uid": uids[mafias[0]]})
+    check("비기자 취재 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    # 대상 없이 제출 = 오늘은 쓰지 않음
+    s, b = rpc("submit_night_action", rep,
+               {"p_room_id": room_id, "p_action": "REPORTER", "p_target_uid": None})
+    check("기자 건너뛰기 허용", s == 200, str(b)[:40])
+
+    s, v = rpc("my_game_view", rep, {"p_room_id": room_id})
+    check("건너뛰어도 1회는 남는다",
+          v.get("abilityUsed") is False and v.get("nightActed") is True,
+          "used=%s acted=%s" % (v.get("abilityUsed"), v.get("nightActed")))
+
+    # 다른 직업은 대상 없이 제출할 수 없다
+    s, b = rpc("submit_night_action", mafias[0],
+               {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": None})
+    check("기자 외에는 건너뛰기 불가", s >= 400 and "대상을 선택" in str(msg(b)), msg(b))
+
+    # 실제로 취재한다
+    s, b = rpc("submit_night_action", rep,
+               {"p_room_id": room_id, "p_action": "REPORTER", "p_target_uid": uids[mafias[0]]})
+    check("기자 취재 제출", s == 200, str(b)[:40])
+
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[rep])
+
+    s, v = rpc("my_game_view", rep, {"p_room_id": room_id})
+    res = [r for r in (v.get("privateResults") or []) if r["kind"] == "REPORTER"]
+    check("기자 결과 도착", len(res) == 1, "%d건" % len(res))
+    check("취재하면 1회 소모", v.get("abilityUsed") is True, str(v.get("abilityUsed")))
+
+    if res:
+        pay = res[0]["payload"]
+        ok = isinstance(pay.get("success"), bool)
+        check("성공 여부가 기록된다", ok, "success=%s" % pay.get("success"))
+        if pay.get("success"):
+            check("성공 시 진영이 정확하다", pay.get("team") == "MAFIA",
+                  "team=%s (대상은 마피아)" % pay.get("team"))
+        else:
+            check("실패 시 진영을 주지 않는다", pay.get("team") is None,
+                  "team=%s" % pay.get("team"))
+
+        # 공개 결과는 성공했을 때만 나온다
+        s, pubs = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+                      + "&kind=eq.NIGHT&day_number=eq.1", citizens[1])
+        reveal = pubs[0]["payload"].get("reporterReveal") if pubs else None
+        if pay.get("success"):
+            check("성공 시 모두에게 공개",
+                  isinstance(reveal, list) and len(reveal) == 1
+                  and reveal[0]["team"] == "MAFIA", str(reveal))
+        else:
+            check("실패 시 아무것도 공개되지 않음",
+                  reveal == [] or reveal is None, str(reveal))
+
+    # 2일차: 이미 썼으므로 다시 취재할 수 없다
+    s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, rep)
+    if b and b[0]["phase"] == "DAY":
+        pass_day(room_id, roles, uids, uids[citizens[1]])
+    s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, rep)
+    if b and b[0]["phase"] == "NIGHT":
+        s, b2 = rpc("submit_night_action", rep,
+                    {"p_room_id": room_id, "p_action": "REPORTER",
+                     "p_target_uid": uids[mafias[1]]})
+        check("1회 제한 (§2.7)", s >= 400 and "한 번만" in str(msg(b2)), msg(b2))
+    else:
+        check("1회 제한 (§2.7)", False, "2일차 밤 진입 실패")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_reporter_does_not_stall_night():
+    """이미 능력을 쓴 기자 때문에 밤이 멈추면 안 된다"""
+    toks, room_id, roles = make_game(11)
+    if not room_id:
+        check("기자 밤 정지 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    rep = _pick(roles, "REPORTER")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 1일차에 기자가 능력을 쓴다
+    rpc("submit_night_action", rep,
+        {"p_room_id": room_id, "p_action": "REPORTER", "p_target_uid": uids[citizens[0]]})
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], doctor_uid=uids[rep])
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+
+    s, b = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, rep)
+    if not (b and b[0]["phase"] == "NIGHT"):
+        check("기자가 밤을 막지 않는다", False, "2일차 밤 진입 실패")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    # 2일차: 기자는 더 제출할 수 없지만 나머지만으로 밤이 끝나야 한다
+    last = pass_night(room_id, roles, uids)
+    check("기자가 밤을 막지 않는다",
+          isinstance(last, dict) and last.get("resolved") is True, str(last))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_reporter, test_reporter_does_not_stall_night])

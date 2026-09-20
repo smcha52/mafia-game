@@ -17,10 +17,12 @@ import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
-  ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, REPEAT_BLOCKED,
-  SUBMITTED_NOTE, SUBMIT_LABEL, roleInfo,
+  ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
+  REPEAT_BLOCKED, SUBMITTED_NOTE, SUBMIT_LABEL, TEAM_RESULT, roleInfo,
 } from '../lib/roles';
-import { leaveRoom, submitDayVote, submitNightAction, tickPhase } from '../lib/api';
+import {
+  leaveRoom, skipNightAction, submitDayVote, submitNightAction, tickPhase,
+} from '../lib/api';
 import { useGame } from '../lib/useGame';
 
 export default function GamePage({ roomId, uid, onLeave }) {
@@ -119,6 +121,7 @@ export default function GamePage({ roomId, uid, onLeave }) {
   const nickOf = (id) => players.find((p) => p.uid === id)?.nickname ?? '알 수 없음';
   const lastNight = results.find((r) => r.kind === 'NIGHT' && r.day_number === day);
   const deaths = (phase === 'DAY' ? lastNight?.payload?.nightDeaths : null) ?? [];
+  const reveals = (phase === 'DAY' ? lastNight?.payload?.reporterReveal : null) ?? [];
 
   const leaveButton = (
     <Button
@@ -148,7 +151,10 @@ export default function GamePage({ roomId, uid, onLeave }) {
   const alive = view?.alive ?? false;
   const role = view?.role;
   const nightAction = NIGHT_ACTION[role] ?? null;
-  const canAct = isNight ? Boolean(nightAction) : true;
+  const spentOneShot = ONE_SHOT.has(role) && view?.abilityUsed;
+  const canAct = isNight ? Boolean(nightAction) && !spentOneShot : true;
+  // 기자는 대상 없이 넘길 수 있다. 그때 nightSubmitted 는 null 이라 별도 표시가 필요하다
+  const skipped = isNight && view?.nightActed && !view?.nightSubmitted;
   const submitted = isNight ? view?.nightSubmitted : view?.daySubmitted;
   const progress = isNight ? view?.nightProgress : view?.dayProgress;
 
@@ -196,6 +202,22 @@ export default function GamePage({ roomId, uid, onLeave }) {
         </Alert>
       )}
 
+      {/* 기자 보도 — 모든 생존자가 본다 (§2.7) */}
+      {phase === 'DAY' && reveals.map((r) => {
+        const t = TEAM_RESULT[r.team] ?? null;
+        return (
+          <Alert key={r.targetUid} severity="warning" icon={false}>
+            <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+              <span>📰 오늘의 보도 —</span>
+              <strong>{r.targetNickname}</strong>
+              <span>님은</span>
+              {t && <Chip size="small" color={t.color} label={t.label} />}
+              <span>입니다.</span>
+            </Stack>
+          </Alert>
+        );
+      })}
+
       {!alive && (
         <Alert severity="info">
           사망하여 관전 중입니다. 능력과 투표를 사용할 수 없습니다.
@@ -223,6 +245,12 @@ export default function GamePage({ roomId, uid, onLeave }) {
                 )}
               </Stack>
 
+              {skipped && (
+                <Alert severity="info">
+                  오늘 밤은 능력을 사용하지 않기로 했습니다. 아직 한 번 남아 있습니다.
+                </Alert>
+              )}
+
               {submitted && (
                 <Alert severity="success">
                   <strong>{nickOf(submitted)}</strong>님을 선택했습니다.
@@ -246,18 +274,31 @@ export default function GamePage({ roomId, uid, onLeave }) {
               {actionError && <Alert severity="error">{actionError}</Alert>}
 
               {!submitted && (
-                <Button
-                  variant="contained"
-                  size="large"
-                  disabled={!pick || busy !== ''}
-                  loading={busy === 'submit'}
-                  onClick={() => run('submit', () =>
-                    isNight
-                      ? submitNightAction(roomId, nightAction, pick)
-                      : submitDayVote(roomId, pick))}
-                >
-                  {!isNight ? '투표 확정' : (SUBMIT_LABEL[role] ?? '확정')}
-                </Button>
+                <Stack spacing={1}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    disabled={!pick || busy !== ''}
+                    loading={busy === 'submit'}
+                    onClick={() => run('submit', () =>
+                      isNight
+                        ? submitNightAction(roomId, nightAction, pick)
+                        : submitDayVote(roomId, pick))}
+                  >
+                    {!isNight ? '투표 확정' : (SUBMIT_LABEL[role] ?? '확정')}
+                  </Button>
+
+                  {isNight && ONE_SHOT.has(role) && !skipped && (
+                    <Button
+                      color="inherit"
+                      disabled={busy !== ''}
+                      loading={busy === 'skip'}
+                      onClick={() => run('skip', () => skipNightAction(roomId, nightAction))}
+                    >
+                      오늘은 사용하지 않기
+                    </Button>
+                  )}
+                </Stack>
               )}
             </>
           ) : (

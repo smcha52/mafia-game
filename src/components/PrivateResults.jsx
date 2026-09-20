@@ -26,6 +26,34 @@ export default function PrivateResults({ results }) {
             </Alert>
           );
         }
+        if (r.kind === 'REPORTER') {
+          const t = TEAM_RESULT[r.payload.team] ?? null;
+          return (
+            <Alert
+              key={`${r.kind}-${r.day}`}
+              severity={r.payload.success ? 'success' : 'warning'}
+              icon={false}
+            >
+              <AlertTitle sx={{ mb: 0.5 }}>{r.day}일차 밤 · 취재 결과</AlertTitle>
+              {r.payload.success ? (
+                <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <strong>{r.payload.targetNickname}</strong>
+                  <span>님의 진영을</span>
+                  {t && <Chip size="small" color={t.color} label={t.label} />}
+                  <span>으로 보도했습니다.</span>
+                </Stack>
+              ) : (
+                <div>
+                  <strong>{r.payload.targetNickname}</strong>님 취재에 실패했습니다.
+                  아무것도 보도되지 않았습니다.
+                </div>
+              )}
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                이 정보는 당신에게만 보입니다.
+              </Typography>
+            </Alert>
+          );
+        }
         if (r.kind === 'DETECTIVE') {
           const cands = r.payload.candidates ?? [];
           return (

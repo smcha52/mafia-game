@@ -88,3 +88,14 @@ export async function fetchResults(roomId) {
 export async function tickPhase(roomId) {
   return unwrap(await supabase.rpc('tick_phase', { p_room_id: roomId }));
 }
+
+// 기자가 오늘 밤은 능력을 쓰지 않고 넘긴다 (대상 없이 제출)
+export async function skipNightAction(roomId, action) {
+  return unwrap(
+    await supabase.rpc('submit_night_action', {
+      p_room_id: roomId,
+      p_action: action,
+      p_target_uid: null,
+    }),
+  );
+}
