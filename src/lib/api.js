@@ -129,3 +129,8 @@ export async function fetchChat(roomId) {
       .limit(200),
   );
 }
+
+// 종료된 방을 대기실로 되돌린다 (방장만)
+export async function restartGame(roomId) {
+  unwrap(await supabase.rpc('restart_game', { p_room_id: roomId }));
+}

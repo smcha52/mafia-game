@@ -623,3 +623,98 @@ def test_chat_revealed_only_after_end():
 
 
 ALL.append(test_chat_revealed_only_after_end)
+
+
+# ------------------------------------------------------------------
+# 다시하기 (요구사항 외 추가)
+# ------------------------------------------------------------------
+
+def test_restart_game():
+    """종료된 방을 대기실로 되돌린다"""
+    toks, room_id, roles, uids = _game_with_max_days(7, 1)
+    if not room_id:
+        check("다시하기 준비", False, "방 생성 실패")
+        return
+
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+
+    # 진행 중에는 다시하기를 쓸 수 없다
+    s, b = rpc("restart_game", toks[0], {"p_room_id": room_id})
+    check("진행 중 다시하기 차단",
+          s >= 400 and "끝난 뒤에만" in str(msg(b)), msg(b))
+
+    # 밤에 마피아 채팅을 남겨두고 게임을 끝낸다
+    rpc("send_chat", mafias[0], {"p_room_id": room_id, "p_body": "지난 판 작전"})
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[citizens[0]])
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+
+    s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, toks[0])
+    if not (r and r[0]["phase"] == "ENDED"):
+        check("종료 확인", False, "종료되지 않음")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+    check("종료 확인", True, "승자 %s" % r[0]["winner"])
+
+    # 방장이 아니면 못 누른다
+    s, b = rpc("restart_game", toks[1], {"p_room_id": room_id})
+    check("비방장 다시하기 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
+
+    # 방장이 다시하기
+    s, b = rpc("restart_game", toks[0], {"p_room_id": room_id})
+    check("방장 다시하기", s in (200, 204), "HTTP %d" % s)
+
+    s, r = req("/rest/v1/rooms?select=phase,day_number,winner,phase_deadline,night_seconds&id=eq."
+               + room_id, toks[0])
+    ok = (bool(r) and r[0]["phase"] == "LOBBY" and r[0]["day_number"] == 0
+          and r[0]["winner"] is None and r[0]["phase_deadline"] is None)
+    check("대기실로 복귀", ok, str(r[0]) if r else "?")
+    check("제한시간 설정은 유지", bool(r) and r[0]["night_seconds"] == 30,
+          "night=%s" % (r[0]["night_seconds"] if r else "?"))
+
+    # 참가자는 그대로, 상태는 초기화
+    s, pl = req("/rest/v1/players?select=nickname,alive,is_ready,is_host,team,ability_used&room_id=eq."
+                + room_id + "&order=joined_at", toks[0])
+    check("참가자 유지", len(pl) == 7, "%d명" % len(pl))
+    check("전원 생존 복구", all(p["alive"] for p in pl), str([p["nickname"] for p in pl if not p["alive"]]))
+    check("진영 초기화", all(p["team"] is None for p in pl), str(set(p["team"] for p in pl)))
+    check("능력 사용 초기화", all(not p["ability_used"] for p in pl), "")
+    host_ready = [p["is_ready"] for p in pl if p["is_host"]]
+    others = [p["is_ready"] for p in pl if not p["is_host"]]
+    check("방장은 준비 유지, 나머지는 해제",
+          host_ready == [True] and not any(others),
+          "방장=%s 나머지준비=%d명" % (host_ready, sum(1 for x in others if x)))
+
+    # 지난 판 기록 삭제
+    s, ch = req("/rest/v1/chat_messages?select=id&room_id=eq." + room_id, toks[0])
+    check("지난 판 채팅 삭제", ch == [], "%d건" % len(ch if isinstance(ch, list) else []))
+    s, pub = req("/rest/v1/public_results?select=day_number&room_id=eq." + room_id, toks[0])
+    check("지난 판 공개결과 삭제", pub == [], "%d건" % len(pub if isinstance(pub, list) else []))
+
+    # 직업이 사라졌으므로 my_game_view 는 거부해야 한다
+    s, b = rpc("my_game_view", toks[1], {"p_room_id": room_id})
+    check("직업 배정 해제", s >= 400 and "배정되지" in str(msg(b)), msg(b))
+
+    # 다시 시작할 수 있다
+    for t in toks[1:]:
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    check("다시 시작 가능", s in (200, 204), "HTTP %d %s" % (s, "" if s < 400 else msg(b)))
+
+    s, r = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
+    check("새 게임 1일차 밤", bool(r) and r[0]["phase"] == "NIGHT" and r[0]["day_number"] == 1,
+          "%s %s일차" % (r[0]["phase"], r[0]["day_number"]) if r else "?")
+
+    # 직업이 새로 배정됐는지
+    got = 0
+    for t in toks:
+        s, v = rpc("my_game_view", t, {"p_room_id": room_id})
+        if s == 200:
+            got += 1
+    check("직업 재배정", got == 7, "%d/7" % got)
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.append(test_restart_game)

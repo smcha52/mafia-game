@@ -10,6 +10,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ReplayIcon from '@mui/icons-material/Replay';
 
 import GameOver from '../components/GameOver';
 import PlayerPicker from '../components/PlayerPicker';
@@ -23,12 +24,13 @@ import {
   roleInfo,
 } from '../lib/roles';
 import {
-  leaveRoom, skipNightAction, submitDayVote, submitNightAction, tickPhase,
+  leaveRoom, restartGame, skipNightAction, submitDayVote, submitNightAction,
+  tickPhase,
 } from '../lib/api';
 import { useChat } from '../lib/useChat';
 import { useGame } from '../lib/useGame';
 
-export default function GamePage({ roomId, uid, onLeave }) {
+export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   const { room, players, results, view, viewError, loading, error, reload } = useGame(roomId);
   const { messages } = useChat(roomId);
   const [pick, setPick] = useState(null);
@@ -37,6 +39,12 @@ export default function GamePage({ roomId, uid, onLeave }) {
 
   const phase = room?.phase;
   const day = room?.day_number;
+
+  // 방장이 다시하기를 누르면 방이 LOBBY 로 돌아간다.
+  // 렌더 중에 부모 state 를 건드리면 안 되므로 effect 에서 알린다.
+  useEffect(() => {
+    if (phase === 'LOBBY') onLobby?.();
+  }, [phase, onLobby]);
 
   // 1초마다 남은 시간을 다시 계산한다
   const [now, setNow] = useState(() => Date.now());
@@ -148,6 +156,24 @@ export default function GamePage({ roomId, uid, onLeave }) {
     return (
       <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
         <GameOver roomId={roomId} winner={room.winner} />
+
+        {actionError && <Alert severity="error">{actionError}</Alert>}
+
+        {room.host_uid === uid ? (
+          <Button
+            variant="contained"
+            size="large"
+            startIcon={<ReplayIcon />}
+            disabled={busy !== ''}
+            loading={busy === 'restart'}
+            onClick={() => run('restart', () => restartGame(roomId))}
+          >
+            다시하기
+          </Button>
+        ) : (
+          <Alert severity="info">방장이 다시 시작하면 대기실로 돌아갑니다.</Alert>
+        )}
+
       <ChatPanel
         roomId={roomId}
         phase={phase}

@@ -56,6 +56,8 @@ export default function App() {
   }, []);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
+  // 다시하기로 방이 대기실로 돌아가면 화면도 되돌린다
+  const handleLobby = useCallback(() => setPhase('LOBBY'), []);
 
   if (!isConfigured) return <SetupNotice />;
 
@@ -87,7 +89,12 @@ export default function App() {
       {!roomId ? (
         <HomePage onEntered={setRoomId} />
       ) : phase && phase !== 'LOBBY' ? (
-        <GamePage roomId={roomId} uid={uid} onLeave={handleLeave} />
+        <GamePage
+          roomId={roomId}
+          uid={uid}
+          onLeave={handleLeave}
+          onLobby={handleLobby}
+        />
       ) : (
         <LobbyPage
           roomId={roomId}
