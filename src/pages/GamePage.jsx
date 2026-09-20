@@ -13,6 +13,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 
 import GameOver from '../components/GameOver';
 import PlayerPicker from '../components/PlayerPicker';
+import ChatPanel from '../components/ChatPanel';
 import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
@@ -24,10 +25,12 @@ import {
 import {
   leaveRoom, skipNightAction, submitDayVote, submitNightAction, tickPhase,
 } from '../lib/api';
+import { useChat } from '../lib/useChat';
 import { useGame } from '../lib/useGame';
 
 export default function GamePage({ roomId, uid, onLeave }) {
   const { room, players, results, view, loading, error, reload } = useGame(roomId);
+  const { messages } = useChat(roomId);
   const [pick, setPick] = useState(null);
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
@@ -143,6 +146,15 @@ export default function GamePage({ roomId, uid, onLeave }) {
     return (
       <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
         <GameOver roomId={roomId} winner={room.winner} />
+      <ChatPanel
+        roomId={roomId}
+        phase={phase}
+        uid={uid}
+        alive={view?.alive ?? false}
+        team={view?.team ?? null}
+        messages={messages}
+      />
+
         {leaveButton}
       </Stack>
     );
@@ -332,6 +344,15 @@ export default function GamePage({ roomId, uid, onLeave }) {
           )}
         </>
       )}
+
+      <ChatPanel
+        roomId={roomId}
+        phase={phase}
+        uid={uid}
+        alive={view?.alive ?? false}
+        team={view?.team ?? null}
+        messages={messages}
+      />
 
       {leaveButton}
     </Stack>

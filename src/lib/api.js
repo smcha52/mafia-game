@@ -111,3 +111,21 @@ export async function setTimers(roomId, night, day, maxDays) {
     }),
   );
 }
+
+// --- 채팅 ---
+
+export async function sendChat(roomId, body) {
+  return unwrap(await supabase.rpc('send_chat', { p_room_id: roomId, p_body: body }));
+}
+
+// RLS 가 걸러 준다. 밤 마피아 채팅은 마피아 진영에게만 내려온다.
+export async function fetchChat(roomId) {
+  return unwrap(
+    await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('room_id', roomId)
+      .order('id', { ascending: true })
+      .limit(200),
+  );
+}

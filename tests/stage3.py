@@ -8,7 +8,7 @@
   · 게임이 무한히 이어지지 않고 끝나는가
 """
 
-from harness import check, msg, req, rpc
+from harness import check, msg, req, rpc, user_pool
 from stage2 import _pick, alive_uids, make_game, pass_day, pass_night, uid_map
 
 # §5 인원별 기본 직업 구성. 서버의 role_composition() 과 일치해야 한다.
@@ -421,3 +421,158 @@ def test_max_days_permission():
 
 ALL.extend([test_default_settings, test_draw_on_max_day,
             test_victory_beats_draw, test_max_days_permission])
+
+
+# ------------------------------------------------------------------
+# 채팅 (요구사항 외 추가)
+# ------------------------------------------------------------------
+
+def _chat_of(token, room_id):
+    s, b = req("/rest/v1/chat_messages?select=channel,body,sender_nickname&room_id=eq."
+               + room_id + "&order=id", token)
+    return b if isinstance(b, list) else []
+
+
+def test_chat_lobby():
+    """대기실에서는 전원이 대화할 수 있다"""
+    from stage2 import make_room
+    toks, room_id = make_room(5)
+    if not room_id:
+        check("대기실 채팅 준비", False, "방 생성 실패")
+        return
+
+    s, b = rpc("send_chat", toks[0], {"p_room_id": room_id, "p_body": "안녕하세요"})
+    check("대기실 방장 전송", s == 200 and b.get("channel") == "PUBLIC", str(b))
+
+    s, b = rpc("send_chat", toks[3], {"p_room_id": room_id, "p_body": "반갑습니다"})
+    check("대기실 참가자 전송", s == 200 and b.get("channel") == "PUBLIC", str(b))
+
+    msgs = _chat_of(toks[2], room_id)
+    check("대기실 대화가 전원에게 보인다", len(msgs) == 2, "%d건" % len(msgs))
+
+    s, b = rpc("send_chat", toks[0], {"p_room_id": room_id, "p_body": "   "})
+    check("빈 내용 차단", s >= 400 and "내용을 입력" in str(msg(b)), msg(b))
+
+    s, b = rpc("send_chat", toks[0], {"p_room_id": room_id, "p_body": "가" * 301})
+    check("300자 초과 차단", s >= 400 and "300자" in str(msg(b)), msg(b))
+
+    # 방에 없는 사람은 보낼 수 없다
+    outsider = user_pool(7)[6]
+    s, b = rpc("send_chat", outsider, {"p_room_id": room_id, "p_body": "끼어들기"})
+    check("외부인 전송 차단", s >= 400 and "참가자가 아닙니다" in str(msg(b)), msg(b))
+
+    check("외부인은 대화를 못 읽는다", _chat_of(outsider, room_id) == [], "")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_chat_night_mafia_only():
+    """밤 채팅은 마피아 진영만 쓰고 읽는다 — 핵심 보안 검사"""
+    toks, room_id, roles = make_game(9)
+    if not room_id:
+        check("밤 채팅 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    spy = _pick(roles, "SPY")
+    police = _pick(roles, "POLICE")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 시민은 밤에 쓸 수 없다
+    s, b = rpc("send_chat", citizens[0], {"p_room_id": room_id, "p_body": "저 시민이에요"})
+    check("밤: 시민 전송 차단",
+          s >= 400 and "마피아 진영만" in str(msg(b)), msg(b))
+
+    s, b = rpc("send_chat", police, {"p_room_id": room_id, "p_body": "조사했습니다"})
+    check("밤: 경찰 전송 차단", s >= 400 and "마피아 진영만" in str(msg(b)), msg(b))
+
+    # 마피아와 스파이는 쓸 수 있다
+    s, b = rpc("send_chat", mafias[0], {"p_room_id": room_id, "p_body": "누구 칠까"})
+    check("밤: 마피아 전송", s == 200 and b.get("channel") == "MAFIA", str(b))
+
+    s, b = rpc("send_chat", spy, {"p_room_id": room_id, "p_body": "경찰부터"})
+    check("밤: 스파이도 전송", s == 200 and b.get("channel") == "MAFIA", str(b))
+
+    # 읽기 — 마피아 진영만 보인다
+    m_msgs = _chat_of(mafias[1], room_id)
+    check("마피아 동료가 읽는다", len(m_msgs) == 2, "%d건" % len(m_msgs))
+
+    for label, tok in [("시민", citizens[0]), ("경찰", police)]:
+        seen = _chat_of(tok, room_id)
+        check("밤 대화를 %s은 못 읽는다 (RLS)" % label, seen == [], "%d건 %s" % (len(seen), seen))
+
+    # 직접 INSERT 는 막혀 있다
+    s, b = req("/rest/v1/chat_messages", citizens[0],
+               body={"room_id": room_id, "channel": "MAFIA", "sender_uid": uids[citizens[0]],
+                     "sender_nickname": "위조", "body": "몰래", "phase": "NIGHT"})
+    check("직접 INSERT 차단", s >= 400, "HTTP %d" % s)
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_chat_day_and_dead():
+    """낮에는 생존자만 쓰고, 사망자는 읽기만 한다"""
+    toks, room_id, roles = make_game(9)
+    if not room_id:
+        check("낮 채팅 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    police = _pick(roles, "POLICE")
+    victim = citizens[0]
+
+    pass_night(room_id, roles, uids, victim_uid=uids[victim], doctor_uid=uids[police])
+
+    s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, police)
+    if not (r and r[0]["phase"] == "DAY"):
+        check("낮 채팅: 생존자 전송", False, "낮 진입 실패")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    s, b = rpc("send_chat", police, {"p_room_id": room_id, "p_body": "제가 경찰입니다"})
+    check("낮: 생존자 전송", s == 200 and b.get("channel") == "PUBLIC", str(b))
+
+    s, b = rpc("send_chat", victim, {"p_room_id": room_id, "p_body": "범인은..."})
+    check("낮: 사망자 전송 차단",
+          s >= 400 and "사망한 참가자는 낮에" in str(msg(b)), msg(b))
+
+    seen = _chat_of(victim, room_id)
+    check("사망자도 낮 대화는 읽는다", len(seen) == 1, "%d건" % len(seen))
+
+    # 밤에 쓴 마피아 대화가 낮에도 시민에게 보이지 않아야 한다
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    rpc("send_chat", mafias[0], {"p_room_id": room_id, "p_body": "낮에도 공개 채널"})
+    civ_seen = _chat_of(citizens[1], room_id)
+    check("낮에는 마피아도 공개 채널", len(civ_seen) == 2, "%d건" % len(civ_seen))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_chat_after_end():
+    """게임이 끝나면 사망자도 대화할 수 있다"""
+    toks, room_id, roles, uids = _game_with_max_days(7, 1)
+    if not room_id:
+        check("종료 후 채팅 준비", False, "방 생성 실패")
+        return
+
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    pass_night(room_id, roles, uids,
+               victim_uid=uids[citizens[0]], doctor_uid=uids[citizens[0]])
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+
+    s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, toks[0])
+    if not (r and r[0]["phase"] == "ENDED"):
+        check("종료 후 사망자 전송 허용", False, "종료되지 않음")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    s, b = rpc("send_chat", citizens[1], {"p_room_id": room_id, "p_body": "아 억울하다"})
+    check("종료 후 사망자 전송 허용", s == 200 and b.get("channel") == "PUBLIC", str(b))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_chat_lobby, test_chat_night_mafia_only,
+            test_chat_day_and_dead, test_chat_after_end])

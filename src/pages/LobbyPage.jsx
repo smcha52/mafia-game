@@ -12,8 +12,10 @@ import Typography from '@mui/material/Typography';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import LogoutIcon from '@mui/icons-material/Logout';
 
+import ChatPanel from '../components/ChatPanel';
 import PlayerList from '../components/PlayerList';
 import RoomSettings from '../components/RoomSettings';
+import { useChat } from '../lib/useChat';
 import { useRoom } from '../lib/useRoom';
 import { leaveRoom, setReady, startGame } from '../lib/api';
 
@@ -22,6 +24,7 @@ const MAX_PLAYERS = 15;
 
 export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
   const { room, players, loading, error } = useRoom(roomId);
+  const { messages } = useChat(roomId);
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -125,6 +128,8 @@ export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
       </Stack>
 
       <PlayerList players={players} uid={uid} />
+
+      <ChatPanel roomId={roomId} phase="LOBBY" uid={uid} messages={messages} />
 
       {total < MIN_PLAYERS && (
         <Alert severity="info">
