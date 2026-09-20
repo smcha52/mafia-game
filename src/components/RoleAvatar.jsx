@@ -8,7 +8,7 @@ const SKIN_DARK = '#C99A72';
 const BG = {
   CITIZEN: '#5A6B8C', MAFIA: '#7A2E2E', POLICE: '#2E4A7A', DOCTOR: '#2E6B5E',
   BODYGUARD: '#4A4A52', DETECTIVE: '#6B5433', REPORTER: '#7A5A2E', MEDIUM: '#5A3A7A',
-  SPY: '#3A3A4E', JESTER: '#8C4A7A',
+  SPY: '#3A3A4E', JESTER: '#8C4A7A', ASSASSIN: '#5A1E1E',
 };
 
 function Head({ y = 30 }) {
@@ -141,6 +141,21 @@ const PARTS = {
       {/* 트렌치코트 깃 */}
       <path d="M22 46 l10 5 -4 11 h-8 z" fill="#4A4A58" />
       <path d="M42 46 l-10 5 4 11 h8 z" fill="#3A3A46" />
+    </>
+  ),
+
+  ASSASSIN: (
+    <>
+      <Head />
+      {SHADES}
+      {/* 후드 */}
+      <path d="M17 33 q0 -19 15 -19 q15 0 15 19 q-5 -11 -15 -11 q-10 0 -15 11z" fill="#241014" />
+      <path d="M17 33 q3 6 6 8 l-2 -12z" fill="#1A0B0E" />
+      <path d="M47 33 q-3 6 -6 8 l2 -12z" fill="#1A0B0E" />
+      {/* 조준경 */}
+      <circle cx="45" cy="47" r="7.5" fill="none" stroke="#D94A4A" strokeWidth="2" />
+      <path d="M45 39.5 v15 M37.5 47 h15" stroke="#D94A4A" strokeWidth="1.4" />
+      <circle cx="45" cy="47" r="1.6" fill="#D94A4A" />
     </>
   ),
 
