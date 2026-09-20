@@ -14,6 +14,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 
 import GameOver from '../components/GameOver';
 import PlayerPicker from '../components/PlayerPicker';
+import AssassinPanel from '../components/AssassinPanel';
 import ChatPanel from '../components/ChatPanel';
 import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
@@ -24,8 +25,8 @@ import {
   roleInfo,
 } from '../lib/roles';
 import {
-  leaveRoom, restartGame, skipNightAction, submitDayVote, submitNightAction,
-  tickPhase,
+  leaveRoom, restartGame, skipNightAction, submitAssassination, submitDayVote,
+  submitNightAction, tickPhase,
 } from '../lib/api';
 import { useChat } from '../lib/useChat';
 import { useGame } from '../lib/useGame';
@@ -36,6 +37,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   const [pick, setPick] = useState(null);
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
+  // 암살자가 저격 버튼을 눌렀는지 (일반 공격 화면 <-> 암살 화면)
+  const [aiming, setAiming] = useState(false);
 
   const phase = room?.phase;
   const day = room?.day_number;
@@ -100,6 +103,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   useEffect(() => {
     setPick(null);
     setActionError('');
+    setAiming(false);
   }, [phase, day]);
 
   async function run(kind, fn) {
@@ -289,7 +293,18 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
       {alive && (
         <>
           <Divider />
-          {canAct ? (
+          {role === 'ASSASSIN' && aiming ? (
+            <AssassinPanel
+              players={players}
+              uid={uid}
+              busy={busy}
+              error={actionError}
+              state={view?.assassin}
+              isNight={isNight}
+              onCancel={() => setAiming(false)}
+              onSubmit={(t, g) => run('assassin', () => submitAssassination(roomId, t, g))}
+            />
+          ) : canAct ? (
             <>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Typography variant="subtitle1">
@@ -335,6 +350,18 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
 
               {actionError && <Alert severity="error">{actionError}</Alert>}
 
+              {submitted && role === 'ASSASSIN' && (
+                <Button
+                  variant="outlined"
+                  color="error"
+                  disabled={busy !== ''
+                    || (view?.canAssassinate === false && !view?.assassin?.done)}
+                  onClick={() => setAiming(true)}
+                >
+                  {view?.assassin?.done ? '🎯 저격 결과 보기' : '🎯 저격'}
+                </Button>
+              )}
+
               {!submitted && (
                 <Stack spacing={1}>
                   <Button
@@ -359,6 +386,25 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
                     >
                       오늘은 사용하지 않기
                     </Button>
+                  )}
+
+                  {role === 'ASSASSIN' && (
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      disabled={busy !== ''
+                        || (view?.canAssassinate === false && !view?.assassin?.done)}
+                      onClick={() => setAiming(true)}
+                    >
+                      {view?.assassin?.done ? '🎯 저격 결과 보기' : '🎯 저격'}
+                    </Button>
+                  )}
+
+                  {role === 'ASSASSIN' && view?.canAssassinate === false
+                    && !view?.assassin?.done && (
+                    <Typography variant="caption" color="text.secondary">
+                      살아 있는 사람이 모두 시민이면 저격할 수 없습니다.
+                    </Typography>
                   )}
                 </Stack>
               )}

@@ -152,3 +152,12 @@ export async function roleComposition(count, disabled) {
     p_disabled: disabled,
   }));
 }
+
+// 암살 — 대상과 찍은 직업을 함께 보낸다
+export async function submitAssassination(roomId, targetUid, guess) {
+  return unwrap(await supabase.rpc('submit_assassination', {
+    p_room_id: roomId,
+    p_target_uid: targetUid,
+    p_guess: guess,
+  }));
+}

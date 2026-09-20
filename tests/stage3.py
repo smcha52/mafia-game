@@ -15,30 +15,30 @@ from stage2 import _pick, alive_uids, make_game, pass_day, pass_night, uid_map
 ROLE_TABLE = {
     5:  ['MAFIA', 'POLICE', 'DOCTOR', 'CITIZEN', 'CITIZEN'],
     6:  ['MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'CITIZEN', 'CITIZEN'],
-    7:  ['MAFIA', 'MAFIA', 'POLICE', 'DOCTOR', 'JESTER', 'CITIZEN', 'CITIZEN'],
-    8:  ['MAFIA', 'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'JESTER',
+    7:  ['MAFIA', 'ASSASSIN', 'POLICE', 'DOCTOR', 'JESTER', 'CITIZEN', 'CITIZEN'],
+    8:  ['MAFIA', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD', 'JESTER',
          'CITIZEN', 'CITIZEN'],
-    9:  ['MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'DETECTIVE',
+    9:  ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'DETECTIVE',
          'CITIZEN', 'CITIZEN', 'CITIZEN'],
-    10: ['MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
+    10: ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
          'CITIZEN', 'CITIZEN', 'CITIZEN'],
-    11: ['MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
+    11: ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
          'REPORTER', 'CITIZEN', 'CITIZEN', 'CITIZEN'],
-    12: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+    12: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
          'DETECTIVE', 'REPORTER', 'JESTER', 'CITIZEN', 'CITIZEN'],
-    13: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+    13: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
          'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'CITIZEN', 'CITIZEN'],
-    14: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+    14: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
          'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER',
          'CITIZEN', 'CITIZEN', 'CITIZEN'],
-    15: ['MAFIA', 'MAFIA', 'MAFIA', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
+    15: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
          'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER',
          'CITIZEN', 'CITIZEN', 'CITIZEN', 'CITIZEN'],
 }
 
 
 def team_of(role):
-    if role in ("MAFIA", "SPY"):
+    if role in ("MAFIA", "SPY", "ASSASSIN"):
         return "MAFIA"
     if role == "JESTER":
         return "NEUTRAL"
@@ -108,8 +108,9 @@ def test_all_abilities_same_night():
     check("15명 밤: 영매는 1일차에 못 쓴다",
           s >= 400 and "사망한 참가자만" in str(msg(b)), msg(b))
 
-    # 마피아 3 + 스파이 1 이 같은 사람을 공격
-    for t in mafias + [spy]:
+    # 마피아 2 + 암살자 1 + 스파이 1 이 같은 사람을 공격
+    killer = _pick(roles, "ASSASSIN")
+    for t in mafias + [spy, killer]:
         rpc("submit_night_action", t,
             {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[victim]})
 
@@ -494,8 +495,8 @@ def test_chat_night_mafia_only():
     s, b = rpc("send_chat", spy, {"p_room_id": room_id, "p_body": "경찰부터"})
     check("밤: 스파이도 전송", s == 200 and b.get("channel") == "MAFIA", str(b))
 
-    # 읽기 — 마피아 진영만 보인다
-    m_msgs = _chat_of(mafias[1], room_id)
+    # 읽기 — 마피아 진영만 보인다 (동료는 암살자로 확인)
+    m_msgs = _chat_of(_pick(roles, "ASSASSIN"), room_id)
     check("마피아 동료가 읽는다", len(m_msgs) == 2, "%d건" % len(m_msgs))
 
     for label, tok in [("시민", citizens[0]), ("경찰", police)]:
@@ -749,7 +750,7 @@ def test_role_toggle_composition():
     s, all_off = rpc("role_composition", KEY,
                      {"p_count": 15, "p_disabled": ["POLICE", "DOCTOR", "BODYGUARD",
                                                     "DETECTIVE", "REPORTER", "MEDIUM",
-                                                    "SPY", "JESTER"]})
+                                                    "SPY", "JESTER", "ASSASSIN"]})
     c2 = Counter(all_off) if s == 200 else Counter()
     check("전부 끄면 마피아+시민만",
           set(c2.keys()) == {"MAFIA", "CITIZEN"} and len(all_off) == 15,
@@ -820,7 +821,9 @@ def test_role_toggle_applies_to_game():
     check("배정에 광대가 없다", "JESTER" not in c, str(dict(c)))
     check("배정에 의사가 없다", "DOCTOR" not in c, str(dict(c)))
     check("대신 시민이 늘었다", c.get("CITIZEN") == 4, "시민 %s명" % c.get("CITIZEN"))
-    check("마피아는 그대로 2명", c.get("MAFIA") == 2, "마피아 %s명" % c.get("MAFIA"))
+    check("마피아 진영은 그대로 2명",
+          c.get("MAFIA", 0) + c.get("ASSASSIN", 0) == 2,
+          "마피아 %s + 암살자 %s" % (c.get("MAFIA"), c.get("ASSASSIN")))
     check("전원 배정", len(roles) == 7, "%d/7" % len(roles))
 
     # 광대가 없으니 jester_uid 도 비어 있어야 한다
@@ -866,3 +869,194 @@ def test_role_toggle_survives_restart():
 
 ALL.extend([test_role_toggle_composition, test_role_toggle_permission,
             test_role_toggle_applies_to_game, test_role_toggle_survives_restart])
+
+
+# ------------------------------------------------------------------
+# 암살자 (요구사항 외 추가)
+# ------------------------------------------------------------------
+
+def test_assassin_composition():
+    """구성표에 암살자가 들어가고, 끄면 마피아로 돌아간다"""
+    from collections import Counter
+    from harness import KEY
+
+    # 5~6명에는 없다
+    for n in (5, 6):
+        s, c = rpc("role_composition", KEY, {"p_count": n, "p_disabled": []})
+        check("%d명엔 암살자 없음" % n, s == 200 and "ASSASSIN" not in c, str(c))
+
+    # 7명 이상에는 마피아 1명이 암살자로 바뀐다
+    s, c7 = rpc("role_composition", KEY, {"p_count": 7, "p_disabled": []})
+    cc = Counter(c7)
+    check("7명: 마피아1 + 암살자1",
+          cc.get("MAFIA") == 1 and cc.get("ASSASSIN") == 1, str(dict(cc)))
+
+    s, c13 = rpc("role_composition", KEY, {"p_count": 13, "p_disabled": []})
+    cc13 = Counter(c13)
+    check("13명: 마피아2 + 암살자1",
+          cc13.get("MAFIA") == 2 and cc13.get("ASSASSIN") == 1, str(dict(cc13)))
+
+    # 끄면 시민이 아니라 마피아로 돌아간다
+    s, off = rpc("role_composition", KEY,
+                 {"p_count": 13, "p_disabled": ["ASSASSIN"]})
+    co = Counter(off)
+    check("암살자를 끄면 마피아로 복귀",
+          "ASSASSIN" not in co and co.get("MAFIA") == 3, str(dict(co)))
+    check("끄더라도 인원수 유지", len(off or []) == 13, "%d개" % len(off or []))
+
+
+def _assassin_game(n=7):
+    """암살자가 있는 게임. (토큰맵, room_id, 직업맵, uid맵) 반환"""
+    toks, room_id, roles = make_game(n)
+    if not room_id:
+        return None, None, None, None
+    return toks, room_id, roles, uid_map(roles)
+
+
+def test_assassin_hit_and_miss():
+    """맞히면 대상이 죽고, 틀리면 암살자가 죽는다"""
+    # --- 성공 ---
+    toks, room_id, roles, uids = _assassin_game(7)
+    if not room_id:
+        check("암살 성공 준비", False, "방 생성 실패")
+        return
+
+    killer = _pick(roles, "ASSASSIN")
+    police = _pick(roles, "POLICE")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, v = rpc("my_game_view", killer, {"p_room_id": room_id})
+    check("암살자는 마피아 진영", v.get("team") == "MAFIA", str(v.get("team")))
+    check("저격 가능 여부 제공", v.get("canAssassinate") is True, str(v.get("canAssassinate")))
+
+    # 경찰을 경찰로 찍는다 -> 성공
+    s, b = rpc("submit_assassination", killer,
+               {"p_room_id": room_id, "p_target_uid": uids[police], "p_guess": "POLICE"})
+    check("밤 저격 제출", s == 200 and b.get("resolved") is False, str(b))
+
+    # 같은 밤에 두 번은 못 한다
+    s, b2 = rpc("submit_assassination", killer,
+                {"p_room_id": room_id, "p_target_uid": uids[citizens[0]], "p_guess": "CITIZEN"})
+    check("같은 밤 재저격 차단", s >= 400 and "이미 저격" in str(msg(b2)), msg(b2))
+
+    # 일반 공격도 함께 할 수 있다
+    s, b3 = rpc("submit_night_action", killer,
+                {"p_room_id": room_id, "p_action": "MAFIA_VOTE",
+                 "p_target_uid": uids[citizens[0]]})
+    check("저격과 일반 공격 동시 가능", s == 200, str(b3)[:40])
+
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], doctor_uid=uids[killer])
+
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, killer)
+    alive = {p["uid"]: p["alive"] for p in pl} if isinstance(pl, list) else {}
+    check("저격 성공 -> 대상 사망", alive.get(uids[police]) is False,
+          "경찰 생존=%s" % alive.get(uids[police]))
+    check("저격 성공 -> 암살자 생존", alive.get(uids[killer]) is True,
+          "암살자 생존=%s" % alive.get(uids[killer]))
+
+    s, v = rpc("my_game_view", killer, {"p_room_id": room_id})
+    res = [x for x in (v.get("privateResults") or []) if x["kind"] == "ASSASSIN"]
+    check("암살자만 결과를 받는다",
+          len(res) == 1 and res[0]["payload"]["success"] is True,
+          str(res[0]["payload"]) if res else "없음")
+
+    s, v2 = rpc("my_game_view", citizens[1], {"p_room_id": room_id})
+    check("다른 사람은 저격 결과 없음",
+          not [x for x in (v2.get("privateResults") or []) if x["kind"] == "ASSASSIN"], "")
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+    # --- 실패 ---
+    toks, room_id, roles, uids = _assassin_game(7)
+    if not room_id:
+        check("암살 실패 준비", False, "방 생성 실패")
+        return
+    killer = _pick(roles, "ASSASSIN")
+    police = _pick(roles, "POLICE")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 경찰을 의사로 찍는다 -> 실패
+    rpc("submit_assassination", killer,
+        {"p_room_id": room_id, "p_target_uid": uids[police], "p_guess": "DOCTOR"})
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], doctor_uid=uids[killer])
+
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, citizens[1])
+    alive = {p["uid"]: p["alive"] for p in pl} if isinstance(pl, list) else {}
+    check("저격 실패 -> 암살자 사망", alive.get(uids[killer]) is False,
+          "암살자 생존=%s" % alive.get(uids[killer]))
+    check("저격 실패 -> 대상 생존", alive.get(uids[police]) is True,
+          "경찰 생존=%s" % alive.get(uids[police]))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_assassin_day_immediate():
+    """낮 저격은 즉시 처리된다"""
+    toks, room_id, roles, uids = _assassin_game(9)
+    if not room_id:
+        check("낮 저격 준비", False, "방 생성 실패")
+        return
+
+    killer = _pick(roles, "ASSASSIN")
+    doctor = _pick(roles, "DOCTOR")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 밤을 넘긴다
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], doctor_uid=uids[killer])
+    s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, killer)
+    if not (r and r[0]["phase"] == "DAY"):
+        check("낮 저격 즉시 처리", False, "낮 진입 실패")
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        return
+
+    # 낮에 의사를 의사로 찍는다 -> 즉시 사망
+    s, b = rpc("submit_assassination", killer,
+               {"p_room_id": room_id, "p_target_uid": uids[doctor], "p_guess": "DOCTOR"})
+    check("낮 저격 즉시 처리", s == 200 and b.get("resolved") is True, str(b))
+
+    s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, killer)
+    alive = {p["uid"]: p["alive"] for p in pl} if isinstance(pl, list) else {}
+    check("낮 저격으로 즉시 사망", alive.get(uids[doctor]) is False,
+          "의사 생존=%s" % alive.get(uids[doctor]))
+
+    s, pub = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+                 + "&kind=eq.DAY", citizens[1])
+    dd = pub[0]["payload"].get("dayDeaths") if pub else None
+    check("낮 사망자가 공개된다", dd == [uids[doctor]], str(dd))
+
+    # 밤과 낮은 따로 센다 — 낮에 또 하려면 막힌다
+    s, b2 = rpc("submit_assassination", killer,
+                {"p_room_id": room_id, "p_target_uid": uids[citizens[1]], "p_guess": "CITIZEN"})
+    check("같은 낮 재저격 차단", s >= 400 and "이미 저격" in str(msg(b2)), msg(b2))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_assassin_rules():
+    """권한과 제한"""
+    toks, room_id, roles, uids = _assassin_game(7)
+    if not room_id:
+        check("암살 규칙 준비", False, "방 생성 실패")
+        return
+
+    killer = _pick(roles, "ASSASSIN")
+    police = _pick(roles, "POLICE")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, b = rpc("submit_assassination", police,
+               {"p_room_id": room_id, "p_target_uid": uids[citizens[0]], "p_guess": "CITIZEN"})
+    check("비암살자 저격 차단", s >= 400 and "암살자만" in str(msg(b)), msg(b))
+
+    s, b = rpc("submit_assassination", killer,
+               {"p_room_id": room_id, "p_target_uid": uids[killer], "p_guess": "ASSASSIN"})
+    check("자기 저격 차단", s >= 400 and "자신을 지목" in str(msg(b)), msg(b))
+
+    s, b = rpc("submit_assassination", killer,
+               {"p_room_id": room_id, "p_target_uid": uids[police], "p_guess": "NOPE"})
+    check("없는 직업 차단", s >= 400 and "직업을 선택" in str(msg(b)), msg(b))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_assassin_composition, test_assassin_hit_and_miss,
+            test_assassin_day_immediate, test_assassin_rules])

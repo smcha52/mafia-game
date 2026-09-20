@@ -26,6 +26,40 @@ export default function PrivateResults({ results }) {
             </Alert>
           );
         }
+        if (r.kind === 'ASSASSIN') {
+          const ok = r.payload.success;
+          return (
+            <Alert
+              key={`${r.kind}-${r.day}`}
+              severity={ok ? 'success' : 'error'}
+              icon={false}
+            >
+              <AlertTitle sx={{ mb: 0.5 }}>
+                {r.day}일차 {r.payload.phase === 'DAY' ? '낮' : '밤'} · 저격 결과
+              </AlertTitle>
+              {ok ? (
+                <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <strong>{r.payload.targetNickname}</strong>
+                  <span>님은 정말</span>
+                  <Chip size="small" color="success" label={roleInfo(r.payload.guess).name} />
+                  <span>이었습니다. 암살 성공.</span>
+                </Stack>
+              ) : (
+                <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <strong>{r.payload.targetNickname}</strong>
+                  <span>님을</span>
+                  <Chip size="small" variant="outlined" label={roleInfo(r.payload.guess).name} />
+                  <span>로 찍었지만 실제로는</span>
+                  <Chip size="small" color="error" label={roleInfo(r.payload.actualRole).name} />
+                  <span>였습니다. 당신이 죽었습니다.</span>
+                </Stack>
+              )}
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                이 정보는 당신에게만 보입니다.
+              </Typography>
+            </Alert>
+          );
+        }
         if (r.kind === 'SPY') {
           return (
             <Alert key={`${r.kind}-${r.day}`} severity="info" icon={false}>
