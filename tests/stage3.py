@@ -1134,7 +1134,86 @@ def test_assassin_guard_allows_real_target():
     rpc("leave_room", toks[0], {"p_room_id": room_id})
 
 
+
+
+def test_d3_reporter_on_jester():
+    """D-3: 기자가 광대를 취재하면 '시민 진영' 으로 위장 공개된다 (0022)
+
+    광대의 team 은 NEUTRAL 이고 중립 직업은 광대뿐이다. 그대로 공개하면
+    광대가 완벽하게 특정돼 승리 경로(처형당하기)가 사라진다.
+
+    기자 성공률이 50% 라 성공할 때까지 판을 다시 만든다. 12인 게임은 비싸므로
+    경찰 검증(비공개는 그대로 NEUTRAL)도 같은 밤에 끼워 한 판을 아낀다.
+    """
+    got_success = False
+    police_checked = False
+
+    for attempt in range(8):
+        toks, room_id, roles = make_game(12)
+        if not room_id:
+            continue
+        uids = uid_map(roles)
+        rep = _pick(roles, "REPORTER")
+        jester = _pick(roles, "JESTER")
+        police = _pick(roles, "POLICE")
+        if not rep or not jester:
+            rpc("leave_room", toks[0], {"p_room_id": room_id})
+            continue
+
+        rpc("submit_night_action", rep,
+            {"p_room_id": room_id, "p_action": "REPORTER",
+             "p_target_uid": uids[jester]})
+        # 경찰도 같은 광대를 조사시킨다 — 판 하나를 아낀다
+        if police:
+            rpc("submit_night_action", police,
+                {"p_room_id": room_id, "p_action": "POLICE",
+                 "p_target_uid": uids[jester]})
+        # 광대와 기자는 살려 둔다
+        pass_night(room_id, roles, uids,
+                   victim_uid=uids[_pick(roles, "CITIZEN")], doctor_uid=uids[rep])
+
+        # 경찰은 바꾸지 않았으므로 광대를 그대로 중립으로 봐야 한다
+        if police and not police_checked:
+            s, pv = rpc("my_game_view", police, {"p_room_id": room_id})
+            pres = [r for r in (pv.get("privateResults") or []) if r["kind"] == "POLICE"]
+            if pres:
+                police_checked = True
+                check("경찰은 광대를 중립으로 본다 (비공개라 유지)",
+                      pres[0]["payload"].get("team") == "NEUTRAL",
+                      "team=%s" % pres[0]["payload"].get("team"))
+
+        s, v = rpc("my_game_view", rep, {"p_room_id": room_id})
+        res = [r for r in (v.get("privateResults") or []) if r["kind"] == "REPORTER"]
+        pay = res[0]["payload"] if res else {}
+
+        if pay.get("success"):
+            got_success = True
+            check("기자 비공개 결과도 시민으로 위장",
+                  pay.get("team") == "CITIZEN", "team=%s" % pay.get("team"))
+            check("기자에게 NEUTRAL 을 주지 않는다",
+                  pay.get("team") != "NEUTRAL", "team=%s" % pay.get("team"))
+
+            s, pubs = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+                          + "&kind=eq.NIGHT&day_number=eq.1", toks[0])
+            reveal = pubs[0]["payload"].get("reporterReveal") if pubs else None
+            one = reveal[0] if isinstance(reveal, list) and reveal else {}
+            check("공개 결과도 시민으로 위장",
+                  one.get("team") == "CITIZEN", str(reveal))
+            check("공개 결과에 중립이 새지 않는다",
+                  "NEUTRAL" not in str(reveal), str(reveal))
+            rpc("leave_room", toks[0], {"p_room_id": room_id})
+            break
+
+        rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+    if not got_success:
+        check("D-3 검증", False, "8번 시도했지만 기자가 한 번도 성공하지 못했다")
+    if not police_checked:
+        check("경찰 판정 검증", False, "경찰 조사 결과를 받지 못했다")
+
+
 ALL.extend([test_assassin_composition, test_assassin_hit_and_miss,
             test_assassin_day_immediate, test_assassin_rules,
             test_assassin_all_citizens_blocked,
-            test_assassin_guard_allows_real_target])
+            test_assassin_guard_allows_real_target,
+            test_d3_reporter_on_jester])
