@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
@@ -18,12 +18,12 @@ import RoleToggles from '../components/RoleToggles';
 import RoomSettings from '../components/RoomSettings';
 import { useChat } from '../lib/useChat';
 import { useRoom } from '../lib/useRoom';
-import { leaveRoom, setReady, startGame } from '../lib/api';
+import { kickPlayer, leaveRoom, setReady, startGame } from '../lib/api';
 
 const MIN_PLAYERS = 5;
 const MAX_PLAYERS = 15;
 
-export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
+export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }) {
   const { room, players, loading, error } = useRoom(roomId);
   const { messages } = useChat(roomId);
   const [busy, setBusy] = useState('');
@@ -39,6 +39,18 @@ export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
   }, [started, onStarted]);
 
   const me = players.find((p) => p.uid === uid) ?? null;
+
+  // 목록에 있던 내가 사라졌으면 추방 등으로 방에서 빠진 것이다. 첫 화면으로 돌아간다.
+  // (한 번도 목록에 없었던 경우는 세션이 어긋난 것이라 아래 경고로 알린다)
+  const seenMe = useRef(false);
+  useEffect(() => {
+    if (me) {
+      seenMe.current = true;
+    } else if (seenMe.current && !loading) {
+      seenMe.current = false; // 한 번만 알린다
+      onRemoved();
+    }
+  }, [me, loading, onRemoved]);
   // 방장 판정은 rooms.host_uid 를 기준으로 한다.
   // 참가자 목록에서 나를 찾는 방식은 목록이 늦게 오면 조용히 틀린 답을 낸다.
   const isHost = Boolean(room) && room.host_uid === uid;
@@ -130,7 +142,12 @@ export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
         />
       </Stack>
 
-      <PlayerList players={players} uid={uid} />
+      <PlayerList
+        players={players}
+        uid={uid}
+        onKick={isHost ? (p) => run(`kick:${p.uid}`, () => kickPlayer(roomId, p.uid)) : undefined}
+        kickingUid={busy.startsWith('kick:') ? busy.slice(5) : null}
+      />
 
       <ChatPanel roomId={roomId} phase="LOBBY" uid={uid} messages={messages} />
 

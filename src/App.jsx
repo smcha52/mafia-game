@@ -9,7 +9,7 @@ import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
 import SetupNotice from './pages/SetupNotice';
 import { ensureSession, isConfigured, supabase } from './lib/supabase';
-import { heartbeat, myActiveRoom } from './lib/api';
+import { heartbeat, myActiveRoom, takeKickNotice } from './lib/api';
 
 export default function App() {
   const [booting, setBooting] = useState(true);
@@ -17,6 +17,8 @@ export default function App() {
   const [uid, setUid] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [phase, setPhase] = useState(null);
+  // 첫 화면에 띄울 안내 (추방 등)
+  const [notice, setNotice] = useState('');
 
   // 앱 시작 시 익명 로그인 후, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   useEffect(() => {
@@ -55,6 +57,24 @@ export default function App() {
     setPhase(null);
   }, []);
 
+  // 내가 모르는 사이 방에서 빠졌을 때. 추방이면 첫 화면에서 알려준다.
+  const handleRemoved = useCallback(async () => {
+    const from = roomId;
+    let kicked = false;
+    try {
+      kicked = await takeKickNotice(from);
+    } catch {
+      // 확인에 실패해도 첫 화면으로는 돌아간다
+    }
+    handleLeave();
+    if (kicked) setNotice('당신은 방장에 의해 추방당했습니다');
+  }, [roomId, handleLeave]);
+
+  const handleEntered = useCallback((id) => {
+    setNotice('');
+    setRoomId(id);
+  }, []);
+
   // 방에 있는 동안 heartbeat 를 보낸다. 브라우저를 닫으면 끊기고,
   // 60초 뒤 서버가 방에서 내보낸다. 새로고침은 그 안에 다시 보내므로 자리가 유지된다.
   useEffect(() => {
@@ -63,7 +83,7 @@ export default function App() {
     const beat = () => {
       heartbeat(roomId).catch((e) => {
         // 자리를 비운 사이 이미 내보내졌으면 첫 화면으로 돌아간다
-        if (e.message.includes('참가자가 아닙니다')) handleLeave();
+        if (e.message.includes('참가자가 아닙니다')) handleRemoved();
       });
     };
     // 백그라운드 탭은 타이머가 늦어지므로 화면에 돌아오면 바로 보낸다
@@ -78,7 +98,7 @@ export default function App() {
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [roomId, handleLeave]);
+  }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
   // 다시하기로 방이 대기실로 돌아가면 화면도 되돌린다
@@ -112,7 +132,11 @@ export default function App() {
   return (
     <Box sx={{ minHeight: '100dvh', px: 2, py: 4 }}>
       {!roomId ? (
-        <HomePage onEntered={setRoomId} />
+        <HomePage
+          onEntered={handleEntered}
+          notice={notice}
+          onCloseNotice={() => setNotice('')}
+        />
       ) : phase && phase !== 'LOBBY' ? (
         <GamePage
           roomId={roomId}
@@ -125,6 +149,7 @@ export default function App() {
           roomId={roomId}
           uid={uid}
           onLeave={handleLeave}
+          onRemoved={handleRemoved}
           onStarted={handleStarted}
         />
       )}

@@ -9,7 +9,7 @@ import Typography from '@mui/material/Typography';
 
 import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
-export default function HomePage({ onEntered }) {
+export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
   const [nickname, setNickname] = useState('');
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState('');
@@ -38,6 +38,12 @@ export default function HomePage({ onEntered }) {
           5~15명이 함께하는 온라인 추리 게임
         </Typography>
       </Stack>
+
+      {notice && (
+        <Alert severity="warning" onClose={onCloseNotice} sx={{ width: '100%' }}>
+          {notice}
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3, width: '100%' }}>
         <Stack spacing={2.5}>

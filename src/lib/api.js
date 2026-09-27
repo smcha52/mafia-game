@@ -32,6 +32,16 @@ export async function leaveRoom(roomId) {
   unwrap(await supabase.rpc('leave_room', { p_room_id: roomId }));
 }
 
+// 방장이 대기실에서 참가자를 추방한다
+export async function kickPlayer(roomId, targetUid) {
+  unwrap(await supabase.rpc('kick_player', { p_room_id: roomId, p_target_uid: targetUid }));
+}
+
+// 방에서 빠졌을 때 추방당한 것인지 확인한다 (한 번만 true)
+export async function takeKickNotice(roomId) {
+  return unwrap(await supabase.rpc('take_kick_notice', { p_room_id: roomId }));
+}
+
 export async function startGame(roomId) {
   unwrap(await supabase.rpc('start_game', { p_room_id: roomId }));
 }
