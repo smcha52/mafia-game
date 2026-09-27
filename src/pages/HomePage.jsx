@@ -7,7 +7,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
-import { createRoom, joinRoom } from '../lib/api';
+import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
 export default function HomePage({ onEntered }) {
   const [nickname, setNickname] = useState('');
@@ -50,6 +50,17 @@ export default function HomePage({ onEntered }) {
             fullWidth
             autoComplete="off"
           />
+
+          <Button
+            variant="contained"
+            color="secondary"
+            size="large"
+            disabled={nicknameEmpty || busy !== ''}
+            loading={busy === 'quick'}
+            onClick={() => run('quick', () => quickJoin(nickname.trim()))}
+          >
+            빠른 시작
+          </Button>
 
           <Button
             variant="contained"

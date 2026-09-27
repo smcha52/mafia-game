@@ -4,7 +4,7 @@
 e2e.py 에서 불러 쓴다. 단독 실행하지 않는다.
 """
 
-from harness import KEY, check, msg, req, rpc, uid_of, user_pool
+from harness import KEY, check, close_room, msg, req, rpc, uid_of, user_pool
 
 
 def uid_map(roles):
@@ -240,7 +240,7 @@ def test_roles_mafia_citizen():
     check("종료 후 전체 직업 공개", s == 200 and isinstance(b, list) and len(b) == 5,
           "%d명 공개" % (len(b) if isinstance(b, list) else -1))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 # ------------------------------------------------------------------
@@ -276,7 +276,7 @@ def test_jester_win():
           bool(b) and b[0]["phase"] == "ENDED" and b[0]["winner"] == "JESTER",
           ("%s / %s" % (b[0]["phase"], b[0]["winner"])) if b else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 # ------------------------------------------------------------------
@@ -313,7 +313,7 @@ def test_night_tie():
     check("동점이어도 낮으로 진행", bool(b) and b[0]["phase"] == "DAY",
           b[0]["phase"] if b else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL = [test_roles_mafia_citizen, test_jester_win, test_night_tie]
@@ -388,7 +388,7 @@ def test_game_view():
     check("낮 투표 후 내 표 복원", v.get("daySubmitted") == uid_of(mafia[1]),
           str(v.get("daySubmitted"))[:36])
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.append(test_game_view)
@@ -477,7 +477,7 @@ def test_phase_timer():
     check("전원 제출 시 즉시 진행",
           isinstance(last, dict) and last.get("resolved") is True, str(last))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.append(test_phase_timer)
@@ -560,7 +560,7 @@ def test_role_police():
               "2일차 진입 실패 phase=%s" % (b[0]["phase"] if b else "?"))
         check("결과가 누적된다", False, "건너뜀")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_police_dead_blocked():
@@ -606,7 +606,7 @@ def test_police_dead_blocked():
               "2일차 밤 진입 실패 phase=%s winner=%s"
               % (b[0]["phase"], b[0]["winner"]) if b else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_role_police, test_police_dead_blocked])
@@ -688,7 +688,7 @@ def test_role_doctor():
         check("연속 치료 차단 (§2.4)", False, "2일차 밤 진입 실패")
         check("다른 사람은 치료 가능", False, "건너뜀")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_doctor_cannot_save_execution():
@@ -711,7 +711,7 @@ def test_doctor_cannot_save_execution():
     check("치료해도 처형은 막지 못한다", target is not None and target["alive"] is False,
           "alive=%s" % (target["alive"] if target else "?"))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_role_doctor, test_doctor_cannot_save_execution])
@@ -759,7 +759,7 @@ def test_tick_before_deadline_is_safe():
     s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, toks[0])
     check("1일차 낮 진입", bool(b) and b[0]["phase"] == "DAY", b[0]["phase"] if b else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.append(test_tick_before_deadline_is_safe)
@@ -803,7 +803,7 @@ def test_bodyguard_rules():
                {"p_room_id": room_id, "p_action": "BODYGUARD", "p_target_uid": uids[citizen]})
     check("경호원 보호 제출", s == 200, str(b)[:40])
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def _combo(label, heal, protect, expect_target_alive, expect_guard_alive, expect_deaths):
@@ -841,7 +841,7 @@ def _combo(label, heal, protect, expect_target_alive, expect_guard_alive, expect
           "대상생존=%s 경호원생존=%s 사망%d명"
           % (alive.get(uids[victim]), alive.get(uids[guard]), len(dead)))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_combo_table():
@@ -884,7 +884,7 @@ def test_bodyguard_repeat():
         check("연속 보호 차단 (§2.5)", False,
               ("2일차 밤 진입 실패 %s/%s" % (b[0]["phase"], b[0]["winner"])) if b else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_bodyguard_private_result():
@@ -923,7 +923,7 @@ def test_bodyguard_private_result():
     deaths = b[0]["payload"]["nightDeaths"] if b else []
     check("공개 결과엔 경호원만 사망", deaths == [uids[guard]], "사망 %d명" % len(deaths))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_bodyguard_rules, test_combo_table,
@@ -971,7 +971,7 @@ def test_detective():
     res = [r for r in (v.get("privateResults") or []) if r["kind"] == "DETECTIVE"]
     check("탐정 결과 도착", len(res) == 1, "%d건" % len(res))
     if not res:
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     cands = res[0]["payload"].get("candidates") or []
@@ -989,7 +989,7 @@ def test_detective():
     others = [r for r in (v2.get("privateResults") or []) if r["kind"] == "DETECTIVE"]
     check("다른 사람은 추리 결과 없음", not others, str(others))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_detective_candidate_count_large():
@@ -1015,7 +1015,7 @@ def test_detective_candidate_count_large():
     check("10명 이상은 후보 3개", len(cands or []) == 3, "후보 %s" % cands)
     check("12명에서도 진짜 포함", "POLICE" in (cands or []), "대상=POLICE 후보=%s" % cands)
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_detective_result_is_stable():
@@ -1043,7 +1043,7 @@ def test_detective_result_is_stable():
 
     check("여러 번 읽어도 후보 동일", len(set(reads)) == 1, str(reads[0]))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_detective, test_detective_candidate_count_large,
@@ -1134,7 +1134,7 @@ def test_reporter():
     else:
         check("1회 제한 (§2.7)", False, "2일차 밤 진입 실패")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_reporter_does_not_stall_night():
@@ -1157,7 +1157,7 @@ def test_reporter_does_not_stall_night():
     s, b = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, rep)
     if not (b and b[0]["phase"] == "NIGHT"):
         check("기자가 밤을 막지 않는다", False, "2일차 밤 진입 실패")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     # 2일차: 기자는 더 제출할 수 없지만 나머지만으로 밤이 끝나야 한다
@@ -1165,7 +1165,7 @@ def test_reporter_does_not_stall_night():
     check("기자가 밤을 막지 않는다",
           isinstance(last, dict) and last.get("resolved") is True, str(last))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_reporter, test_reporter_does_not_stall_night])
@@ -1211,7 +1211,7 @@ def test_medium():
     if not (b and b[0]["phase"] == "NIGHT"):
         check("영매 결과 도착", False,
               ("2일차 밤 진입 실패 %s/%s" % (b[0]["phase"], b[0]["winner"])) if b else "?")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     # 비영매는 쓸 수 없다
@@ -1239,7 +1239,7 @@ def test_medium():
     others = [r for r in (v2.get("privateResults") or []) if r["kind"] == "MEDIUM"]
     check("다른 사람은 교신 결과 없음", not others, str(others))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_medium_reads_executed_role():
@@ -1263,7 +1263,7 @@ def test_medium_reads_executed_role():
     s, b = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, med)
     if not (b and b[0]["phase"] == "NIGHT"):
         check("처형된 사람의 직업 확인", False, "2일차 밤 진입 실패")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     rpc("submit_night_action", med,
@@ -1277,7 +1277,7 @@ def test_medium_reads_executed_role():
           bool(res) and res[0]["payload"].get("role") == "POLICE",
           (res[0]["payload"].get("role") if res else "결과 없음"))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_medium, test_medium_reads_executed_role])
@@ -1337,7 +1337,7 @@ def test_spy():
     s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, spy)
     if not (b and b[0]["phase"] == "DAY"):
         check("스파이 투표 시 직업 확인 (§2.9)", False, "낮 진입 실패")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     s, b = rpc("submit_day_vote", spy, {"p_room_id": room_id, "p_target_uid": uids[police]})
@@ -1362,7 +1362,7 @@ def test_spy():
     s, b = rpc("submit_day_vote", spy, {"p_room_id": room_id, "p_target_uid": uids[mafias[0]]})
     check("스파이 투표 변경 차단", s >= 400 and "변경할 수 없습니다" in str(msg(b)), msg(b))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_spy_counts_for_mafia_win():
@@ -1406,7 +1406,7 @@ def test_spy_counts_for_mafia_win():
     else:
         check("스파이 생존 시 시민 승리 아님 (§4.2)", False, "2일차 진입 실패")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_spy, test_spy_counts_for_mafia_win])

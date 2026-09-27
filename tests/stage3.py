@@ -8,7 +8,7 @@
   · 게임이 무한히 이어지지 않고 끝나는가
 """
 
-from harness import check, msg, req, rpc, user_pool
+from harness import check, close_room, msg, req, rpc, user_pool
 from stage2 import _pick, alive_uids, make_game, pass_day, pass_night, uid_map
 
 # §5 인원별 기본 직업 구성. 서버의 role_composition() 과 일치해야 한다.
@@ -74,7 +74,7 @@ def test_all_compositions():
         elif len(roles) != n:
             bad.append("%d명: %d명만 배정" % (n, len(roles)))
 
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
 
     check("5~15명 전 구성 배정 일치 (§5)", not bad, "; ".join(bad) if bad else "11개 구성 모두 일치")
 
@@ -160,7 +160,7 @@ def test_all_abilities_same_night():
     check("15명 탐정 후보 3개", len(cands) == 3, str(cands))
     check("15명 탐정 후보에 진짜 포함", "SPY" in cands, str(cands))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 # ------------------------------------------------------------------
@@ -210,7 +210,7 @@ def test_citizen_victory_path():
         mafia_alive = sum(1 for p in pl if p["team"] == "MAFIA" and p["alive"])
         check("승리 시점에 마피아 진영 0명", mafia_alive == 0, "%d명" % mafia_alive)
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_mafia_victory_path():
@@ -230,7 +230,7 @@ def test_mafia_victory_path():
         c = sum(1 for p in pl if p["team"] == "CITIZEN" and p["alive"])
         check("승리 시점에 마피아 >= 시민 (광대 제외)", m >= c, "마피아%d vs 시민%d" % (m, c))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_jester_victory_beats_others():
@@ -262,7 +262,7 @@ def test_jester_victory_beats_others():
         check("양 진영이 남아 있어도 광대가 우선",
               m > 0 and c > 0, "마피아%d 시민%d" % (m, c))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_jester_killed_at_night_does_not_win():
@@ -288,7 +288,7 @@ def test_jester_killed_at_night_does_not_win():
           j_alive is False and (not r or r[0]["winner"] != "JESTER"),
           "광대생존=%s winner=%s" % (j_alive, r[0]["winner"] if r else "?"))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL = [test_all_compositions, test_all_abilities_same_night,
@@ -332,7 +332,7 @@ def test_default_settings():
         and r[0]["max_days"] == 15
     check("기본값 밤30초/낮60초/15일차", ok, str(r[0]) if r else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_draw_on_max_day():
@@ -366,7 +366,7 @@ def test_draw_on_max_day():
     check("무승부 후에도 직업 공개", s == 200 and isinstance(b, list) and len(b) == 7,
           "%d명" % (len(b) if isinstance(b, list) else -1))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_victory_beats_draw():
@@ -389,7 +389,7 @@ def test_victory_beats_draw():
           bool(r) and r[0]["winner"] == "JESTER",
           "winner=%s" % (r[0]["winner"] if r else "?"))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_max_days_permission():
@@ -417,7 +417,7 @@ def test_max_days_permission():
                {"p_room_id": room_id, "p_night": 30, "p_day": 60, "p_max_days": 9})
     check("진행 중 최대 일수 변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_default_settings, test_draw_on_max_day,
@@ -464,7 +464,7 @@ def test_chat_lobby():
 
     check("외부인은 대화를 못 읽는다", _chat_of(outsider, room_id) == [], "")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_chat_night_mafia_only():
@@ -509,7 +509,7 @@ def test_chat_night_mafia_only():
                      "sender_nickname": "위조", "body": "몰래", "phase": "NIGHT"})
     check("직접 INSERT 차단", s >= 400, "HTTP %d" % s)
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_chat_day_and_dead():
@@ -529,7 +529,7 @@ def test_chat_day_and_dead():
     s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, police)
     if not (r and r[0]["phase"] == "DAY"):
         check("낮 채팅: 생존자 전송", False, "낮 진입 실패")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     s, b = rpc("send_chat", police, {"p_room_id": room_id, "p_body": "제가 경찰입니다"})
@@ -548,7 +548,7 @@ def test_chat_day_and_dead():
     civ_seen = _chat_of(citizens[1], room_id)
     check("낮에는 마피아도 공개 채널", len(civ_seen) == 2, "%d건" % len(civ_seen))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_chat_after_end():
@@ -566,13 +566,13 @@ def test_chat_after_end():
     s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, toks[0])
     if not (r and r[0]["phase"] == "ENDED"):
         check("종료 후 사망자 전송 허용", False, "종료되지 않음")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     s, b = rpc("send_chat", citizens[1], {"p_room_id": room_id, "p_body": "아 억울하다"})
     check("종료 후 사망자 전송 허용", s == 200 and b.get("channel") == "PUBLIC", str(b))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_chat_lobby, test_chat_night_mafia_only,
@@ -613,14 +613,14 @@ def test_chat_revealed_only_after_end():
     s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, police)
     if not (r and r[0]["phase"] == "ENDED"):
         check("종료 후: 시민도 읽는다", False, "종료되지 않음")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     check("종료 후: 시민도 읽는다", maf_count(citizens[0]) >= 1,
           "%d건" % maf_count(citizens[0]))
     check("종료 후: 경찰도 읽는다", maf_count(police) >= 1, "%d건" % maf_count(police))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.append(test_chat_revealed_only_after_end)
@@ -654,7 +654,7 @@ def test_restart_game():
     s, r = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, toks[0])
     if not (r and r[0]["phase"] == "ENDED"):
         check("종료 확인", False, "종료되지 않음")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
     check("종료 확인", True, "승자 %s" % r[0]["winner"])
 
@@ -715,7 +715,7 @@ def test_restart_game():
             got += 1
     check("직업 재배정", got == 7, "%d/7" % got)
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.append(test_restart_game)
@@ -792,7 +792,7 @@ def test_role_toggle_permission():
                {"p_room_id": room_id, "p_disabled": ["POLICE"]})
     check("진행 중 직업 변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_role_toggle_applies_to_game():
@@ -831,7 +831,7 @@ def test_role_toggle_applies_to_game():
     check("광대 없으면 jester_uid 비어 있음", bool(r) and r[0]["jester_uid"] is None,
           str(r[0]["jester_uid"]) if r else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_role_toggle_survives_restart():
@@ -849,7 +849,7 @@ def test_role_toggle_survives_restart():
     s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, toks[0])
     if not (r and r[0]["phase"] == "ENDED"):
         check("다시하기 후 설정 유지", False, "종료되지 않음")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     rpc("restart_game", toks[0], {"p_room_id": room_id})
@@ -864,7 +864,7 @@ def test_role_toggle_survives_restart():
     check("다시하기 후 설정 유지", bool(r) and r[0]["disabled_roles"] == ["JESTER"],
           str(r[0]["disabled_roles"]) if r else "?")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_role_toggle_composition, test_role_toggle_permission,
@@ -964,7 +964,7 @@ def test_assassin_hit_and_miss():
     check("다른 사람은 저격 결과 없음",
           not [x for x in (v2.get("privateResults") or []) if x["kind"] == "ASSASSIN"], "")
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
     # --- 실패 ---
     toks, room_id, roles, uids = _assassin_game(7)
@@ -987,7 +987,7 @@ def test_assassin_hit_and_miss():
     check("저격 실패 -> 대상 생존", alive.get(uids[police]) is True,
           "경찰 생존=%s" % alive.get(uids[police]))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_assassin_day_immediate():
@@ -1006,7 +1006,7 @@ def test_assassin_day_immediate():
     s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, killer)
     if not (r and r[0]["phase"] == "DAY"):
         check("낮 저격 즉시 처리", False, "낮 진입 실패")
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
         return
 
     # 낮에 의사를 의사로 찍는다 -> 즉시 사망
@@ -1029,7 +1029,7 @@ def test_assassin_day_immediate():
                 {"p_room_id": room_id, "p_target_uid": uids[citizens[1]], "p_guess": "CITIZEN"})
     check("같은 낮 재저격 차단", s >= 400 and "이미 저격" in str(msg(b2)), msg(b2))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_assassin_rules():
@@ -1055,7 +1055,7 @@ def test_assassin_rules():
                {"p_room_id": room_id, "p_target_uid": uids[police], "p_guess": "NOPE"})
     check("없는 직업 차단", s >= 400 and "직업을 선택" in str(msg(b)), msg(b))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 
@@ -1116,7 +1116,7 @@ def test_assassin_all_citizens_blocked():
     check("전원 시민이면 저격 제출 차단",
           s >= 400 and "모두 시민" in str(msg(b)), msg(b))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_assassin_guard_allows_real_target():
@@ -1131,7 +1131,7 @@ def test_assassin_guard_allows_real_target():
     check("경찰·의사가 살아 있으면 canAssassinate=true",
           v.get("canAssassinate") is True, str(v.get("canAssassinate")))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 
@@ -1157,7 +1157,7 @@ def test_d3_reporter_on_jester():
         jester = _pick(roles, "JESTER")
         police = _pick(roles, "POLICE")
         if not rep or not jester:
-            rpc("leave_room", toks[0], {"p_room_id": room_id})
+            close_room(toks, room_id)
             continue
 
         rpc("submit_night_action", rep,
@@ -1201,10 +1201,10 @@ def test_d3_reporter_on_jester():
                   one.get("team") == "CITIZEN", str(reveal))
             check("공개 결과에 중립이 새지 않는다",
                   "NEUTRAL" not in str(reveal), str(reveal))
-            rpc("leave_room", toks[0], {"p_room_id": room_id})
+            close_room(toks, room_id)
             break
 
-        rpc("leave_room", toks[0], {"p_room_id": room_id})
+        close_room(toks, room_id)
 
     if not got_success:
         check("D-3 검증", False, "8번 시도했지만 기자가 한 번도 성공하지 못했다")
@@ -1295,7 +1295,7 @@ def test_day_tie_and_citizen_reveal():
     check("처형 시 tie=false",
           pay.get("tie") is False and pay.get("executed") == uids[police], str(pay))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 def test_day_reveal_mafia_and_jester():
@@ -1340,7 +1340,7 @@ def test_day_reveal_mafia_and_jester():
     check("공개 후에도 광대 단독 승리 유지",
           bool(rm) and rm[0]["winner"] == "JESTER", str(rm))
 
-    rpc("leave_room", toks[0], {"p_room_id": room_id})
+    close_room(toks, room_id)
 
 
 ALL.extend([test_day_tie_and_citizen_reveal, test_day_reveal_mafia_and_jester])

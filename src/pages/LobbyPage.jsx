@@ -189,7 +189,7 @@ export default function LobbyPage({ roomId, uid, onLeave, onStarted }) {
             onLeave();
           })}
         >
-          {isHost ? '방 닫고 나가기' : '나가기'}
+          나가기
         </Button>
       </Stack>
     </Stack>

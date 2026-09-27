@@ -14,6 +14,16 @@ export async function joinRoom(code, nickname) {
   return unwrap(await supabase.rpc('join_room', { p_code: code, p_nickname: nickname }));
 }
 
+// 15명이 안 된 대기실 방에 바로 입장한다
+export async function quickJoin(nickname) {
+  return unwrap(await supabase.rpc('quick_join', { p_nickname: nickname }));
+}
+
+// 화면이 열려 있음을 알린다. 60초 넘게 오지 않으면 서버가 나간 것으로 처리한다
+export async function heartbeat(roomId) {
+  unwrap(await supabase.rpc('heartbeat', { p_room_id: roomId }));
+}
+
 export async function setReady(roomId, ready) {
   unwrap(await supabase.rpc('set_ready', { p_room_id: roomId, p_ready: ready }));
 }

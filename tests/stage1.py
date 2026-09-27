@@ -2,7 +2,7 @@
 1단계 테스트 — 온라인 방 / 대기실 / 준비 / 시작 / 재접속
 """
 
-from harness import check, msg, req, rpc, user_pool
+from harness import check, close_room, msg, req, rpc, uid_of, user_pool
 
 
 def test_lobby():
@@ -95,10 +95,25 @@ def test_lobby():
     s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
     check("중복 시작 차단", s >= 400 and "이미 시작" in str(msg(b)), msg(b))
 
-    # 정리 — 방장이 나가면 방과 참가자가 함께 삭제된다
+    # 방장이 나가면 그다음으로 들어온 사람이 방장이 된다 (0026)
     rpc("leave_room", toks[0], {"p_room_id": room_id})
-    s, b = req("/rest/v1/rooms?select=id&id=eq." + room_id, toks[1])
-    check("방장 퇴장 시 방 삭제", b == [], "남은 방 %s" % b)
+    next_uid = uid_of(toks[1])
+    s, b = req("/rest/v1/rooms?select=host_uid&id=eq." + room_id, toks[1])
+    check("방장 퇴장 시 방 유지", isinstance(b, list) and len(b) == 1, "남은 방 %s" % b)
+    check("다음 입장자에게 방장 이전",
+          bool(b) and b[0]["host_uid"] == next_uid, str(b)[:60])
+    s, b = req("/rest/v1/players?select=nickname,is_host&room_id=eq." + room_id
+               + "&is_host=eq.true", toks[1])
+    check("방장 표시도 한 명만 이전",
+          isinstance(b, list) and [p["nickname"] for p in b] == ["참가자2"], str(b))
+
+    # 정리 — 전원이 나가면 방이 삭제된다
+    # 나간 사람은 RLS 때문에 방이 남아 있어도 [] 를 받는다. 코드로 입장해 확인한다.
+    close_room(toks, room_id)
+    s, b = rpc("join_room", t_out, {"p_code": code, "p_nickname": "확인"})
+    check("전원 퇴장 시 방 삭제", s >= 400 and "존재하지 않는" in str(msg(b)), msg(b))
+    if s == 200:
+        close_room([t_out], room_id)
 
 
 ALL = [test_lobby]

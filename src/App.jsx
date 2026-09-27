@@ -9,7 +9,7 @@ import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
 import SetupNotice from './pages/SetupNotice';
 import { ensureSession, isConfigured, supabase } from './lib/supabase';
-import { myActiveRoom } from './lib/api';
+import { heartbeat, myActiveRoom } from './lib/api';
 
 export default function App() {
   const [booting, setBooting] = useState(true);
@@ -54,6 +54,31 @@ export default function App() {
     setRoomId(null);
     setPhase(null);
   }, []);
+
+  // 방에 있는 동안 heartbeat 를 보낸다. 브라우저를 닫으면 끊기고,
+  // 60초 뒤 서버가 방에서 내보낸다. 새로고침은 그 안에 다시 보내므로 자리가 유지된다.
+  useEffect(() => {
+    if (!roomId) return undefined;
+
+    const beat = () => {
+      heartbeat(roomId).catch((e) => {
+        // 자리를 비운 사이 이미 내보내졌으면 첫 화면으로 돌아간다
+        if (e.message.includes('참가자가 아닙니다')) handleLeave();
+      });
+    };
+    // 백그라운드 탭은 타이머가 늦어지므로 화면에 돌아오면 바로 보낸다
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') beat();
+    };
+
+    beat();
+    const timer = setInterval(beat, 15000);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [roomId, handleLeave]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
   // 다시하기로 방이 대기실로 돌아가면 화면도 되돌린다

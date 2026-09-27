@@ -180,6 +180,13 @@ def rpc(fn, token, args):
     return req("/rest/v1/rpc/" + fn, token, args)
 
 
+def close_room(toks, room_id):
+    """테스트 방을 치운다. 방장이 나가도 다음 사람에게 방장이 넘어가므로(0026)
+    참가자 전원이 나가야 방이 지워진다. 참가하지 않은 토큰은 서버가 무시한다."""
+    for t in toks:
+        rpc("leave_room", t, {"p_room_id": room_id})
+
+
 def msg(b):
     return b.get("message") if isinstance(b, dict) else b
 
