@@ -116,4 +116,71 @@ def test_lobby():
         close_room([t_out], room_id)
 
 
-ALL = [test_lobby]
+# ------------------------------------------------------------------
+# 대기실 추방 (0027)
+# ------------------------------------------------------------------
+
+def test_kick():
+    toks = user_pool(5)
+    uids = [uid_of(t) for t in toks]
+
+    s, b = rpc("create_room", toks[0], {"p_nickname": "방장"})
+    if s != 200:
+        check("추방 테스트 준비", False, "방 생성 실패")
+        return
+    room_id, code = b["room_id"], b["room_code"]
+    for i, t in enumerate(toks[1:], start=1):
+        rpc("join_room", t, {"p_code": code, "p_nickname": "추방%d" % i})
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+
+    # --- 권한 ---
+    s, b = rpc("kick_player", toks[1], {"p_room_id": room_id, "p_target_uid": uids[2]})
+    check("비방장 추방 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
+
+    s, b = rpc("kick_player", toks[0], {"p_room_id": room_id, "p_target_uid": uids[0]})
+    check("자기 자신 추방 차단", s >= 400 and "자신" in str(msg(b)), msg(b))
+
+    # --- 추방 ---
+    s, b = rpc("kick_player", toks[0], {"p_room_id": room_id, "p_target_uid": uids[1]})
+    check("방장 추방", s in (200, 204), "HTTP %d %s" % (s, str(msg(b))[:38] if s >= 400 else ""))
+
+    s, b = req("/rest/v1/players?select=uid&room_id=eq." + room_id, toks[0])
+    left = [p["uid"] for p in b] if isinstance(b, list) else []
+    check("추방된 사람은 목록에서 빠진다", uids[1] not in left and len(left) == 4,
+          "%d명" % len(left))
+
+    s, b = req("/rest/v1/rooms?select=id&id=eq." + room_id, toks[1])
+    check("추방된 사람은 방을 못 읽는다", b == [], str(b))
+
+    s, b = rpc("heartbeat", toks[1], {"p_room_id": room_id})
+    check("추방된 사람의 heartbeat 거부", s >= 400 and "참가자가 아닙니다" in str(msg(b)), msg(b))
+
+    # --- 추방 안내: 추방당한 사람에게만, 한 번만 ---
+    s, b = rpc("take_kick_notice", toks[2], {"p_room_id": room_id})
+    check("다른 사람에겐 추방 안내 없음", b is False, str(b))
+
+    s, b = rpc("take_kick_notice", toks[1], {"p_room_id": room_id})
+    check("추방된 사람에게 안내", b is True, str(b))
+
+    s, b = rpc("take_kick_notice", toks[1], {"p_room_id": room_id})
+    check("추방 안내는 한 번만", b is False, str(b))
+
+    s, b = rpc("kick_player", toks[0], {"p_room_id": room_id, "p_target_uid": uids[1]})
+    check("방에 없는 사람 추방 차단", s >= 400 and "참가자가 아닙니다" in str(msg(b)), msg(b))
+
+    # --- 다시 들어오는 것은 막지 않는다 ---
+    s, b = rpc("join_room", toks[1], {"p_code": code, "p_nickname": "추방1"})
+    check("추방 후 재입장 허용", s == 200, msg(b) if s >= 400 else "HTTP 200")
+    rpc("set_ready", toks[1], {"p_room_id": room_id, "p_ready": True})
+
+    # --- 게임 중에는 추방할 수 없다 ---
+    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    check("추방 테스트: 게임 시작", s in (200, 204), msg(b) if s >= 400 else "HTTP %d" % s)
+
+    s, b = rpc("kick_player", toks[0], {"p_room_id": room_id, "p_target_uid": uids[2]})
+    check("게임 중 추방 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
+
+    close_room(toks, room_id)
+
+
+ALL = [test_lobby, test_kick]
