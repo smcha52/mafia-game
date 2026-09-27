@@ -261,7 +261,7 @@ def test_jester_win():
     jester_uid = uid_of(jester_tok)
     mafia_toks = [t for t, r in roles.items() if r["role"] == "MAFIA"]
     # 광대가 밤에 죽으면 승리하지 못하므로(§2.10) 다른 사람을 공격한다
-    prey = next(t for t, r in roles.items() if r["role"] not in ("MAFIA", "JESTER"))
+    prey = next(t for t, r in roles.items() if r["role"] not in ("MAFIA", "ASSASSIN", "JESTER"))
     prey_uid = uid_of(prey)
 
     uids = uid_map(roles)
