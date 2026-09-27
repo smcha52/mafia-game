@@ -1217,3 +1217,130 @@ ALL.extend([test_assassin_composition, test_assassin_hit_and_miss,
             test_assassin_all_citizens_blocked,
             test_assassin_guard_allows_real_target,
             test_d3_reporter_on_jester])
+
+
+# ------------------------------------------------------------------
+# 0023  밤에 낮 투표 결과 공개 — 동점 여부, 처형자 진영
+# ------------------------------------------------------------------
+
+def _day_payload(room_id, token, day):
+    s, b = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+               + "&kind=eq.DAY&day_number=eq.%d" % day, token)
+    return b[0]["payload"] if s == 200 and b else {}
+
+
+def _split_votes(room_id, roles, uids, a, b, c):
+    """최다 득표가 a, b 로 갈리도록 투표시킨다. 인원이 홀수면 한 표는 c 로 보낸다."""
+    alive = alive_uids(room_id, next(iter(roles)))
+    voters = [t for t in roles if uids[t] in alive]
+    n = len(voters)
+    quota = {a: n // 2, b: n // 2, c: n % 2}
+    # 대상 본인이 먼저 표를 고르게 해 몫이 자기 자신에게만 남는 일을 막는다
+    voters.sort(key=lambda t: uids[t] not in (a, b, c))
+    last = None
+    for t in voters:
+        opts = [u for u in (a, b, c) if u != uids[t] and quota[u] > 0]
+        tgt = max(opts, key=lambda u: quota[u])
+        quota[tgt] -= 1
+        s, last = rpc("submit_day_vote", t, {"p_room_id": room_id, "p_target_uid": tgt})
+    return last
+
+
+def test_day_tie_and_citizen_reveal():
+    """동점이면 아무도 처형하지 않고 tie=true 를 공개한다 (D-2, 0023)
+    시민 진영 처형자는 진영만 공개하고 직업은 숨긴다."""
+    toks, room_id, roles = make_game(7)
+    if not room_id:
+        check("낮 결과 공개 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    police = _pick(roles, "POLICE")
+    doctor = _pick(roles, "DOCTOR")
+    jester = _pick(roles, "JESTER")
+
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]],
+               doctor_uid=uids[_pick(roles, "MAFIA")])
+
+    # --- 1일차 낮: 경찰과 의사가 동점 ---
+    before = alive_uids(room_id, toks[0])
+    b = _split_votes(room_id, roles, uids, uids[police], uids[doctor], uids[jester])
+    check("동점 투표 후 자동 처리",
+          isinstance(b, dict) and b.get("resolved") is True, str(b))
+    check("낮 동점 -> 아무도 처형되지 않는다 (D-2)",
+          alive_uids(room_id, toks[0]) == before, "")
+
+    pay = _day_payload(room_id, citizens[1], 1)
+    check("동점 공개: tie=true", pay.get("tie") is True, str(pay))
+    check("동점 공개: 처형자·진영·직업 비어 있음",
+          pay.get("executed") is None and pay.get("executedTeam") is None
+          and pay.get("executedRole") is None, str(pay))
+
+    s, rm = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
+    check("동점 후 2일차 밤으로 진행",
+          bool(rm) and rm[0]["phase"] == "NIGHT" and rm[0]["day_number"] == 2,
+          str(rm))
+
+    # --- 2일차: 경찰 처형 -> 시민 진영, 직업은 숨긴다 ---
+    # 밤에 시민이 또 죽으면 마피아2 : 시민2 로 밤에 게임이 끝나므로 의사가 살린다
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[1]],
+               doctor_uid=uids[citizens[1]])
+    pass_day(room_id, roles, uids, uids[police])
+
+    pay = _day_payload(room_id, toks[0], 2)
+    check("시민 처형 공개: executedTeam=CITIZEN",
+          pay.get("executedTeam") == "CITIZEN", str(pay))
+    check("시민 처형 공개: 직업은 숨긴다",
+          pay.get("executedRole") is None and "POLICE" not in str(pay), str(pay))
+    check("처형 시 tie=false",
+          pay.get("tie") is False and pay.get("executed") == uids[police], str(pay))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+def test_day_reveal_mafia_and_jester():
+    """마피아 진영 처형자는 진영만, 중립(광대)은 직업을 그대로 공개한다 (0023)"""
+    toks, room_id, roles = make_game(7)
+    if not room_id:
+        check("낮 결과 공개 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    assassin = _pick(roles, "ASSASSIN")
+    jester = _pick(roles, "JESTER")
+
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]],
+               doctor_uid=uids[_pick(roles, "MAFIA")])
+
+    # --- 1일차: 암살자 처형 -> 마피아 진영, 직업은 숨긴다 ---
+    pass_day(room_id, roles, uids, uids[assassin])
+    pay = _day_payload(room_id, citizens[1], 1)
+    check("마피아 처형 공개: executedTeam=MAFIA",
+          pay.get("executedTeam") == "MAFIA", str(pay))
+    check("마피아 처형 공개: 암살자 직업은 숨긴다",
+          pay.get("executedRole") is None and "ASSASSIN" not in str(pay), str(pay))
+
+    s, rm = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
+    check("마피아 처형 후 2일차 밤으로 진행",
+          bool(rm) and rm[0]["phase"] == "NIGHT" and rm[0]["day_number"] == 2,
+          str(rm))
+
+    # --- 2일차: 광대 처형 -> 직업을 그대로 공개, 진영은 비운다 ---
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[1]],
+               doctor_uid=uids[_pick(roles, "POLICE")])
+    pass_day(room_id, roles, uids, uids[jester])
+
+    pay = _day_payload(room_id, toks[0], 2)
+    check("광대 처형 공개: executedRole=JESTER",
+          pay.get("executedRole") == "JESTER", str(pay))
+    check("광대 처형 공개: 진영(NEUTRAL)은 비운다",
+          pay.get("executedTeam") is None and "NEUTRAL" not in str(pay), str(pay))
+
+    s, rm = req("/rest/v1/rooms?select=phase,winner&id=eq." + room_id, toks[0])
+    check("공개 후에도 광대 단독 승리 유지",
+          bool(rm) and rm[0]["winner"] == "JESTER", str(rm))
+
+    rpc("leave_room", toks[0], {"p_room_id": room_id})
+
+
+ALL.extend([test_day_tie_and_citizen_reveal, test_day_reveal_mafia_and_jester])
