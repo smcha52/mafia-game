@@ -19,28 +19,28 @@ ROLE_TABLE = {
     8:  ['MAFIA', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD', 'JESTER',
          'CITIZEN', 'CITIZEN'],
     9:  ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'DETECTIVE',
-         'CITIZEN', 'CITIZEN', 'CITIZEN'],
+         'KILLER', 'CITIZEN', 'CITIZEN'],
     10: ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
-         'CITIZEN', 'CITIZEN', 'CITIZEN'],
+         'KILLER', 'CITIZEN', 'CITIZEN'],
     11: ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
-         'REPORTER', 'CITIZEN', 'CITIZEN', 'CITIZEN'],
+         'REPORTER', 'KILLER', 'CITIZEN', 'CITIZEN'],
     12: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'JESTER', 'CITIZEN', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'JESTER', 'KILLER', 'CITIZEN'],
     13: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'CITIZEN', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'CITIZEN'],
     14: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER',
-         'CITIZEN', 'CITIZEN', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER',
+         'CITIZEN', 'CITIZEN'],
     15: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER',
-         'CITIZEN', 'CITIZEN', 'CITIZEN', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER',
+         'CITIZEN', 'CITIZEN', 'CITIZEN'],
 }
 
 
 def team_of(role):
     if role in ("MAFIA", "SPY", "ASSASSIN"):
         return "MAFIA"
-    if role == "JESTER":
+    if role in ("JESTER", "KILLER"):
         return "NEUTRAL"
     return "CITIZEN"
 
@@ -62,7 +62,7 @@ def test_all_compositions():
 
     bad = []
     for n in range(5, 16):
-        toks, room_id, roles = make_game(n)
+        toks, room_id, roles = make_game(n, disabled=())
         if not room_id:
             bad.append("%d명: 방 생성 실패" % n)
             continue
@@ -750,7 +750,8 @@ def test_role_toggle_composition():
     s, all_off = rpc("role_composition", KEY,
                      {"p_count": 15, "p_disabled": ["POLICE", "DOCTOR", "BODYGUARD",
                                                     "DETECTIVE", "REPORTER", "MEDIUM",
-                                                    "SPY", "JESTER", "ASSASSIN"]})
+                                                    "SPY", "JESTER", "ASSASSIN",
+                                                    "KILLER"]})
     c2 = Counter(all_off) if s == 200 else Counter()
     check("전부 끄면 마피아+시민만",
           set(c2.keys()) == {"MAFIA", "CITIZEN"} and len(all_off) == 15,
@@ -1344,3 +1345,247 @@ def test_day_reveal_mafia_and_jester():
 
 
 ALL.extend([test_day_tie_and_citizen_reveal, test_day_reveal_mafia_and_jester])
+
+
+# ------------------------------------------------------------------
+# 새 직업: 살인자 (0028) — 중립, 밤마다 혼자 제거, 누구와든 1:1 이면 단독 승리
+# ------------------------------------------------------------------
+
+def _killer_game(n, off):
+    """off 직업을 끈 n명 게임. (토큰들, room_id, 직업맵, uid맵) 반환"""
+    toks = user_pool(n)
+    s, b = rpc("create_room", toks[0], {"p_nickname": "P1"})
+    if s != 200:
+        return None, None, None, None
+    room_id, code = b["room_id"], b["room_code"]
+    for i, t in enumerate(toks[1:], start=2):
+        rpc("join_room", t, {"p_code": code, "p_nickname": "P%d" % i})
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+    rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": off})
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+
+    roles = {}
+    for t in toks:
+        s, b = rpc("my_role", t, {"p_room_id": room_id})
+        if s == 200:
+            roles[t] = b
+    return toks, room_id, roles, uid_map(roles)
+
+
+# 살인자만 남기고 전부 끈다 -> 9명: 마피아2(암살자 자리 포함) + 살인자1 + 시민6
+ALL_BUT_KILLER = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE",
+                  "REPORTER", "MEDIUM", "SPY", "JESTER", "ASSASSIN"]
+
+
+def _phase(room_id, token):
+    s, b = req("/rest/v1/rooms?select=phase,winner,day_number&id=eq." + room_id, token)
+    return b[0] if s == 200 and b else {}
+
+
+def test_killer_composition():
+    from collections import Counter
+    from harness import KEY
+
+    s, c8 = rpc("role_composition", KEY, {"p_count": 8, "p_disabled": []})
+    check("8명엔 살인자 없음", s == 200 and "KILLER" not in c8, str(c8))
+
+    bad = []
+    for n in range(9, 16):
+        s, c = rpc("role_composition", KEY, {"p_count": n, "p_disabled": []})
+        if not (s == 200 and Counter(c).get("KILLER") == 1):
+            bad.append("%d명: %s" % (n, c))
+    check("9명 이상 살인자 1명", not bad, "; ".join(bad) if bad else "9~15명")
+
+    s, base = rpc("role_composition", KEY, {"p_count": 9, "p_disabled": []})
+    s, off = rpc("role_composition", KEY, {"p_count": 9, "p_disabled": ["KILLER"]})
+    check("살인자를 끄면 시민으로 복귀",
+          "KILLER" not in off
+          and Counter(off).get("CITIZEN") == Counter(base).get("CITIZEN") + 1,
+          str(dict(Counter(off))))
+
+
+def test_killer_night_rules():
+    """살인자 제출·차단·치료·경호·경찰 판정 (11명 기본 구성)"""
+    toks, room_id, roles, uids = _killer_game(11, [])
+    if not room_id:
+        check("살인자 밤 테스트 준비", False, "방 생성 실패")
+        return
+
+    killer = _pick(roles, "KILLER")
+    police = _pick(roles, "POLICE")
+    guard = _pick(roles, "BODYGUARD")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    m_target, k_target = citizens[0], citizens[1]
+
+    s, v = rpc("my_game_view", killer, {"p_room_id": room_id})
+    check("살인자는 중립 진영", v.get("team") == "NEUTRAL", str(v.get("team")))
+
+    s, b = rpc("submit_night_action", killer,
+               {"p_room_id": room_id, "p_action": "KILLER", "p_target_uid": uids[killer]})
+    check("살인자 자기 지목 차단", s >= 400 and "자신" in str(msg(b)), msg(b))
+
+    s, b = rpc("submit_night_action", police,
+               {"p_room_id": room_id, "p_action": "KILLER", "p_target_uid": uids[k_target]})
+    check("살인자가 아니면 제거 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    # 살인자를 뺀 전원이 먼저 제출한다
+    # 마피아 -> 시민A (경호원이 막고 대신 죽음), 살인자 -> 시민B (의사가 치료)
+    others = {t: r for t, r in roles.items() if r["role"] != "KILLER"}
+    b = pass_night(room_id, others, uids, victim_uid=uids[m_target],
+                   doctor_uid=uids[k_target], guard_uid=uids[m_target],
+                   police_uid=uids[killer])
+    check("살인자가 내기 전엔 밤이 끝나지 않는다",
+          _phase(room_id, toks[0]).get("phase") == "NIGHT", str(b))
+
+    s, b = rpc("submit_night_action", killer,
+               {"p_room_id": room_id, "p_action": "KILLER", "p_target_uid": uids[k_target]})
+    check("살인자 제출로 밤 종료", s == 200 and b.get("resolved") is True, str(b))
+
+    alive = alive_uids(room_id, toks[0])
+    check("의사가 살인자의 공격을 막는다", uids[k_target] in alive, "")
+    check("경호원이 마피아 공격을 막고 대신 죽는다",
+          uids[m_target] in alive and uids[guard] not in alive, "")
+
+    s, dv = rpc("my_game_view", _pick(roles, "DOCTOR"), {"p_room_id": room_id})
+    doc = [r for r in (dv.get("privateResults") or []) if r["kind"] == "DOCTOR"]
+    check("의사 결과: 살인자 대상을 살렸다",
+          bool(doc) and doc[0]["payload"].get("savedUid") == uids[k_target], str(doc)[:60])
+
+    s, pv = rpc("my_game_view", police, {"p_room_id": room_id})
+    pres = [r for r in (pv.get("privateResults") or []) if r["kind"] == "POLICE"]
+    check("경찰은 살인자를 중립으로 본다",
+          bool(pres) and pres[0]["payload"].get("team") == "NEUTRAL", str(pres)[:60])
+
+    close_room(toks, room_id)
+
+
+def test_killer_kills_separately():
+    """마피아와 살인자가 다른 사람을 노리면 둘 다 죽는다. 누구든 노릴 수 있다."""
+    toks, room_id, roles, uids = _killer_game(9, ALL_BUT_KILLER)
+    if not room_id:
+        check("살인자 제거 테스트 준비", False, "방 생성 실패")
+        return
+    from collections import Counter
+    cc = Counter(r["role"] for r in roles.values())
+    check("구성: 마피아2 + 살인자1 + 시민6",
+          cc.get("MAFIA") == 2 and cc.get("KILLER") == 1 and cc.get("CITIZEN") == 6,
+          str(dict(cc)))
+
+    mafia = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 살인자는 마피아도 노릴 수 있다
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], killer_uid=uids[mafia[0]])
+    alive = alive_uids(room_id, toks[0])
+    check("마피아 대상과 살인자 대상이 모두 죽는다",
+          uids[citizens[0]] not in alive and uids[mafia[0]] not in alive, "")
+    s, pub = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+                 + "&kind=eq.NIGHT&day_number=eq.1", toks[0])
+    deaths = pub[0]["payload"].get("nightDeaths") if pub else None
+    check("밤 사망자 2명 공개", isinstance(deaths, list) and len(deaths) == 2, str(deaths))
+
+    close_room(toks, room_id)
+
+
+def test_killer_blocks_other_wins():
+    """살인자가 살아 있으면 시민은 이기지 못하고, 살인자까지 잡아야 이긴다"""
+    toks, room_id, roles, uids = _killer_game(9, ALL_BUT_KILLER)
+    if not room_id:
+        check("살인자 승리조건 준비", False, "방 생성 실패")
+        return
+    killer = _pick(roles, "KILLER")
+    mafia = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    cz = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 1밤: 둘이 같은 시민을 노린다 -> 1명 사망 (8명)
+    pass_night(room_id, roles, uids, victim_uid=uids[cz[0]], killer_uid=uids[cz[0]])
+    # 1낮: 마피아 1 처형 (7명: 마피아1 살인자1 시민5)
+    pass_day(room_id, roles, uids, uids[mafia[0]])
+    # 2밤: 마피아는 시민, 살인자는 남은 마피아 -> 마피아 전멸 (5명: 살인자1 시민4)
+    pass_night(room_id, roles, uids, victim_uid=uids[cz[1]], killer_uid=uids[mafia[1]])
+
+    st = _phase(room_id, toks[0])
+    check("마피아 전멸이어도 살인자가 살아 있으면 시민 승리 아님",
+          st.get("phase") == "DAY" and st.get("winner") is None, str(st))
+
+    # 2낮: 살인자 처형 -> 이제 시민 승리
+    pass_day(room_id, roles, uids, uids[killer])
+    st = _phase(room_id, toks[0])
+    check("살인자까지 잡으면 시민 승리",
+          st.get("phase") == "ENDED" and st.get("winner") == "CITIZEN", str(st))
+
+    s, b = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+               + "&kind=eq.DAY&day_number=eq.2", toks[0])
+    pay = b[0]["payload"] if b else {}
+    check("살인자 처형은 직업으로 공개 (중립)",
+          pay.get("executedRole") == "KILLER" and pay.get("executedTeam") is None, str(pay))
+
+    close_room(toks, room_id)
+
+
+def test_killer_wins_one_on_one():
+    """마피아가 시민보다 많아도 살인자가 살아 있으면 마피아 승리가 아니고,
+    마피아와 1:1 이 되면 살인자가 이긴다"""
+    toks, room_id, roles, uids = _killer_game(9, ALL_BUT_KILLER)
+    if not room_id:
+        check("살인자 1:1 준비", False, "방 생성 실패")
+        return
+    mafia = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    cz = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 1밤 (7명) -> 1낮 시민 처형 (6명: 마피아2 살인자1 시민3)
+    pass_night(room_id, roles, uids, victim_uid=uids[cz[0]], killer_uid=uids[cz[1]])
+    pass_day(room_id, roles, uids, uids[cz[2]])
+    # 2밤 (4명: 마피아2 살인자1 시민1) — 살인자가 없으면 마피아 승리 조건이다
+    pass_night(room_id, roles, uids, victim_uid=uids[cz[3]], killer_uid=uids[cz[4]])
+    st = _phase(room_id, toks[0])
+    check("살인자 생존 시 마피아 승리 없음 (마피아2 vs 시민1)",
+          st.get("phase") == "DAY" and st.get("winner") is None, str(st))
+
+    # 2낮: 마피아 1 처형 (3명: 마피아1 살인자1 시민1)
+    pass_day(room_id, roles, uids, uids[mafia[0]])
+    # 3밤: 마피아와 살인자가 마지막 시민을 노린다 -> 마피아1 vs 살인자1
+    pass_night(room_id, roles, uids, victim_uid=uids[cz[5]], killer_uid=uids[cz[5]])
+    st = _phase(room_id, toks[0])
+    check("마피아와 1:1 -> 살인자 단독 승리",
+          st.get("phase") == "ENDED" and st.get("winner") == "KILLER", str(st))
+
+    close_room(toks, room_id)
+
+
+def test_killer_reporter_disguise():
+    """기자가 살인자를 취재하면 광대처럼 시민 진영으로 공개된다"""
+    got = False
+    for attempt in range(8):
+        toks, room_id, roles, uids = _killer_game(11, [])
+        if not room_id:
+            continue
+        rep, killer = _pick(roles, "REPORTER"), _pick(roles, "KILLER")
+        rpc("submit_night_action", rep,
+            {"p_room_id": room_id, "p_action": "REPORTER", "p_target_uid": uids[killer]})
+        # 기자와 살인자는 살려 둔다
+        pass_night(room_id, roles, uids, victim_uid=uids[_pick(roles, "CITIZEN")],
+                   doctor_uid=uids[rep])
+
+        s, v = rpc("my_game_view", rep, {"p_room_id": room_id})
+        res = [r for r in (v.get("privateResults") or []) if r["kind"] == "REPORTER"]
+        pay = res[0]["payload"] if res else {}
+        if pay.get("success"):
+            got = True
+            check("기자 결과: 살인자는 시민 진영", pay.get("team") == "CITIZEN", str(pay)[:60])
+            s, pubs = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+                          + "&kind=eq.NIGHT&day_number=eq.1", toks[0])
+            reveal = pubs[0]["payload"].get("reporterReveal") if pubs else None
+            check("공개 결과도 시민, 중립이 새지 않는다",
+                  "CITIZEN" in str(reveal) and "NEUTRAL" not in str(reveal), str(reveal))
+            close_room(toks, room_id)
+            break
+        close_room(toks, room_id)
+
+    if not got:
+        check("살인자 취재 검증", False, "8번 시도했지만 기자가 한 번도 성공하지 못했다")
+
+
+ALL.extend([test_killer_composition, test_killer_night_rules,
+            test_killer_kills_separately, test_killer_blocks_other_wins,
+            test_killer_wins_one_on_one, test_killer_reporter_disguise])

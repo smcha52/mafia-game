@@ -8,7 +8,7 @@ const SKIN_DARK = '#C99A72';
 const BG = {
   CITIZEN: '#5A6B8C', MAFIA: '#7A2E2E', POLICE: '#2E4A7A', DOCTOR: '#2E6B5E',
   BODYGUARD: '#4A4A52', DETECTIVE: '#6B5433', REPORTER: '#7A5A2E', MEDIUM: '#5A3A7A',
-  SPY: '#3A3A4E', JESTER: '#8C4A7A', ASSASSIN: '#5A1E1E',
+  SPY: '#3A3A4E', JESTER: '#8C4A7A', ASSASSIN: '#5A1E1E', KILLER: '#3E4A2E',
 };
 
 function Head({ y = 30 }) {
@@ -170,6 +170,23 @@ const PARTS = {
       <path d="M44 26 q8 -8 6 -16 q-6 4 -9 10z" fill="#C4649B" />
       <circle cx="13" cy="9" r="3" fill="#E8C35A" />
       <circle cx="51" cy="9" r="3" fill="#E8C35A" />
+    </>
+  ),
+
+  KILLER: (
+    <>
+      <Head />
+      {/* 하키 마스크 */}
+      <ellipse cx="32" cy="30" rx="11" ry="12.5" fill="#E9E6DA" />
+      <path d="M25 26.5 q2.5 -2 5 0 q-2.5 2.2 -5 0z M34 26.5 q2.5 -2 5 0 q-2.5 2.2 -5 0z" fill="#15151C" />
+      <circle cx="28" cy="35" r="0.9" fill="#8A877C" />
+      <circle cx="32" cy="36" r="0.9" fill="#8A877C" />
+      <circle cx="36" cy="35" r="0.9" fill="#8A877C" />
+      <circle cx="32" cy="32" r="0.9" fill="#8A877C" />
+      <path d="M26 21 l3 3 M38 21 l-3 3" stroke="#B8413A" strokeWidth="1.6" strokeLinecap="round" />
+      {/* 도끼 */}
+      <path d="M48 55 l-6 -16" stroke="#6B4A2E" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M40.5 36 q4 -4 8 -2 l-2.6 7 q-3 -2.6 -5.4 -5z" fill="#B9BCC4" />
     </>
   ),
 };

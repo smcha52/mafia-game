@@ -19,7 +19,7 @@ def alive_uids(room_id, token):
 
 def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
                doctor_uid=None, guard_uid=None, detective_uid=None,
-               reporter_uid=None, medium_uid=None):
+               reporter_uid=None, medium_uid=None, killer_uid=None):
     """밤에 행동하는 직업(마피아·경찰)을 모두 제출시켜 밤을 넘긴다.
 
     victim_uid 를 주지 않으면 마피아는 살아 있는 아무나를 공격한다.
@@ -56,6 +56,15 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
             tgt = victim_uid or next(u for u in alive if u != uids[t])
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": tgt})
+        elif r["role"] == "KILLER":
+            # 따로 정하지 않으면 마피아와 같은 사람을 노려 사망자가 늘지 않게 한다
+            tgt = killer_uid if killer_uid in alive and killer_uid != uids[t] else None
+            if tgt is None and victim_uid and victim_uid != uids[t]:
+                tgt = victim_uid
+            if tgt is None:
+                tgt = next(u for u in alive if u != uids[t])
+            s, last = rpc("submit_night_action", t,
+                          {"p_room_id": room_id, "p_action": "KILLER", "p_target_uid": tgt})
         elif r["role"] == "POLICE":
             tgt = police_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,
@@ -116,7 +125,13 @@ def pass_day(room_id, roles, uids, target_uid):
     return last
 
 
-def make_game(n):
+# 살인자(0028)는 승리 조건을 바꾸고 9명 이상에서 시민 한 자리를 차지한다.
+# 그 전에 쓴 테스트는 살인자가 없는 구성을 전제로 하므로 기본으로 끈다.
+# 살인자 자리는 시민으로 돌아가 이전 구성과 같아진다.
+DEFAULT_OFF = ("KILLER",)
+
+
+def make_game(n, disabled=DEFAULT_OFF):
     """n명짜리 방을 만들고 게임을 시작한다. (토큰들, room_id, 직업맵) 반환."""
     toks = user_pool(n)
     s, b = rpc("create_room", toks[0], {"p_nickname": "P1"})
@@ -126,6 +141,8 @@ def make_game(n):
     for i, t in enumerate(toks[1:], start=2):
         rpc("join_room", t, {"p_code": code, "p_nickname": "P%d" % i})
         rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+    if disabled:
+        rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": list(disabled)})
     rpc("start_game", toks[0], {"p_room_id": room_id})
 
     roles = {}
