@@ -140,6 +140,10 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   const lastNight = results.find((r) => r.kind === 'NIGHT' && r.day_number === day);
   const deaths = (phase === 'DAY' ? lastNight?.payload?.nightDeaths : null) ?? [];
   const reveals = (phase === 'DAY' ? lastNight?.payload?.reporterReveal : null) ?? [];
+  // 밤에는 직전 낮의 투표 결과를 보여준다
+  const lastDay = phase === 'NIGHT'
+    ? results.find((r) => r.kind === 'DAY' && r.day_number === day - 1)
+    : null;
 
   const leaveButton = (
     <Button
@@ -265,6 +269,34 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
             ? `간밤에 ${deaths.map(nickOf).join(', ')}님이 사망했습니다.`
             : '간밤에 아무도 죽지 않았습니다.'}
         </Alert>
+      )}
+
+      {/* 낮 투표 결과 — 처형자의 진영, 중립이면 직업을 공개한다 */}
+      {lastDay && (
+        lastDay.payload?.executed ? (
+          <Alert severity="error" icon={false}>
+            <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+              <span>⚖️ 투표로</span>
+              <strong>{nickOf(lastDay.payload.executed)}</strong>
+              <span>님이 처형되었습니다.</span>
+              {lastDay.payload.executedRole ? (
+                <Chip size="small" color="warning" label={roleInfo(lastDay.payload.executedRole).name} />
+              ) : TEAM_RESULT[lastDay.payload.executedTeam] && (
+                <Chip
+                  size="small"
+                  color={TEAM_RESULT[lastDay.payload.executedTeam].color}
+                  label={TEAM_RESULT[lastDay.payload.executedTeam].label}
+                />
+              )}
+            </Stack>
+          </Alert>
+        ) : (
+          <Alert severity="info">
+            {lastDay.payload?.tie
+              ? '⚖️ 투표가 동점이라 아무도 처형되지 않았습니다.'
+              : '⚖️ 오늘 낮에는 아무도 처형되지 않았습니다.'}
+          </Alert>
+        )
       )}
 
       {/* 기자 보도 — 모든 생존자가 본다 (§2.7) */}
