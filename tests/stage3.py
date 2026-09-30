@@ -1589,3 +1589,144 @@ def test_killer_reporter_disguise():
 ALL.extend([test_killer_composition, test_killer_night_rules,
             test_killer_kills_separately, test_killer_blocks_other_wins,
             test_killer_wins_one_on_one, test_killer_reporter_disguise])
+
+
+# ------------------------------------------------------------------
+# 자경단 (0029)
+# ------------------------------------------------------------------
+
+# 자경단만 남기고 전부 끈다 -> 10명: 마피아2(암살자 자리 포함) + 자경단1 + 시민7
+ALL_BUT_VIGILANTE = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER",
+                     "MEDIUM", "SPY", "JESTER", "ASSASSIN", "KILLER"]
+
+
+def test_vigilante_composition():
+    from collections import Counter
+    from harness import KEY
+
+    s, c9 = rpc("role_composition", KEY, {"p_count": 9, "p_disabled": []})
+    check("9명엔 자경단 없음", s == 200 and "VIGILANTE" not in c9, str(c9))
+
+    bad = []
+    for n in range(10, 16):
+        s, c = rpc("role_composition", KEY, {"p_count": n, "p_disabled": []})
+        if not (s == 200 and Counter(c).get("VIGILANTE") == 1):
+            bad.append("%d명: %s" % (n, c))
+    check("10명 이상 자경단 1명", not bad, "; ".join(bad) if bad else "10~15명")
+
+    s, base = rpc("role_composition", KEY, {"p_count": 10, "p_disabled": []})
+    s, off = rpc("role_composition", KEY, {"p_count": 10, "p_disabled": ["VIGILANTE"]})
+    check("자경단을 끄면 시민으로 복귀",
+          "VIGILANTE" not in off
+          and Counter(off).get("CITIZEN", 0) == Counter(base).get("CITIZEN", 0) + 1,
+          str(dict(Counter(off))))
+
+
+def test_vigilante_one_shot():
+    """건너뛰기, 한 번 제거, 이후 차단, 밤 진행 인원에서 빠지기"""
+    toks, room_id, roles, uids = _killer_game(10, ALL_BUT_VIGILANTE)
+    if not room_id:
+        check("자경단 테스트 준비", False, "방 생성 실패")
+        return
+    from collections import Counter
+    cc = Counter(r["role"] for r in roles.values())
+    check("구성: 마피아2 + 자경단1 + 시민7",
+          cc.get("MAFIA") == 2 and cc.get("VIGILANTE") == 1 and cc.get("CITIZEN") == 7,
+          str(dict(cc)))
+
+    vig = _pick(roles, "VIGILANTE")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, v = rpc("my_game_view", vig, {"p_room_id": room_id})
+    check("자경단은 시민 진영", v.get("team") == "CITIZEN", str(v.get("team")))
+
+    s, b = rpc("submit_night_action", vig,
+               {"p_room_id": room_id, "p_action": "VIGILANTE", "p_target_uid": uids[vig]})
+    check("자경단 자기 지목 차단", s >= 400 and "자신" in str(msg(b)), msg(b))
+
+    s, b = rpc("submit_night_action", mafias[0],
+               {"p_room_id": room_id, "p_action": "VIGILANTE", "p_target_uid": uids[citizens[0]]})
+    check("자경단이 아니면 제거 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    # 1일차 밤: 자경단은 건너뛴다. 마피아만 내면 밤이 끝난다.
+    s, b = rpc("submit_night_action", vig,
+               {"p_room_id": room_id, "p_action": "VIGILANTE", "p_target_uid": None})
+    check("자경단 건너뛰기 허용", s == 200, str(b))
+    check("건너뛰기만으로는 밤이 끝나지 않는다",
+          _phase(room_id, toks[0]).get("phase") == "NIGHT", "")
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]])
+    s, v = rpc("my_game_view", vig, {"p_room_id": room_id})
+    check("건너뛰면 기회가 남는다", v.get("abilityUsed") is False, str(v.get("abilityUsed")))
+
+    pass_day(room_id, roles, uids, uids[citizens[1]])
+    check("2일차 밤으로", _phase(room_id, toks[0]).get("phase") == "NIGHT",
+          str(_phase(room_id, toks[0])))
+
+    # 2일차 밤: 자경단 -> 마피아1, 마피아 -> 시민. 둘 다 죽는다.
+    s, b = rpc("submit_night_action", vig,
+               {"p_room_id": room_id, "p_action": "VIGILANTE", "p_target_uid": uids[mafias[0]]})
+    check("자경단 제거 제출", s == 200, str(b))
+    b = pass_night(room_id, roles, uids, victim_uid=uids[citizens[2]])
+    check("2일차 밤 종료", isinstance(b, dict) and b.get("resolved") is True, str(b))
+
+    alive = alive_uids(room_id, toks[0])
+    check("자경단의 대상이 죽는다", uids[mafias[0]] not in alive, "")
+    check("마피아 공격도 따로 처리된다", uids[citizens[2]] not in alive, "")
+
+    s, v = rpc("my_game_view", vig, {"p_room_id": room_id})
+    check("제거 후 기회 소진", v.get("abilityUsed") is True, str(v.get("abilityUsed")))
+
+    pass_day(room_id, roles, uids, uids[citizens[3]])
+    check("3일차 밤으로", _phase(room_id, toks[0]).get("phase") == "NIGHT",
+          str(_phase(room_id, toks[0])))
+
+    # 3일차 밤: 다시 제거도, 건너뛰기도 막힌다
+    s, b = rpc("submit_night_action", vig,
+               {"p_room_id": room_id, "p_action": "VIGILANTE", "p_target_uid": uids[mafias[1]]})
+    check("두 번째 제거 차단", s >= 400 and "당신은 제거를 이미 했습니다" in str(msg(b)), msg(b))
+    s, b = rpc("submit_night_action", vig,
+               {"p_room_id": room_id, "p_action": "VIGILANTE", "p_target_uid": None})
+    check("소진 후 건너뛰기도 차단",
+          s >= 400 and "당신은 제거를 이미 했습니다" in str(msg(b)), msg(b))
+
+    # 자경단을 기다리지 않고 마피아 제출만으로 밤이 끝난다
+    s, b = rpc("submit_night_action", mafias[1],
+               {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[citizens[4]]})
+    check("소진한 자경단은 밤 진행 인원에서 빠진다",
+          s == 200 and b.get("resolved") is True, str(b))
+
+    close_room(toks, room_id)
+
+
+def test_vigilante_blocked_by_doctor():
+    """의사가 막아도 기회는 사라진다"""
+    off = [r for r in ALL_BUT_VIGILANTE if r != "DOCTOR"]
+    toks, room_id, roles, uids = _killer_game(10, off)
+    if not room_id:
+        check("자경단·의사 테스트 준비", False, "방 생성 실패")
+        return
+
+    vig, doctor = _pick(roles, "VIGILANTE"), _pick(roles, "DOCTOR")
+    mafia = _pick(roles, "MAFIA")
+    citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    rpc("submit_night_action", vig,
+        {"p_room_id": room_id, "p_action": "VIGILANTE", "p_target_uid": uids[mafia]})
+    pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]], doctor_uid=uids[mafia])
+
+    alive = alive_uids(room_id, toks[0])
+    check("의사가 자경단의 공격을 막는다", uids[mafia] in alive, "")
+    s, v = rpc("my_game_view", vig, {"p_room_id": room_id})
+    check("막혀도 기회는 소진", v.get("abilityUsed") is True, str(v.get("abilityUsed")))
+
+    s, dv = rpc("my_game_view", doctor, {"p_room_id": room_id})
+    doc = [r for r in (dv.get("privateResults") or []) if r["kind"] == "DOCTOR"]
+    check("의사 결과: 자경단 대상을 살렸다",
+          bool(doc) and doc[0]["payload"].get("savedUid") == uids[mafia], str(doc)[:60])
+
+    close_room(toks, room_id)
+
+
+ALL.extend([test_vigilante_composition, test_vigilante_one_shot,
+            test_vigilante_blocked_by_doctor])
