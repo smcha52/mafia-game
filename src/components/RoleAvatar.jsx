@@ -9,6 +9,7 @@ const BG = {
   CITIZEN: '#5A6B8C', MAFIA: '#7A2E2E', POLICE: '#2E4A7A', DOCTOR: '#2E6B5E',
   BODYGUARD: '#4A4A52', DETECTIVE: '#6B5433', REPORTER: '#7A5A2E', MEDIUM: '#5A3A7A',
   SPY: '#3A3A4E', JESTER: '#8C4A7A', ASSASSIN: '#5A1E1E', KILLER: '#3E4A2E',
+  VIGILANTE: '#6B4A2E',
 };
 
 function Head({ y = 30 }) {
@@ -187,6 +188,22 @@ const PARTS = {
       {/* 도끼 */}
       <path d="M48 55 l-6 -16" stroke="#6B4A2E" strokeWidth="2.6" strokeLinecap="round" />
       <path d="M40.5 36 q4 -4 8 -2 l-2.6 7 q-3 -2.6 -5.4 -5z" fill="#B9BCC4" />
+    </>
+  ),
+
+  VIGILANTE: (
+    <>
+      <Head />
+      {EYES}
+      {/* 반다나 */}
+      <path d="M21 33 q11 4 22 0 l-2 9 q-9 4 -18 0z" fill="#8C2B2B" />
+      {/* 카우보이 모자 */}
+      <path d="M13 23 q19 6 38 0 q-4 5 -19 5 q-15 0 -19 -5z" fill="#4A3220" />
+      <path d="M22 23 q-1 -12 10 -12 q11 0 10 12 q-10 3 -20 0z" fill="#5E4029" />
+      <rect x="22.5" y="19" width="19" height="2.6" fill="#2E1F14" />
+      {/* 별 배지 */}
+      <path d="M42 45 l1.8 3.6 4 .6 -2.9 2.8 .7 4 -3.6 -1.9 -3.6 1.9 .7 -4 -2.9 -2.8 4 -.6z"
+        fill="#E8C35A" />
     </>
   ),
 };

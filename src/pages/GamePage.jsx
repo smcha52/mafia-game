@@ -21,7 +21,7 @@ import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
   ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
-  REPEAT_BLOCKED, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
+  REPEAT_BLOCKED, SPENT_NOTE, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
   roleInfo,
 } from '../lib/roles';
 import {
@@ -451,7 +451,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
                 {noTargets
                   ? '아직 사망자가 없어 능력을 쓸 수 없습니다.'
                   : spentOneShot
-                    ? '능력을 이미 사용했습니다.'
+                    ? (SPENT_NOTE[role] ?? '능력을 이미 사용했습니다.')
                     : ABILITY_READY.has(role)
                       ? '오늘 밤 당신이 할 일은 없습니다.'
                       : `${roleInfo(role).name}의 능력은 아직 준비 중입니다.`}

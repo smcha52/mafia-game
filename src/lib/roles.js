@@ -12,6 +12,7 @@ export const ROLES = {
   JESTER:    { name: '광대',   emoji: '🤡', desc: '낮에 처형당하면 당신 혼자 승리합니다.' },
   ASSASSIN:  { name: '암살자', emoji: '🎯', desc: '마피아 진영입니다. 상대의 직업을 맞히면 즉사시키고, 틀리면 당신이 죽습니다.' },
   KILLER:    { name: '살인자', emoji: '🪓', desc: '중립 진영입니다. 밤마다 혼자 한 명을 제거합니다. 누구와든 1:1이 되면 당신 혼자 승리합니다.' },
+  VIGILANTE: { name: '자경단', emoji: '🤠', desc: '시민 진영입니다. 게임 중 단 한 번, 밤에 한 명을 제거할 수 있습니다.' },
 };
 
 export const TEAMS = {
@@ -33,13 +34,13 @@ export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', des
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
 export const ABILITY_READY = new Set([
   'MAFIA', 'SPY', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD',
-  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER',
+  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE',
 ]);
 
 // 암살자가 찍을 수 있는 직업 (전부)
 export const ALL_ROLES = [
   'MAFIA', 'SPY', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD',
-  'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'CITIZEN',
+  'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'VIGILANTE', 'CITIZEN',
 ];
 
 // 밤에 행동하는 직업 -> 서버가 받는 action 코드
@@ -54,6 +55,7 @@ export const NIGHT_ACTION = {
   REPORTER: 'REPORTER',
   MEDIUM: 'MEDIUM',
   KILLER: 'KILLER',
+  VIGILANTE: 'VIGILANTE',
 };
 
 // 밤 화면에서 보여줄 안내 문구
@@ -68,6 +70,7 @@ export const NIGHT_PROMPT = {
   REPORTER: '취재할 사람을 고르세요',
   MEDIUM: '직업을 확인할 사망자를 고르세요',
   KILLER: '제거할 대상을 고르세요',
+  VIGILANTE: '제거할 대상을 고르세요 (게임 중 한 번)',
 };
 
 // 확정 버튼 문구
@@ -82,6 +85,7 @@ export const SUBMIT_LABEL = {
   REPORTER: '취재 확정',
   MEDIUM: '교신 확정',
   KILLER: '제거 확정',
+  VIGILANTE: '제거 확정',
 };
 
 // 제출 후 안내
@@ -96,6 +100,7 @@ export const SUBMITTED_NOTE = {
   REPORTER: ' 아침에 취재 결과가 나옵니다.',
   MEDIUM: ' 아침에 직업을 알려드립니다.',
   KILLER: ' 아침에 결과가 드러납니다.',
+  VIGILANTE: ' 아침에 결과가 드러납니다. 이제 제거는 다시 할 수 없습니다.',
 };
 
 // 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
@@ -103,17 +108,22 @@ export const SUBMITTED_NOTE = {
 // 시민은 끈 직업을 대체하는 자리다.
 export const TOGGLEABLE = [
   'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
-  'SPY', 'JESTER', 'ASSASSIN', 'KILLER',
+  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE',
 ];
 
 // 살아 있는 사람이 아니라 사망자를 지목하는 직업
 export const TARGETS_DEAD = new Set(['MEDIUM']);
 
 // 게임 중 한 번만 쓸 수 있는 직업
-export const ONE_SHOT = new Set(['REPORTER']);
+export const ONE_SHOT = new Set(['REPORTER', 'VIGILANTE']);
+
+// 1회용 능력을 다 쓴 뒤 밤마다 보여줄 문구
+export const SPENT_NOTE = {
+  VIGILANTE: '당신은 제거를 이미 했습니다.',
+};
 
 // 자신을 지목할 수 없는 직업
-export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'BODYGUARD', 'KILLER']);
+export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'BODYGUARD', 'KILLER', 'VIGILANTE']);
 
 // 같은 사람을 연속으로 지목할 수 없는 직업 -> 화면에 표시할 사유
 export const REPEAT_BLOCKED = {

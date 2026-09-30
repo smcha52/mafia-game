@@ -21,19 +21,19 @@ ROLE_TABLE = {
     9:  ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'DETECTIVE',
          'KILLER', 'CITIZEN', 'CITIZEN'],
     10: ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
-         'KILLER', 'CITIZEN', 'CITIZEN'],
+         'KILLER', 'VIGILANTE', 'CITIZEN'],
     11: ['MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE',
-         'REPORTER', 'KILLER', 'CITIZEN', 'CITIZEN'],
+         'REPORTER', 'KILLER', 'VIGILANTE', 'CITIZEN'],
     12: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'JESTER', 'KILLER', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'JESTER', 'KILLER', 'VIGILANTE'],
     13: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'VIGILANTE'],
     14: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER',
-         'CITIZEN', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'VIGILANTE',
+         'CITIZEN'],
     15: ['MAFIA', 'MAFIA', 'ASSASSIN', 'SPY', 'POLICE', 'DOCTOR', 'BODYGUARD',
-         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER',
-         'CITIZEN', 'CITIZEN', 'CITIZEN'],
+         'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'VIGILANTE',
+         'CITIZEN', 'CITIZEN'],
 }
 
 
@@ -751,7 +751,7 @@ def test_role_toggle_composition():
                      {"p_count": 15, "p_disabled": ["POLICE", "DOCTOR", "BODYGUARD",
                                                     "DETECTIVE", "REPORTER", "MEDIUM",
                                                     "SPY", "JESTER", "ASSASSIN",
-                                                    "KILLER"]})
+                                                    "KILLER", "VIGILANTE"]})
     c2 = Counter(all_off) if s == 200 else Counter()
     check("전부 끄면 마피아+시민만",
           set(c2.keys()) == {"MAFIA", "CITIZEN"} and len(all_off) == 15,
@@ -1374,7 +1374,7 @@ def _killer_game(n, off):
 
 # 살인자만 남기고 전부 끈다 -> 9명: 마피아2(암살자 자리 포함) + 살인자1 + 시민6
 ALL_BUT_KILLER = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE",
-                  "REPORTER", "MEDIUM", "SPY", "JESTER", "ASSASSIN"]
+                  "REPORTER", "MEDIUM", "SPY", "JESTER", "ASSASSIN", "VIGILANTE"]
 
 
 def _phase(room_id, token):
@@ -1406,7 +1406,7 @@ def test_killer_composition():
 
 def test_killer_night_rules():
     """살인자 제출·차단·치료·경호·경찰 판정 (11명 기본 구성)"""
-    toks, room_id, roles, uids = _killer_game(11, [])
+    toks, room_id, roles, uids = _killer_game(11, ["VIGILANTE"])
     if not room_id:
         check("살인자 밤 테스트 준비", False, "방 생성 실패")
         return
@@ -1557,7 +1557,7 @@ def test_killer_reporter_disguise():
     """기자가 살인자를 취재하면 광대처럼 시민 진영으로 공개된다"""
     got = False
     for attempt in range(8):
-        toks, room_id, roles, uids = _killer_game(11, [])
+        toks, room_id, roles, uids = _killer_game(11, ["VIGILANTE"])
         if not room_id:
             continue
         rep, killer = _pick(roles, "REPORTER"), _pick(roles, "KILLER")

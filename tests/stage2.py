@@ -65,6 +65,12 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
                 tgt = next(u for u in alive if u != uids[t])
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "KILLER", "p_target_uid": tgt})
+        elif r["role"] == "VIGILANTE":
+            # 1회를 썼으면 제출 대상이 아니다. 안 썼으면 건너뛰기로 넘긴다.
+            if not mv0.get("abilityUsed"):
+                s, last = rpc("submit_night_action", t,
+                              {"p_room_id": room_id, "p_action": "VIGILANTE",
+                               "p_target_uid": None})
         elif r["role"] == "POLICE":
             tgt = police_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,
@@ -128,7 +134,8 @@ def pass_day(room_id, roles, uids, target_uid):
 # 살인자(0028)는 승리 조건을 바꾸고 9명 이상에서 시민 한 자리를 차지한다.
 # 그 전에 쓴 테스트는 살인자가 없는 구성을 전제로 하므로 기본으로 끈다.
 # 살인자 자리는 시민으로 돌아가 이전 구성과 같아진다.
-DEFAULT_OFF = ("KILLER",)
+# 자경단(0029)도 같은 이유로 기본으로 끈다.
+DEFAULT_OFF = ("KILLER", "VIGILANTE")
 
 
 def make_game(n, disabled=DEFAULT_OFF):
