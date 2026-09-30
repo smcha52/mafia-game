@@ -12,6 +12,14 @@ import RoleAvatar from './RoleAvatar';
 import { TOGGLEABLE, roleInfo } from '../lib/roles';
 import { roleComposition, setDisabledRoles } from '../lib/api';
 
+// 진영별 이름 색. 목록에 없는 직업(시민 진영)은 기본 흰색.
+const NAME_COLOR = {
+  SPY: 'error.main',
+  ASSASSIN: 'error.main',
+  JESTER: '#FFD54F',
+  KILLER: '#42A5F5',
+};
+
 // 대기실에서 직업을 켜고 끈다. 끈 직업 자리는 시민이 채운다.
 export default function RoleToggles({ room, isHost, playerCount }) {
   const disabled = room?.disabled_roles ?? [];
@@ -94,7 +102,9 @@ export default function RoleToggles({ room, isHost, playerCount }) {
                 label={
                   <Stack direction="row" spacing={0.5} alignItems="center">
                     <RoleAvatar role={code} size={20} hidden={!on} />
-                    <Typography variant="body2">{roleInfo(code).name}</Typography>
+                    <Typography variant="body2" sx={{ color: NAME_COLOR[code] }}>
+                      {roleInfo(code).name}
+                    </Typography>
                   </Stack>
                 }
               />
@@ -108,8 +118,10 @@ export default function RoleToggles({ room, isHost, playerCount }) {
               key={code}
               size="small"
               variant={disabled.includes(code) ? 'outlined' : 'filled'}
-              color={disabled.includes(code) ? 'default' : 'primary'}
+              // 색 이름은 주황 배경에서 안 보이므로 회색 배경을 쓴다
+              color={disabled.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
               label={roleInfo(code).name}
+              sx={{ color: NAME_COLOR[code] }}
             />
           ))}
         </Stack>
