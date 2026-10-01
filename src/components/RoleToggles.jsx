@@ -94,6 +94,14 @@ export default function RoleToggles({ room, isHost, playerCount }) {
     return acc;
   }, {});
 
+  // 마피아 진영이 0명이면 시작할 수 없다. 미리보기가 없으면 켜진 직업으로만 판단한다.
+  const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN'];
+  const noMafiaTeam = preview
+    ? (Array.isArray(preview)
+      ? !preview.some((r) => MAFIA_TEAM.includes(r))
+      : preview.mafia === 0)
+    : MAFIA_TEAM.every((r) => disabled.includes(r));
+
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -226,9 +234,9 @@ export default function RoleToggles({ room, isHost, playerCount }) {
         시민은 끌 수 없습니다.
       </Typography>
 
-      {disabled.includes('MAFIA') && (
+      {noMafiaTeam && (
         <Alert severity="warning" sx={{ mt: 1 }}>
-          마피아가 꺼져 있어 게임을 시작할 수 없습니다.
+          마피아 진영 직업이 하나도 없어 게임을 시작할 수 없습니다.
         </Alert>
       )}
 

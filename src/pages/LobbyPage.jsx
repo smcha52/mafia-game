@@ -58,10 +58,12 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
   const sessionMismatch = players.length > 0 && !me;
   const total = players.length;
   const readyCount = players.filter((p) => p.is_ready).length;
-  // 마피아가 꺼져 있으면 시작할 수 없다 (서버도 막는다)
-  const mafiaOff = (room?.disabled_roles ?? []).includes('MAFIA');
+  // 마피아 진영 직업이 전부 꺼져 있으면 시작할 수 없다.
+  // 인원에 따라 0명이 되는 경우는 서버가 막고 오류 문구로 알려준다.
+  const off = room?.disabled_roles ?? [];
+  const mafiaTeamOff = ['MAFIA', 'SPY', 'ASSASSIN'].every((r) => off.includes(r));
   const canStart = total >= MIN_PLAYERS && total <= MAX_PLAYERS && readyCount === total
-    && !mafiaOff;
+    && !mafiaTeamOff;
 
   async function run(kind, fn) {
     setBusy(kind);

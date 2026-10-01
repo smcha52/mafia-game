@@ -771,12 +771,14 @@ def test_role_toggle_permission():
                {"p_room_id": room_id, "p_disabled": ["POLICE"]})
     check("비방장 직업 변경 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
 
-    # 마피아는 끌 수 있지만(0030) 꺼져 있으면 시작할 수 없다
+    # 마피아는 끌 수 있다(0030). 5명 고정 구성은 마피아 진영이 마피아뿐이라
+    # 끄면 마피아 진영이 0명이 되어 시작할 수 없다(0031).
     s, b = rpc("set_disabled_roles", toks[0],
                {"p_room_id": room_id, "p_disabled": ["MAFIA"]})
     check("마피아도 끌 수 있다", s in (200, 204), msg(b))
     s, b = start_game(toks[0], room_id)
-    check("마피아를 끄면 시작 차단", s >= 400 and "마피아가 꺼져" in str(msg(b)), msg(b))
+    check("마피아 진영 0명이면 시작 차단",
+          s >= 400 and "마피아 진영 직업이 하나도 없어" in str(msg(b)), msg(b))
     s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, toks[0])
     check("시작이 취소되어 대기실 유지",
           bool(r) and r[0]["phase"] == "LOBBY", str(r))
@@ -1854,5 +1856,47 @@ def test_random_respects_disabled():
     close_room(toks, room_id)
 
 
+def test_mafia_team_without_mafia():
+    """마피아를 꺼도 스파이·암살자가 있으면 시작할 수 있다 (0031)"""
+    from collections import Counter
+    from harness import KEY
+
+    s, c = rpc("team_composition", KEY, {"p_count": 9, "p_disabled": ["MAFIA"]})
+    check("마피아를 끄면 마피아 진영은 스파이·암살자 수까지",
+          s == 200 and c == {"mafia": 2, "neutral": 2, "citizen": 5}, str(c))
+    s, c = rpc("team_composition", KEY,
+               {"p_count": 9, "p_disabled": ["MAFIA", "SPY", "ASSASSIN"]})
+    check("마피아 진영을 다 끄면 0명", s == 200 and c.get("mafia") == 0, str(c))
+
+    # 랜덤 구성: 마피아 없이 스파이·암살자로 시작
+    toks, room_id, roles = _random_game(9, ["MAFIA"])
+    if not room_id:
+        check("마피아 없는 랜덤 게임 준비", False, "방 생성 실패")
+        return
+    cc = Counter(r["role"] for r in roles.values())
+    check("랜덤: 마피아 없이 스파이+암살자로 시작",
+          len(roles) == 9 and "MAFIA" not in cc
+          and cc.get("SPY") == 1 and cc.get("ASSASSIN") == 1, str(dict(cc)))
+    close_room(toks, room_id)
+
+    # 고정 구성: 7명 구성표의 암살자가 마피아 진영을 맡는다
+    from stage2 import make_room
+    toks, room_id = make_room(7)
+    rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": ["MAFIA"]})
+    s, b = start_game(toks[0], room_id)
+    check("고정: 마피아를 꺼도 암살자가 있으면 시작", s in (200, 204), msg(b))
+    close_room(toks, room_id)
+
+    # 마피아 진영을 다 끄면 시작할 수 없다
+    toks, room_id = make_room(9)
+    rpc("set_disabled_roles", toks[0],
+        {"p_room_id": room_id, "p_disabled": ["MAFIA", "SPY", "ASSASSIN"]})
+    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    check("마피아 진영을 다 끄면 시작 차단",
+          s >= 400 and "마피아 진영 직업이 하나도 없어" in str(msg(b)), msg(b))
+    close_room(toks, room_id)
+
+
 ALL.extend([test_team_composition, test_random_room_setting,
-            test_random_assignment, test_random_respects_disabled])
+            test_random_assignment, test_random_respects_disabled,
+            test_mafia_team_without_mafia])
