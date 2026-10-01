@@ -1750,7 +1750,7 @@ TEAM_TABLE = {n: (m, 1 if n < 9 else 2) for n, m in
                (12, 4), (13, 4), (14, 4), (15, 4)]}
 
 SPECIALS = ("POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER", "MEDIUM",
-            "VIGILANTE", "SPY", "ASSASSIN", "JESTER", "KILLER")
+            "VIGILANTE", "SHERIFF", "SPY", "ASSASSIN", "JESTER", "KILLER")
 
 
 def _random_game(n, off=()):
@@ -1900,3 +1900,119 @@ def test_mafia_team_without_mafia():
 ALL.extend([test_team_composition, test_random_room_setting,
             test_random_assignment, test_random_respects_disabled,
             test_mafia_team_without_mafia])
+
+
+# ------------------------------------------------------------------
+# 보안관 (0032) — 랜덤 구성에서만 나온다
+# ------------------------------------------------------------------
+
+CITIZEN_SPECIALS = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER",
+                    "MEDIUM", "VIGILANTE", "SHERIFF"]
+OTHER_SPECIALS = ["SPY", "ASSASSIN", "JESTER", "KILLER"]
+
+
+def _sheriff_game(n, keep, tries=10):
+    """keep 직업만 켠 랜덤 게임을, keep 이 모두 배정될 때까지 다시 만든다."""
+    off = [r for r in CITIZEN_SPECIALS + OTHER_SPECIALS if r not in keep]
+    for _ in range(tries):
+        toks, room_id, roles = _random_game(n, off)
+        if not room_id:
+            continue
+        got = {r["role"] for r in roles.values()}
+        if all(k in got for k in keep):
+            return toks, room_id, roles, uid_map(roles)
+        close_room(toks, room_id)
+    return None, None, None, None
+
+
+def test_sheriff_rules():
+    """중립·마피아는 대상만, 시민은 함께 죽는다. 치료가 대상을 살려도 오인 사격 대가는 그대로."""
+    toks, room_id, roles, uids = _sheriff_game(15, ["SHERIFF", "DOCTOR", "JESTER"])
+    if not room_id:
+        check("보안관 테스트 준비", False, "보안관·의사·광대가 함께 나오지 않았다")
+        return
+
+    sheriff, doctor, jester = (_pick(roles, "SHERIFF"), _pick(roles, "DOCTOR"),
+                               _pick(roles, "JESTER"))
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    cits = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, v = rpc("my_game_view", sheriff, {"p_room_id": room_id})
+    check("보안관은 시민 진영", v.get("team") == "CITIZEN", str(v.get("team")))
+
+    s, b = rpc("submit_night_action", sheriff,
+               {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": uids[sheriff]})
+    check("보안관 자기 지목 차단", s >= 400 and "자신" in str(msg(b)), msg(b))
+    s, b = rpc("submit_night_action", doctor,
+               {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": uids[jester]})
+    check("보안관이 아니면 제거 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    # 1일차 밤: 보안관 -> 광대(중립), 마피아 -> 시민0, 의사 -> 시민1
+    s, b = rpc("submit_night_action", sheriff,
+               {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": uids[jester]})
+    check("보안관 제거 제출", s == 200, str(b))
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[0]], doctor_uid=uids[cits[1]])
+    alive = alive_uids(room_id, toks[0])
+    check("중립을 쏘면 대상만 죽는다",
+          uids[jester] not in alive and uids[sheriff] in alive, "")
+    check("밤에 죽은 광대는 이기지 않는다",
+          _phase(room_id, toks[0]).get("phase") == "DAY", str(_phase(room_id, toks[0])))
+
+    pass_day(room_id, roles, uids, uids[cits[2]])
+
+    # 2일차 밤: 보안관 -> 마피아0, 마피아 -> 시민3, 의사 -> 시민4
+    rpc("submit_night_action", sheriff,
+        {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": uids[mafias[0]]})
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[3]], doctor_uid=uids[cits[4]])
+    alive = alive_uids(room_id, toks[0])
+    check("마피아를 쏘면 대상만 죽는다",
+          uids[mafias[0]] not in alive and uids[sheriff] in alive, "")
+
+    pass_day(room_id, roles, uids, uids[cits[5]])
+
+    # 3일차 밤: 보안관 -> 시민6, 의사도 시민6 을 치료. 마피아 -> 시민7
+    rpc("submit_night_action", sheriff,
+        {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": uids[cits[6]]})
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[7]], doctor_uid=uids[cits[6]])
+    alive = alive_uids(room_id, toks[0])
+    check("의사가 보안관의 공격을 막는다", uids[cits[6]] in alive, "")
+    check("시민을 쐈으면 대상이 살아도 보안관은 죽는다", uids[sheriff] not in alive, "")
+
+    close_room(toks, room_id)
+
+
+def test_sheriff_shoots_citizen():
+    """시민을 쏘면 대상과 보안관이 함께 죽는다. 건너뛰기도 된다."""
+    toks, room_id, roles, uids = _sheriff_game(8, ["SHERIFF"])
+    if not room_id:
+        check("보안관 오인 사격 준비", False, "보안관이 나오지 않았다")
+        return
+    sheriff = _pick(roles, "SHERIFF")
+    cits = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 1일차 밤은 건너뛴다
+    s, b = rpc("submit_night_action", sheriff,
+               {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": None})
+    check("보안관 건너뛰기 허용", s == 200, str(b))
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[0]])
+    check("건너뛴 보안관은 살아 있다", uids[sheriff] in alive_uids(room_id, toks[0]), "")
+
+    pass_day(room_id, roles, uids, uids[cits[1]])
+
+    # 2일차 밤: 보안관 -> 시민2, 마피아 -> 시민3
+    rpc("submit_night_action", sheriff,
+        {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": uids[cits[2]]})
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[3]])
+    alive = alive_uids(room_id, toks[0])
+    check("시민을 쏘면 대상과 보안관이 함께 죽는다",
+          uids[cits[2]] not in alive and uids[sheriff] not in alive, "")
+
+    s, pubs = req("/rest/v1/public_results?select=payload&room_id=eq." + room_id
+                  + "&kind=eq.NIGHT&day_number=eq.2", toks[0])
+    deaths = (pubs[0]["payload"].get("nightDeaths") if pubs else None) or []
+    check("보안관도 밤 사망자 목록에 나온다", uids[sheriff] in deaths, str(deaths)[:60])
+
+    close_room(toks, room_id)
+
+
+ALL.extend([test_sheriff_rules, test_sheriff_shoots_citizen])

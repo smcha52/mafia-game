@@ -21,7 +21,7 @@ import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
   ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
-  REPEAT_BLOCKED, SPENT_NOTE, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
+  REPEAT_BLOCKED, SKIPPABLE, SPENT_NOTE, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
   roleInfo,
 } from '../lib/roles';
 import {
@@ -207,7 +207,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   const canAct = isNight
     ? Boolean(nightAction) && !spentOneShot && !noTargets
     : true;
-  // 기자는 대상 없이 넘길 수 있다. 그때 nightSubmitted 는 null 이라 별도 표시가 필요하다
+  // 기자·자경단·보안관은 대상 없이 넘길 수 있다. 그때 nightSubmitted 는 null 이라 별도 표시가 필요하다
   const skipped = isNight && view?.nightActed && !view?.nightSubmitted;
   const submitted = isNight ? view?.nightSubmitted : view?.daySubmitted;
   const progress = isNight ? view?.nightProgress : view?.dayProgress;
@@ -355,7 +355,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
 
               {skipped && (
                 <Alert severity="info">
-                  오늘 밤은 능력을 사용하지 않기로 했습니다. 아직 한 번 남아 있습니다.
+                  오늘 밤은 능력을 사용하지 않기로 했습니다.
+                  {ONE_SHOT.has(role) && ' 아직 한 번 남아 있습니다.'}
                 </Alert>
               )}
 
@@ -409,7 +410,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
                     {!isNight ? '투표 확정' : (SUBMIT_LABEL[role] ?? '확정')}
                   </Button>
 
-                  {isNight && ONE_SHOT.has(role) && !skipped && (
+                  {isNight && SKIPPABLE.has(role) && !skipped && (
                     <Button
                       color="inherit"
                       disabled={busy !== ''}

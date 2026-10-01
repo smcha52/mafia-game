@@ -12,7 +12,8 @@ export const ROLES = {
   JESTER:    { name: '광대',   emoji: '🤡', desc: '낮에 처형당하면 당신 혼자 승리합니다.' },
   ASSASSIN:  { name: '암살자', emoji: '🎯', desc: '마피아 진영입니다. 상대의 직업을 맞히면 즉사시키고, 틀리면 당신이 죽습니다.' },
   KILLER:    { name: '살인자', emoji: '🪓', desc: '중립 진영입니다. 밤마다 혼자 한 명을 제거합니다. 누구와든 1:1이 되면 당신 혼자 승리합니다.' },
-  VIGILANTE: { name: '자경단', emoji: '🤠', desc: '시민 진영입니다. 게임 중 단 한 번, 밤에 한 명을 제거할 수 있습니다.' },
+  VIGILANTE: { name: '자경단', emoji: '🏏', desc: '시민 진영입니다. 게임 중 단 한 번, 밤에 한 명을 제거할 수 있습니다.' },
+  SHERIFF:   { name: '보안관', emoji: '🤠', desc: '시민 진영입니다. 밤마다 한 명을 제거할 수 있습니다. 마피아·중립이면 대상만 죽지만, 시민을 쏘면 당신도 함께 죽습니다.' },
 };
 
 export const TEAMS = {
@@ -34,13 +35,13 @@ export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', des
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
 export const ABILITY_READY = new Set([
   'MAFIA', 'SPY', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD',
-  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE',
+  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE', 'SHERIFF',
 ]);
 
 // 암살자가 찍을 수 있는 직업 (전부)
 export const ALL_ROLES = [
   'MAFIA', 'SPY', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD',
-  'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'VIGILANTE', 'CITIZEN',
+  'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'VIGILANTE', 'SHERIFF', 'CITIZEN',
 ];
 
 // 밤에 행동하는 직업 -> 서버가 받는 action 코드
@@ -56,6 +57,7 @@ export const NIGHT_ACTION = {
   MEDIUM: 'MEDIUM',
   KILLER: 'KILLER',
   VIGILANTE: 'VIGILANTE',
+  SHERIFF: 'SHERIFF',
 };
 
 // 밤 화면에서 보여줄 안내 문구
@@ -71,6 +73,7 @@ export const NIGHT_PROMPT = {
   MEDIUM: '직업을 확인할 사망자를 고르세요',
   KILLER: '제거할 대상을 고르세요',
   VIGILANTE: '제거할 대상을 고르세요 (게임 중 한 번)',
+  SHERIFF: '제거할 대상을 고르세요 (시민을 쏘면 함께 죽습니다)',
 };
 
 // 확정 버튼 문구
@@ -86,6 +89,7 @@ export const SUBMIT_LABEL = {
   MEDIUM: '교신 확정',
   KILLER: '제거 확정',
   VIGILANTE: '제거 확정',
+  SHERIFF: '제거 확정',
 };
 
 // 제출 후 안내
@@ -101,6 +105,7 @@ export const SUBMITTED_NOTE = {
   MEDIUM: ' 아침에 직업을 알려드립니다.',
   KILLER: ' 아침에 결과가 드러납니다.',
   VIGILANTE: ' 아침에 결과가 드러납니다. 이제 제거는 다시 할 수 없습니다.',
+  SHERIFF: ' 아침에 결과가 드러납니다.',
 };
 
 // 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
@@ -108,7 +113,7 @@ export const SUBMITTED_NOTE = {
 // 마피아는 끌 수 있다. 마피아 진영(마피아·스파이·암살자)이 0명이면 시작할 수 없다.
 export const TOGGLEABLE = [
   'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
-  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE',
+  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF',
 ];
 
 // 살아 있는 사람이 아니라 사망자를 지목하는 직업
@@ -117,13 +122,16 @@ export const TARGETS_DEAD = new Set(['MEDIUM']);
 // 게임 중 한 번만 쓸 수 있는 직업
 export const ONE_SHOT = new Set(['REPORTER', 'VIGILANTE']);
 
+// 대상 없이 "오늘은 사용하지 않기" 로 넘길 수 있는 직업
+export const SKIPPABLE = new Set(['REPORTER', 'VIGILANTE', 'SHERIFF']);
+
 // 1회용 능력을 다 쓴 뒤 밤마다 보여줄 문구
 export const SPENT_NOTE = {
   VIGILANTE: '당신은 제거를 이미 했습니다.',
 };
 
 // 자신을 지목할 수 없는 직업
-export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'BODYGUARD', 'KILLER', 'VIGILANTE']);
+export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF']);
 
 // 같은 사람을 연속으로 지목할 수 없는 직업 -> 화면에 표시할 사유
 export const REPEAT_BLOCKED = {

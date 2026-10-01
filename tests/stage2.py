@@ -71,6 +71,10 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
                 s, last = rpc("submit_night_action", t,
                               {"p_room_id": room_id, "p_action": "VIGILANTE",
                                "p_target_uid": None})
+        elif r["role"] == "SHERIFF":
+            # 따로 정하지 않으면 건너뛴다
+            s, last = rpc("submit_night_action", t,
+                          {"p_room_id": room_id, "p_action": "SHERIFF", "p_target_uid": None})
         elif r["role"] == "POLICE":
             tgt = police_uid or next(iter(alive))
             s, last = rpc("submit_night_action", t,

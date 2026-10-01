@@ -25,7 +25,7 @@ const NAME_COLOR = {
 
 // 직업 설정을 진영별로 묶어 보여준다
 const GROUPS = [
-  { title: '시민 진영', roles: ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE'] },
+  { title: '시민 진영', roles: ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'] },
   { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN'] },
   { title: '중립 진영', roles: ['JESTER', 'KILLER'] },
 ];

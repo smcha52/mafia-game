@@ -9,7 +9,7 @@ const BG = {
   CITIZEN: '#5A6B8C', MAFIA: '#7A2E2E', POLICE: '#2E4A7A', DOCTOR: '#2E6B5E',
   BODYGUARD: '#4A4A52', DETECTIVE: '#6B5433', REPORTER: '#7A5A2E', MEDIUM: '#5A3A7A',
   SPY: '#3A3A4E', JESTER: '#8C4A7A', ASSASSIN: '#5A1E1E', KILLER: '#3E4A2E',
-  VIGILANTE: '#6B4A2E',
+  VIGILANTE: '#2E3440', SHERIFF: '#6B4A2E',
 };
 
 function Head({ y = 30 }) {
@@ -191,7 +191,7 @@ const PARTS = {
     </>
   ),
 
-  VIGILANTE: (
+  SHERIFF: (
     <>
       <Head />
       {EYES}
@@ -204,6 +204,25 @@ const PARTS = {
       {/* 별 배지 */}
       <path d="M42 45 l1.8 3.6 4 .6 -2.9 2.8 .7 4 -3.6 -1.9 -3.6 1.9 .7 -4 -2.9 -2.8 4 -.6z"
         fill="#E8C35A" />
+    </>
+  ),
+
+  VIGILANTE: (
+    <>
+      <path d="M20 26 q12 -13 24 0 q-12 -5 -24 0z" fill="#1C1C22" />
+      <Head />
+      {/* 검은 눈 마스크 */}
+      <path d="M19 27 q13 -4 26 0 l-1 5 q-12 3 -24 0z" fill="#111116" />
+      <ellipse cx="27.5" cy="29.3" rx="2.4" ry="1.5" fill="#F2F0E8" />
+      <ellipse cx="36.5" cy="29.3" rx="2.4" ry="1.5" fill="#F2F0E8" />
+      <circle cx="27.5" cy="29.3" r="0.9" fill="#2B2B33" />
+      <circle cx="36.5" cy="29.3" r="0.9" fill="#2B2B33" />
+      <path d="M45 28 q4 1 5 4 M45 30 q3 2 3 5" stroke="#111116" strokeWidth="1.6"
+        strokeLinecap="round" fill="none" />
+      {/* 쇠방망이 */}
+      <path d="M38 60 l12 -22" stroke="#9AA0AA" strokeWidth="4.2" strokeLinecap="round" />
+      <path d="M38 60 l3 -5.5" stroke="#3A3A44" strokeWidth="4.6" strokeLinecap="round" />
+      <path d="M48.5 41 l1.5 -2.8" stroke="#D8DDE4" strokeWidth="1.2" strokeLinecap="round" />
     </>
   ),
 };
