@@ -164,6 +164,22 @@ export async function setDisabledRoles(roomId, disabled) {
   }));
 }
 
+// 랜덤 구성 켜기/끄기 (방장만)
+export async function setRandomRoles(roomId, on) {
+  unwrap(await supabase.rpc('set_random_roles', {
+    p_room_id: roomId,
+    p_on: on,
+  }));
+}
+
+// 랜덤 구성일 때 진영별 인원을 서버에 물어본다
+export async function teamComposition(count, disabled) {
+  return unwrap(await supabase.rpc('team_composition', {
+    p_count: count,
+    p_disabled: disabled,
+  }));
+}
+
 // 지금 인원과 설정으로 나오는 구성을 서버에 물어본다.
 // 구성표를 화면에 또 적어두면 서버와 어긋날 수 있다.
 export async function roleComposition(count, disabled) {

@@ -4,7 +4,7 @@
 e2e.py 에서 불러 쓴다. 단독 실행하지 않는다.
 """
 
-from harness import KEY, check, close_room, msg, req, rpc, uid_of, user_pool
+from harness import KEY, check, close_room, msg, req, rpc, uid_of, user_pool, start_game
 
 
 def uid_map(roles):
@@ -150,7 +150,7 @@ def make_game(n, disabled=DEFAULT_OFF):
         rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
     if disabled:
         rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": list(disabled)})
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
 
     roles = {}
     for t in toks:
@@ -459,7 +459,7 @@ def test_phase_timer():
           "night=%s deadline=%s" % (b[0]["night_seconds"], b[0]["phase_deadline"]) if b else "?")
 
     # --- 시작하면 마감이 잡힌다 ---
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
     s, b = req("/rest/v1/rooms?select=phase,phase_deadline&id=eq." + room_id, toks[0])
     check("시작 시 마감 설정", bool(b) and b[0]["phase_deadline"] is not None,
           str(b[0]["phase_deadline"])[:19] if b else "?")
@@ -756,7 +756,7 @@ def test_tick_before_deadline_is_safe():
         check("시계 어긋남 테스트 준비", False, "방 생성 실패")
         return
 
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
 
     remains = []
     for _ in range(4):

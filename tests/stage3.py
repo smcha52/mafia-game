@@ -8,7 +8,7 @@
   · 게임이 무한히 이어지지 않고 끝나는가
 """
 
-from harness import check, close_room, msg, req, rpc, user_pool
+from harness import check, close_room, msg, req, rpc, user_pool, start_game
 from stage2 import _pick, alive_uids, make_game, pass_day, pass_night, uid_map
 
 # §5 인원별 기본 직업 구성. 서버의 role_composition() 과 일치해야 한다.
@@ -308,7 +308,7 @@ def _game_with_max_days(n, max_days):
         return None, None, None, None
     rpc("set_timers", toks[0],
         {"p_room_id": room_id, "p_night": 30, "p_day": 60, "p_max_days": max_days})
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
 
     roles = {}
     for t in toks:
@@ -412,7 +412,7 @@ def test_max_days_permission():
     check("최대 일수 저장됨", bool(r) and r[0]["max_days"] == 3,
           str(r[0]["max_days"]) if r else "?")
 
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
     s, b = rpc("set_timers", toks[0],
                {"p_room_id": room_id, "p_night": 30, "p_day": 60, "p_max_days": 9})
     check("진행 중 최대 일수 변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
@@ -700,7 +700,7 @@ def test_restart_game():
     # 다시 시작할 수 있다
     for t in toks[1:]:
         rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
-    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = start_game(toks[0], room_id)
     check("다시 시작 가능", s in (200, 204), "HTTP %d %s" % (s, "" if s < 400 else msg(b)))
 
     s, r = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
@@ -771,9 +771,15 @@ def test_role_toggle_permission():
                {"p_room_id": room_id, "p_disabled": ["POLICE"]})
     check("비방장 직업 변경 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
 
+    # 마피아는 끌 수 있지만(0030) 꺼져 있으면 시작할 수 없다
     s, b = rpc("set_disabled_roles", toks[0],
                {"p_room_id": room_id, "p_disabled": ["MAFIA"]})
-    check("마피아는 끌 수 없다", s >= 400 and "끌 수 없는" in str(msg(b)), msg(b))
+    check("마피아도 끌 수 있다", s in (200, 204), msg(b))
+    s, b = start_game(toks[0], room_id)
+    check("마피아를 끄면 시작 차단", s >= 400 and "마피아가 꺼져" in str(msg(b)), msg(b))
+    s, r = req("/rest/v1/rooms?select=phase&id=eq." + room_id, toks[0])
+    check("시작이 취소되어 대기실 유지",
+          bool(r) and r[0]["phase"] == "LOBBY", str(r))
 
     s, b = rpc("set_disabled_roles", toks[0],
                {"p_room_id": room_id, "p_disabled": ["CITIZEN"]})
@@ -788,7 +794,7 @@ def test_role_toggle_permission():
           bool(r) and sorted(r[0]["disabled_roles"]) == ["DOCTOR", "POLICE"],
           str(r[0]["disabled_roles"]) if r else "?")
 
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
     s, b = rpc("set_disabled_roles", toks[0],
                {"p_room_id": room_id, "p_disabled": ["POLICE"]})
     check("진행 중 직업 변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
@@ -810,7 +816,7 @@ def test_role_toggle_applies_to_game():
     # 광대와 의사를 끄면 -> MAFIA2 POLICE CITIZEN4
     rpc("set_disabled_roles", toks[0],
         {"p_room_id": room_id, "p_disabled": ["JESTER", "DOCTOR"]})
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
 
     roles = {}
     for t in toks:
@@ -859,7 +865,7 @@ def test_role_toggle_survives_restart():
     # 한 판 더 돌린 뒤 설정이 남아 있는지
     for t in toks[1:]:
         rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
 
     s, r = req("/rest/v1/rooms?select=disabled_roles&id=eq." + room_id, toks[0])
     check("다시하기 후 설정 유지", bool(r) and r[0]["disabled_roles"] == ["JESTER"],
@@ -1088,7 +1094,7 @@ def test_assassin_all_citizens_blocked():
                {"p_room_id": room_id, "p_disabled": off})
     check("직업 끄기 성공", s in (200, 204), str(b)[:60])
 
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
 
     roles = {}
     for t in toks:
@@ -1362,7 +1368,7 @@ def _killer_game(n, off):
         rpc("join_room", t, {"p_code": code, "p_nickname": "P%d" % i})
         rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
     rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": off})
-    rpc("start_game", toks[0], {"p_room_id": room_id})
+    start_game(toks[0], room_id)
 
     roles = {}
     for t in toks:
@@ -1730,3 +1736,123 @@ def test_vigilante_blocked_by_doctor():
 
 ALL.extend([test_vigilante_composition, test_vigilante_one_shot,
             test_vigilante_blocked_by_doctor])
+
+
+# ------------------------------------------------------------------
+# 랜덤 구성 (0030)
+# ------------------------------------------------------------------
+
+# 진영별 인원: 마피아 진영은 기존 구성표 합계, 중립은 9명부터 2명, 나머지는 시민 진영
+TEAM_TABLE = {n: (m, 1 if n < 9 else 2) for n, m in
+              [(5, 1), (6, 1), (7, 2), (8, 2), (9, 3), (10, 3), (11, 3),
+               (12, 4), (13, 4), (14, 4), (15, 4)]}
+
+SPECIALS = ("POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER", "MEDIUM",
+            "VIGILANTE", "SPY", "ASSASSIN", "JESTER", "KILLER")
+
+
+def _random_game(n, off=()):
+    """랜덤 구성(기본값)으로 시작한 n명 게임. (토큰들, room_id, 직업맵) 반환"""
+    from stage2 import make_room
+    toks, room_id = make_room(n)
+    if not room_id:
+        return None, None, None
+    if off:
+        rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": list(off)})
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+    roles = {}
+    for t in toks:
+        s, b = rpc("my_role", t, {"p_room_id": room_id})
+        if s == 200:
+            roles[t] = b
+    return toks, room_id, roles
+
+
+def test_team_composition():
+    from harness import KEY
+
+    bad = []
+    for n, (m, ne) in TEAM_TABLE.items():
+        s, c = rpc("team_composition", KEY, {"p_count": n, "p_disabled": []})
+        want = {"mafia": m, "neutral": ne, "citizen": n - m - ne}
+        if s != 200 or c != want:
+            bad.append("%d명: %s" % (n, c))
+    check("진영별 인원 (5명 = 시민3·중립1·마피아1 ...)", not bad,
+          "; ".join(bad) if bad else "5~15명")
+
+    s, c = rpc("team_composition", KEY, {"p_count": 9, "p_disabled": ["KILLER"]})
+    check("꺼진 중립 자리는 시민 진영으로",
+          s == 200 and c == {"mafia": 3, "neutral": 1, "citizen": 5}, str(c))
+
+
+def test_random_room_setting():
+    from stage2 import make_room
+    toks, room_id = make_room(5)
+    if not room_id:
+        check("랜덤 구성 설정 준비", False, "방 생성 실패")
+        return
+
+    s, r = req("/rest/v1/rooms?select=random_roles&id=eq." + room_id, toks[0])
+    check("랜덤 구성 기본값 켜짐", bool(r) and r[0]["random_roles"] is True, str(r))
+
+    s, b = rpc("set_random_roles", toks[1], {"p_room_id": room_id, "p_on": False})
+    check("비방장 랜덤 구성 변경 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
+
+    s, b = rpc("set_random_roles", toks[0], {"p_room_id": room_id, "p_on": False})
+    s, r = req("/rest/v1/rooms?select=random_roles&id=eq." + room_id, toks[0])
+    check("방장 랜덤 구성 끄기", bool(r) and r[0]["random_roles"] is False, str(r))
+
+    close_room(toks, room_id)
+
+
+def test_random_assignment():
+    """랜덤 배정이 진영 인원·중복 금지·마피아 1명 이상을 지키는가"""
+    from collections import Counter
+
+    bad = []
+    seen = set()
+    for n in (5, 7, 9, 12, 15):
+        for _ in range(2):
+            toks, room_id, roles = _random_game(n)
+            if not room_id:
+                bad.append("%d명: 방 생성 실패" % n)
+                continue
+            got = [r["role"] for r in roles.values()]
+            seen.update(got)
+            cc = Counter(got)
+            teams = Counter(team_of(x) for x in got)
+            m, ne = TEAM_TABLE[n]
+            dup = [x for x in SPECIALS if cc.get(x, 0) > 1]
+            if len(got) != n:
+                bad.append("%d명: %d명만 배정" % (n, len(got)))
+            elif teams.get("MAFIA", 0) != m or teams.get("NEUTRAL", 0) != ne:
+                bad.append("%d명 진영 인원: %s" % (n, dict(teams)))
+            elif cc.get("MAFIA", 0) < 1:
+                bad.append("%d명 마피아 없음: %s" % (n, dict(cc)))
+            elif dup:
+                bad.append("%d명 특수 직업 중복: %s" % (n, dup))
+            close_room(toks, room_id)
+    check("랜덤 배정: 진영 인원·마피아 1명 이상·특수 직업 중복 없음",
+          not bad, "; ".join(bad) if bad else "10판")
+    check("랜덤 배정: 여러 직업이 실제로 나온다", len(seen) >= 6, str(sorted(seen)))
+
+
+def test_random_respects_disabled():
+    """꺼진 직업은 랜덤에서도 나오지 않고, 중립을 다 끄면 그 자리는 시민 진영이 된다"""
+    from collections import Counter
+    off = ["POLICE", "DOCTOR", "JESTER", "KILLER", "SPY"]
+    toks, room_id, roles = _random_game(9, off)
+    if not room_id:
+        check("랜덤 끄기 테스트 준비", False, "방 생성 실패")
+        return
+    got = [r["role"] for r in roles.values()]
+    check("꺼진 직업은 배정되지 않는다", not (set(got) & set(off)), str(sorted(got)))
+    teams = Counter(team_of(x) for x in got)
+    check("중립을 다 끄면 시민 진영 6 · 마피아 진영 3",
+          teams.get("NEUTRAL", 0) == 0 and teams.get("CITIZEN") == 6
+          and teams.get("MAFIA") == 3, str(dict(teams)))
+    close_room(toks, room_id)
+
+
+ALL.extend([test_team_composition, test_random_room_setting,
+            test_random_assignment, test_random_respects_disabled])

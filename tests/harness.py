@@ -191,6 +191,17 @@ def msg(b):
     return b.get("message") if isinstance(b, dict) else b
 
 
+def start_game(token, room_id):
+    """고정 구성표로 게임을 시작한다.
+
+    랜덤 구성(0030)이 기본값이 되었지만, 기존 테스트는 고정 구성표의 직업이
+    나온다는 전제로 짜여 있다. 시작 직전에 랜덤 구성을 끄고 시작한다.
+    방장이 아니면 끄기가 거절되고 시작도 같은 이유로 거절된다.
+    """
+    rpc("set_random_roles", token, {"p_room_id": room_id, "p_on": False})
+    return rpc("start_game", token, {"p_room_id": room_id})
+
+
 # ------------------------------------------------------------------
 # 결과 수집
 # ------------------------------------------------------------------

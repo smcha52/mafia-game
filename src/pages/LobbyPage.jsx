@@ -58,7 +58,10 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
   const sessionMismatch = players.length > 0 && !me;
   const total = players.length;
   const readyCount = players.filter((p) => p.is_ready).length;
-  const canStart = total >= MIN_PLAYERS && total <= MAX_PLAYERS && readyCount === total;
+  // 마피아가 꺼져 있으면 시작할 수 없다 (서버도 막는다)
+  const mafiaOff = (room?.disabled_roles ?? []).includes('MAFIA');
+  const canStart = total >= MIN_PLAYERS && total <= MAX_PLAYERS && readyCount === total
+    && !mafiaOff;
 
   async function run(kind, fn) {
     setBusy(kind);

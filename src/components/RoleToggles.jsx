@@ -10,10 +10,13 @@ import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
 import { roleInfo } from '../lib/roles';
-import { roleComposition, setDisabledRoles } from '../lib/api';
+import {
+  roleComposition, setDisabledRoles, setRandomRoles, teamComposition,
+} from '../lib/api';
 
 // 진영별 이름 색. 목록에 없는 직업(시민 진영)은 기본 흰색.
 const NAME_COLOR = {
+  MAFIA: 'error.main',
   SPY: 'error.main',
   ASSASSIN: 'error.main',
   JESTER: '#FFD54F',
@@ -23,13 +26,14 @@ const NAME_COLOR = {
 // 직업 설정을 진영별로 묶어 보여준다
 const GROUPS = [
   { title: '시민 진영', roles: ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE'] },
-  { title: '마피아 진영', roles: ['SPY', 'ASSASSIN'] },
+  { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN'] },
   { title: '중립 진영', roles: ['JESTER', 'KILLER'] },
 ];
 
 // 대기실에서 직업을 켜고 끈다. 끈 직업 자리는 시민이 채운다.
 export default function RoleToggles({ room, isHost, playerCount }) {
   const disabled = room?.disabled_roles ?? [];
+  const random = room?.random_roles ?? true;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);
@@ -42,7 +46,9 @@ export default function RoleToggles({ room, isHost, playerCount }) {
       return;
     }
     let cancelled = false;
-    roleComposition(playerCount, disabled)
+    // 랜덤 구성은 직업이 매번 달라서 진영별 인원만 보여준다
+    const ask = random ? teamComposition : roleComposition;
+    ask(playerCount, disabled)
       .then((rows) => {
         if (!cancelled) setPreview(rows);
       })
@@ -52,7 +58,7 @@ export default function RoleToggles({ room, isHost, playerCount }) {
     return () => {
       cancelled = true;
     };
-  }, [room, playerCount, disabled.join(',')]);
+  }, [room, playerCount, random, disabled.join(',')]);
 
   if (!room) return null;
 
@@ -71,7 +77,19 @@ export default function RoleToggles({ room, isHost, playerCount }) {
     }
   }
 
-  const counts = (preview ?? []).reduce((acc, r) => {
+  async function toggleRandom(on) {
+    setBusy(true);
+    setError('');
+    try {
+      await setRandomRoles(room.id, on);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const counts = (Array.isArray(preview) ? preview : []).reduce((acc, r) => {
     acc[r] = (acc[r] ?? 0) + 1;
     return acc;
   }, {});
@@ -83,6 +101,28 @@ export default function RoleToggles({ room, isHost, playerCount }) {
           ? '직업 설정 — 끈 직업은 시민으로 대체됩니다'
           : '직업 설정'}
       </Typography>
+
+      {/* 랜덤 구성: 진영별 인원만 정하고 진영 안에서 직업을 무작위로 뽑는다 */}
+      {isHost ? (
+        <FormControlLabel
+          sx={{ ml: 0, mb: 1 }}
+          control={
+            <Switch
+              size="small"
+              checked={random}
+              disabled={busy}
+              onChange={(e) => toggleRandom(e.target.checked)}
+            />
+          }
+          label={<Typography variant="body2">랜덤 구성</Typography>}
+        />
+      ) : (
+        <Chip
+          size="small"
+          sx={{ mb: 1 }}
+          label={random ? '랜덤 구성' : '고정 구성'}
+        />
+      )}
 
       <Stack spacing={1.5}>
         {GROUPS.map((group) => (
@@ -144,8 +184,24 @@ export default function RoleToggles({ room, isHost, playerCount }) {
         ))}
       </Stack>
 
-      {/* 지금 인원으로 실제 나오는 구성 */}
-      {preview && (
+      {/* 랜덤 구성: 진영별 인원 */}
+      {preview && random && !Array.isArray(preview) && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography variant="caption" color="text.secondary">
+            {playerCount}명 구성 — 진영 안의 직업은 시작할 때 무작위로 정해집니다
+          </Typography>
+          <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
+            <Chip size="small" label={`시민 진영 ${preview.citizen}`} />
+            <Chip size="small" label={`마피아 진영 ${preview.mafia}`} sx={{ color: 'error.main' }} />
+            {preview.neutral > 0 && (
+              <Chip size="small" label={`중립 ${preview.neutral}`} />
+            )}
+          </Stack>
+        </Box>
+      )}
+
+      {/* 고정 구성: 지금 인원으로 실제 나오는 구성 */}
+      {preview && !random && Array.isArray(preview) && (
         <Box sx={{ mt: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
             {playerCount}명 구성
@@ -167,8 +223,14 @@ export default function RoleToggles({ room, isHost, playerCount }) {
       )}
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-        마피아와 시민은 끌 수 없습니다.
+        시민은 끌 수 없습니다.
       </Typography>
+
+      {disabled.includes('MAFIA') && (
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          마피아가 꺼져 있어 게임을 시작할 수 없습니다.
+        </Alert>
+      )}
 
       {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
     </Paper>

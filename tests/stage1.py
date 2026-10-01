@@ -2,7 +2,7 @@
 1단계 테스트 — 온라인 방 / 대기실 / 준비 / 시작 / 재접속
 """
 
-from harness import check, close_room, msg, req, rpc, uid_of, user_pool
+from harness import check, close_room, msg, req, rpc, uid_of, user_pool, start_game
 
 
 def test_lobby():
@@ -18,7 +18,7 @@ def test_lobby():
         return
     room_id, code = b["room_id"], b["room_code"]
 
-    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = start_game(toks[0], room_id)
     check("5명 미만 시작 차단", s >= 400 and "최소 5명" in str(msg(b)), msg(b))
 
     joined, errs = 0, []
@@ -58,7 +58,7 @@ def test_lobby():
     check("직접 INSERT 차단", s >= 400, "HTTP %d %s" % (s, str(msg(b))[:48]))
 
     # --- 시작 조건 ---
-    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = start_game(toks[0], room_id)
     check("미준비 상태 시작 차단", s >= 400 and "준비하지 않은" in str(msg(b)), msg(b))
 
     s, b = rpc("set_ready", toks[0], {"p_room_id": room_id, "p_ready": False})
@@ -70,7 +70,7 @@ def test_lobby():
     ready = sum(1 for p in b if p["is_ready"]) if isinstance(b, list) else -1
     check("전원 준비 완료", ready == 5, "%d/5 준비" % ready)
 
-    s, b = rpc("start_game", toks[1], {"p_room_id": room_id})
+    s, b = start_game(toks[1], room_id)
     check("비방장 시작 차단", s >= 400 and "방장만" in str(msg(b)), msg(b))
 
     s, b = rpc("my_active_room", toks[2], {})
@@ -79,7 +79,7 @@ def test_lobby():
           "코드 %s" % (b.get("room_code") if isinstance(b, dict) else None))
 
     # void 를 반환하는 RPC 는 PostgREST 가 204 No Content 로 응답한다
-    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = start_game(toks[0], room_id)
     check("게임 시작", s in (200, 204), "HTTP %d %s" % (s, str(msg(b))[:38] if s >= 400 else ""))
 
     s, b = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
@@ -92,7 +92,7 @@ def test_lobby():
     s, b = rpc("set_ready", toks[1], {"p_room_id": room_id, "p_ready": False})
     check("시작 후 준비변경 차단", s >= 400 and "대기실에서만" in str(msg(b)), msg(b))
 
-    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = start_game(toks[0], room_id)
     check("중복 시작 차단", s >= 400 and "이미 시작" in str(msg(b)), msg(b))
 
     # 방장이 나가면 그다음으로 들어온 사람이 방장이 된다 (0026)
@@ -174,7 +174,7 @@ def test_kick():
     rpc("set_ready", toks[1], {"p_room_id": room_id, "p_ready": True})
 
     # --- 게임 중에는 추방할 수 없다 ---
-    s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
+    s, b = start_game(toks[0], room_id)
     check("추방 테스트: 게임 시작", s in (200, 204), msg(b) if s >= 400 else "HTTP %d" % s)
 
     s, b = rpc("kick_player", toks[0], {"p_room_id": room_id, "p_target_uid": uids[2]})
