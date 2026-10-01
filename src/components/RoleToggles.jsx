@@ -9,7 +9,7 @@ import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
-import { TOGGLEABLE, roleInfo } from '../lib/roles';
+import { roleInfo } from '../lib/roles';
 import { roleComposition, setDisabledRoles } from '../lib/api';
 
 // 진영별 이름 색. 목록에 없는 직업(시민 진영)은 기본 흰색.
@@ -19,6 +19,13 @@ const NAME_COLOR = {
   JESTER: '#FFD54F',
   KILLER: '#42A5F5',
 };
+
+// 직업 설정을 진영별로 묶어 보여준다
+const GROUPS = [
+  { title: '시민 진영', roles: ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE'] },
+  { title: '마피아 진영', roles: ['SPY', 'ASSASSIN'] },
+  { title: '중립 진영', roles: ['JESTER', 'KILLER'] },
+];
 
 // 대기실에서 직업을 켜고 끈다. 끈 직업 자리는 시민이 채운다.
 export default function RoleToggles({ room, isHost, playerCount }) {
@@ -77,55 +84,65 @@ export default function RoleToggles({ room, isHost, playerCount }) {
           : '직업 설정'}
       </Typography>
 
-      {isHost ? (
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr 1fr' },
-            columnGap: 1,
-          }}
-        >
-          {TOGGLEABLE.map((code) => {
-            const on = !disabled.includes(code);
-            return (
-              <FormControlLabel
-                key={code}
-                sx={{ ml: 0, mr: 0 }}
-                control={
-                  <Switch
+      <Stack spacing={1.5}>
+        {GROUPS.map((group) => (
+          <Box key={group.title}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+              {group.title}
+            </Typography>
+
+            {isHost ? (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr 1fr', sm: '1fr 1fr 1fr' },
+                  columnGap: 1,
+                }}
+              >
+                {group.roles.map((code) => {
+                  const on = !disabled.includes(code);
+                  return (
+                    <FormControlLabel
+                      key={code}
+                      sx={{ ml: 0, mr: 0 }}
+                      control={
+                        <Switch
+                          size="small"
+                          checked={on}
+                          disabled={busy}
+                          onChange={(e) => toggle(code, e.target.checked)}
+                        />
+                      }
+                      label={
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <RoleAvatar role={code} size={20} hidden={!on} />
+                          <Typography variant="body2" sx={{ color: NAME_COLOR[code] }}>
+                            {roleInfo(code).name}
+                          </Typography>
+                        </Stack>
+                      }
+                    />
+                  );
+                })}
+              </Box>
+            ) : (
+              <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                {group.roles.map((code) => (
+                  <Chip
+                    key={code}
                     size="small"
-                    checked={on}
-                    disabled={busy}
-                    onChange={(e) => toggle(code, e.target.checked)}
+                    variant={disabled.includes(code) ? 'outlined' : 'filled'}
+                    // 색 이름은 주황 배경에서 안 보이므로 회색 배경을 쓴다
+                    color={disabled.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
+                    label={roleInfo(code).name}
+                    sx={{ color: NAME_COLOR[code] }}
                   />
-                }
-                label={
-                  <Stack direction="row" spacing={0.5} alignItems="center">
-                    <RoleAvatar role={code} size={20} hidden={!on} />
-                    <Typography variant="body2" sx={{ color: NAME_COLOR[code] }}>
-                      {roleInfo(code).name}
-                    </Typography>
-                  </Stack>
-                }
-              />
-            );
-          })}
-        </Box>
-      ) : (
-        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-          {TOGGLEABLE.map((code) => (
-            <Chip
-              key={code}
-              size="small"
-              variant={disabled.includes(code) ? 'outlined' : 'filled'}
-              // 색 이름은 주황 배경에서 안 보이므로 회색 배경을 쓴다
-              color={disabled.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
-              label={roleInfo(code).name}
-              sx={{ color: NAME_COLOR[code] }}
-            />
-          ))}
-        </Stack>
-      )}
+                ))}
+              </Stack>
+            )}
+          </Box>
+        ))}
+      </Stack>
 
       {/* 지금 인원으로 실제 나오는 구성 */}
       {preview && (
