@@ -9,7 +9,7 @@ import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
-import { roleInfo } from '../lib/roles';
+import { roleInfo, survivorTarget } from '../lib/roles';
 import {
   roleComposition, setDisabledRoles, setRandomRoles, teamComposition,
 } from '../lib/api';
@@ -20,6 +20,7 @@ const NAME_COLOR = {
   SPY: 'error.main',
   ASSASSIN: 'error.main',
   FORGER: 'error.main',
+  SURVIVOR: '#B388FF',
   JESTER: '#FFD54F',
   KILLER: '#42A5F5',
 };
@@ -28,13 +29,17 @@ const NAME_COLOR = {
 const GROUPS = [
   { title: '시민 진영', roles: ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'] },
   { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'] },
-  { title: '중립 진영', roles: ['JESTER', 'KILLER'] },
+  { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR'] },
 ];
 
 // 대기실에서 직업을 켜고 끈다. 끈 직업 자리는 시민이 채운다.
 export default function RoleToggles({ room, isHost, playerCount }) {
   const disabled = room?.disabled_roles ?? [];
   const random = room?.random_roles ?? true;
+  // 최대 일수가 2일 이하이면 생존자는 이길 날이 없어 넣을 수 없다 (서버도 뺀다)
+  const target = survivorTarget(room?.max_days ?? 15);
+  const survivorBlocked = target === null;
+  const effectiveOff = survivorBlocked ? [...disabled, 'SURVIVOR'] : disabled;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);
@@ -49,7 +54,7 @@ export default function RoleToggles({ room, isHost, playerCount }) {
     let cancelled = false;
     // 랜덤 구성은 직업이 매번 달라서 진영별 인원만 보여준다
     const ask = random ? teamComposition : roleComposition;
-    ask(playerCount, disabled)
+    ask(playerCount, effectiveOff)
       .then((rows) => {
         if (!cancelled) setPreview(rows);
       })
@@ -59,7 +64,7 @@ export default function RoleToggles({ room, isHost, playerCount }) {
     return () => {
       cancelled = true;
     };
-  }, [room, playerCount, random, disabled.join(',')]);
+  }, [room, playerCount, random, effectiveOff.join(',')]);
 
   if (!room) return null;
 
@@ -149,7 +154,8 @@ export default function RoleToggles({ room, isHost, playerCount }) {
                 }}
               >
                 {group.roles.map((code) => {
-                  const on = !disabled.includes(code);
+                  const blocked = code === 'SURVIVOR' && survivorBlocked;
+                  const on = !disabled.includes(code) && !blocked;
                   return (
                     <FormControlLabel
                       key={code}
@@ -158,7 +164,7 @@ export default function RoleToggles({ room, isHost, playerCount }) {
                         <Switch
                           size="small"
                           checked={on}
-                          disabled={busy}
+                          disabled={busy || blocked}
                           onChange={(e) => toggle(code, e.target.checked)}
                         />
                       }
@@ -180,9 +186,9 @@ export default function RoleToggles({ room, isHost, playerCount }) {
                   <Chip
                     key={code}
                     size="small"
-                    variant={disabled.includes(code) ? 'outlined' : 'filled'}
+                    variant={effectiveOff.includes(code) ? 'outlined' : 'filled'}
                     // 색 이름은 주황 배경에서 안 보이므로 회색 배경을 쓴다
-                    color={disabled.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
+                    color={effectiveOff.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
                     label={roleInfo(code).name}
                     sx={{ color: NAME_COLOR[code] }}
                   />
@@ -233,6 +239,9 @@ export default function RoleToggles({ room, isHost, playerCount }) {
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
         시민은 끌 수 없습니다.
+        {survivorBlocked
+          ? ' 최대 일수가 2일 이하라 생존자는 넣을 수 없습니다.'
+          : ` 생존자는 ${target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.`}
       </Typography>
 
       {noMafiaTeam && (

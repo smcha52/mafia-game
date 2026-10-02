@@ -11,6 +11,7 @@ const BG = {
   SPY: '#3A3A4E', JESTER: '#8C4A7A', ASSASSIN: '#5A1E1E', KILLER: '#3E4A2E',
   VIGILANTE: '#2E3440', SHERIFF: '#6B4A2E',
   FORGER: '#4A2A3A',
+  SURVIVOR: '#5B3A8C',
 };
 
 function Head({ y = 30 }) {
@@ -189,6 +190,22 @@ const PARTS = {
       {/* 도끼 */}
       <path d="M48 55 l-6 -16" stroke="#6B4A2E" strokeWidth="2.6" strokeLinecap="round" />
       <path d="M40.5 36 q4 -4 8 -2 l-2.6 7 q-3 -2.6 -5.4 -5z" fill="#B9BCC4" />
+    </>
+  ),
+
+  SURVIVOR: (
+    <>
+      <Head />
+      {EYES}
+      {/* 반창고 */}
+      <rect x="33" y="33" width="7" height="2.6" rx="1.2" fill="#E8D2B0" transform="rotate(-20 36.5 34.3)" />
+      {/* 헝클어진 머리 */}
+      <path d="M20 26 q3 -12 12 -12 q9 0 12 12 l-3 -4 -2 3 -3 -4 -2 3 -3 -4 -2 3 -3 -4 -2 3z"
+        fill="#6B4A2E" />
+      {/* 구명 튜브 */}
+      <circle cx="32" cy="54" r="8.5" fill="none" stroke="#F2F0E8" strokeWidth="4.5" />
+      <path d="M26 48 l2.4 2.4 M38 48 l-2.4 2.4 M26 60 l2.4 -2.4 M38 60 l-2.4 -2.4"
+        stroke="#D94A4A" strokeWidth="4.5" />
     </>
   ),
 

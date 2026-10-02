@@ -22,7 +22,7 @@ import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
   ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
-  REPEAT_BLOCKED, SKIPPABLE, SPENT_NOTE, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
+  REPEAT_BLOCKED, SKIPPABLE, SPENT_NOTE, survivorTarget, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
   roleInfo,
 } from '../lib/roles';
 import {
@@ -262,6 +262,14 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
       <RoleCard view={view} />
 
       <PrivateResults results={view?.privateResults} />
+
+      {/* 생존자: 목표 날 안내 */}
+      {role === 'SURVIVOR' && survivorTarget(room.max_days) && (
+        <Alert severity="info" icon={false} sx={{ color: '#B388FF' }}>
+          🛟 {survivorTarget(room.max_days)}일째 낮이 끝날 때까지 살아 있으면 승리합니다.
+          (지금 {day}일차)
+        </Alert>
+      )}
 
       {/* 지난 밤 결과 */}
       {phase === 'DAY' && (

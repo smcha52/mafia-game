@@ -40,7 +40,7 @@ ROLE_TABLE = {
 def team_of(role):
     if role in ("MAFIA", "SPY", "ASSASSIN", "FORGER"):
         return "MAFIA"
-    if role in ("JESTER", "KILLER"):
+    if role in ("JESTER", "KILLER", "SURVIVOR"):
         return "NEUTRAL"
     return "CITIZEN"
 
@@ -1750,7 +1750,7 @@ TEAM_TABLE = {n: (m, 1 if n < 9 else 2) for n, m in
                (12, 4), (13, 4), (14, 4), (15, 4)]}
 
 SPECIALS = ("POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER", "MEDIUM",
-            "VIGILANTE", "SHERIFF", "SPY", "ASSASSIN", "FORGER", "JESTER", "KILLER")
+            "VIGILANTE", "SHERIFF", "SPY", "ASSASSIN", "FORGER", "JESTER", "KILLER", "SURVIVOR")
 
 
 def _random_game(n, off=()):
@@ -1782,7 +1782,7 @@ def test_team_composition():
     check("진영별 인원 (5명 = 시민3·중립1·마피아1 ...)", not bad,
           "; ".join(bad) if bad else "5~15명")
 
-    s, c = rpc("team_composition", KEY, {"p_count": 9, "p_disabled": ["KILLER"]})
+    s, c = rpc("team_composition", KEY, {"p_count": 9, "p_disabled": ["KILLER", "SURVIVOR"]})
     check("꺼진 중립 자리는 시민 진영으로",
           s == 200 and c == {"mafia": 3, "neutral": 1, "citizen": 5}, str(c))
 
@@ -1842,7 +1842,7 @@ def test_random_assignment():
 def test_random_respects_disabled():
     """꺼진 직업은 랜덤에서도 나오지 않고, 중립을 다 끄면 그 자리는 시민 진영이 된다"""
     from collections import Counter
-    off = ["POLICE", "DOCTOR", "JESTER", "KILLER", "SPY"]
+    off = ["POLICE", "DOCTOR", "JESTER", "KILLER", "SURVIVOR", "SPY"]
     toks, room_id, roles = _random_game(9, off)
     if not room_id:
         check("랜덤 끄기 테스트 준비", False, "방 생성 실패")
@@ -1909,7 +1909,7 @@ ALL.extend([test_team_composition, test_random_room_setting,
 
 CITIZEN_SPECIALS = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER",
                     "MEDIUM", "VIGILANTE", "SHERIFF"]
-OTHER_SPECIALS = ["SPY", "ASSASSIN", "FORGER", "JESTER", "KILLER"]
+OTHER_SPECIALS = ["SPY", "ASSASSIN", "FORGER", "JESTER", "KILLER", "SURVIVOR"]
 
 
 def _sheriff_game(n, keep, tries=10):
@@ -2130,3 +2130,101 @@ def test_forger_medium_and_limit():
 
 
 ALL.extend([test_forger_police_detective, test_forger_medium_and_limit])
+
+
+# ------------------------------------------------------------------
+# 생존자 (0034) — 랜덤 구성에서만 나온다
+# ------------------------------------------------------------------
+
+def test_survivor_target():
+    from harness import KEY
+    want = {1: None, 2: None, 3: 2, 4: 2, 5: 4, 7: 4, 8: 6, 10: 6, 11: 8, 13: 8,
+            14: 10, 15: 10, 16: 10, 17: 12, 50: 34}
+    bad = []
+    for m, w in want.items():
+        s, got = rpc("survivor_target", KEY, {"p_max": m})
+        if s != 200 or got != w:
+            bad.append("%d일: %s" % (m, got))
+    check("생존자 목표 날 (3~4일 2 · 5~7일 4 · ... · 14~15일 10)",
+          not bad, "; ".join(bad) if bad else "1~50일")
+
+
+def test_survivor_blocked_short_game():
+    """최대 일수 2일이면 생존자만 켜져 있어도 배정되지 않는다"""
+    from collections import Counter
+    from stage2 import make_room
+    off = [r for r in CITIZEN_SPECIALS + OTHER_SPECIALS if r != "SURVIVOR"]
+    toks, room_id = make_room(5)
+    if not room_id:
+        check("생존자 제외 테스트 준비", False, "방 생성 실패")
+        return
+    rpc("set_timers", toks[0], {"p_room_id": room_id, "p_night": 30, "p_day": 60,
+                                "p_max_days": 2})
+    rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": off})
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+    roles = {}
+    for t in toks:
+        s, b = rpc("my_role", t, {"p_room_id": room_id})
+        if s == 200:
+            roles[t] = b
+    cc = Counter(r["role"] for r in roles.values())
+    check("최대 2일이면 생존자 없음 (중립 자리는 시민)",
+          len(roles) == 5 and "SURVIVOR" not in cc and cc.get("CITIZEN") == 4,
+          str(dict(cc)))
+    close_room(toks, room_id)
+
+
+def test_survivor_wins():
+    """목표 날의 낮이 끝날 때 살아 있으면 생존자 단독 승리"""
+    from stage2 import make_room
+    off = [r for r in CITIZEN_SPECIALS + OTHER_SPECIALS if r != "SURVIVOR"]
+    toks, room_id = make_room(8)
+    if not room_id:
+        check("생존자 승리 테스트 준비", False, "방 생성 실패")
+        return
+    # 최대 4일 -> 목표 2일
+    rpc("set_timers", toks[0], {"p_room_id": room_id, "p_night": 30, "p_day": 60,
+                                "p_max_days": 4})
+    rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": off})
+    rpc("start_game", toks[0], {"p_room_id": room_id})
+    roles = {}
+    for t in toks:
+        s, b = rpc("my_role", t, {"p_room_id": room_id})
+        if s == 200:
+            roles[t] = b
+    uids = uid_map(roles)
+    if "SURVIVOR" not in {r["role"] for r in roles.values()}:
+        check("생존자 승리 준비", False, str([r["role"] for r in roles.values()]))
+        close_room(toks, room_id)
+        return
+
+    survivor = _pick(roles, "SURVIVOR")
+    mafias = [t for t, r in roles.items() if r["role"] == "MAFIA"]
+    cits = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, v = rpc("my_game_view", survivor, {"p_room_id": room_id})
+    check("생존자는 중립", v.get("team") == "NEUTRAL", str(v.get("team")))
+
+    def split_night():
+        # 마피아 표를 갈라 아무도 죽지 않게 한다
+        rpc("submit_night_action", mafias[0],
+            {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[cits[3]]})
+        rpc("submit_night_action", mafias[1],
+            {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[cits[4]]})
+
+    split_night()
+    pass_day(room_id, roles, uids, uids[cits[0]])
+    st = _phase(room_id, toks[0])
+    check("1일째 낮이 끝나도 게임은 계속 (목표 2일)",
+          st.get("phase") == "NIGHT" and st.get("winner") is None, str(st))
+
+    split_night()
+    pass_day(room_id, roles, uids, uids[cits[1]])
+    st = _phase(room_id, toks[0])
+    check("2일째 낮이 끝날 때 살아 있으면 생존자 단독 승리",
+          st.get("phase") == "ENDED" and st.get("winner") == "SURVIVOR", str(st))
+
+    close_room(toks, room_id)
+
+
+ALL.extend([test_survivor_target, test_survivor_blocked_short_game, test_survivor_wins])
