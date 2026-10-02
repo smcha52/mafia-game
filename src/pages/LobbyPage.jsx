@@ -61,7 +61,7 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
   // 마피아 진영 직업이 전부 꺼져 있으면 시작할 수 없다.
   // 인원에 따라 0명이 되는 경우는 서버가 막고 오류 문구로 알려준다.
   const off = room?.disabled_roles ?? [];
-  const mafiaTeamOff = ['MAFIA', 'SPY', 'ASSASSIN'].every((r) => off.includes(r));
+  const mafiaTeamOff = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'].every((r) => off.includes(r));
   const canStart = total >= MIN_PLAYERS && total <= MAX_PLAYERS && readyCount === total
     && !mafiaTeamOff;
 

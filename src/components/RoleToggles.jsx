@@ -19,6 +19,7 @@ const NAME_COLOR = {
   MAFIA: 'error.main',
   SPY: 'error.main',
   ASSASSIN: 'error.main',
+  FORGER: 'error.main',
   JESTER: '#FFD54F',
   KILLER: '#42A5F5',
 };
@@ -26,7 +27,7 @@ const NAME_COLOR = {
 // 직업 설정을 진영별로 묶어 보여준다
 const GROUPS = [
   { title: '시민 진영', roles: ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'] },
-  { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN'] },
+  { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'] },
   { title: '중립 진영', roles: ['JESTER', 'KILLER'] },
 ];
 
@@ -95,7 +96,7 @@ export default function RoleToggles({ room, isHost, playerCount }) {
   }, {});
 
   // 마피아 진영이 0명이면 시작할 수 없다. 미리보기가 없으면 켜진 직업으로만 판단한다.
-  const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN'];
+  const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'];
   const noMafiaTeam = preview
     ? (Array.isArray(preview)
       ? !preview.some((r) => MAFIA_TEAM.includes(r))

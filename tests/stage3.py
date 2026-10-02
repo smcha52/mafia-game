@@ -38,7 +38,7 @@ ROLE_TABLE = {
 
 
 def team_of(role):
-    if role in ("MAFIA", "SPY", "ASSASSIN"):
+    if role in ("MAFIA", "SPY", "ASSASSIN", "FORGER"):
         return "MAFIA"
     if role in ("JESTER", "KILLER"):
         return "NEUTRAL"
@@ -1750,7 +1750,7 @@ TEAM_TABLE = {n: (m, 1 if n < 9 else 2) for n, m in
                (12, 4), (13, 4), (14, 4), (15, 4)]}
 
 SPECIALS = ("POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER", "MEDIUM",
-            "VIGILANTE", "SHERIFF", "SPY", "ASSASSIN", "JESTER", "KILLER")
+            "VIGILANTE", "SHERIFF", "SPY", "ASSASSIN", "FORGER", "JESTER", "KILLER")
 
 
 def _random_game(n, off=()):
@@ -1861,15 +1861,16 @@ def test_mafia_team_without_mafia():
     from collections import Counter
     from harness import KEY
 
-    s, c = rpc("team_composition", KEY, {"p_count": 9, "p_disabled": ["MAFIA"]})
-    check("마피아를 끄면 마피아 진영은 스파이·암살자 수까지",
+    s, c = rpc("team_composition", KEY,
+               {"p_count": 9, "p_disabled": ["MAFIA", "FORGER"]})
+    check("마피아를 끄면 마피아 진영은 켜진 스파이·암살자·위조범 수까지",
           s == 200 and c == {"mafia": 2, "neutral": 2, "citizen": 5}, str(c))
     s, c = rpc("team_composition", KEY,
-               {"p_count": 9, "p_disabled": ["MAFIA", "SPY", "ASSASSIN"]})
+               {"p_count": 9, "p_disabled": ["MAFIA", "SPY", "ASSASSIN", "FORGER"]})
     check("마피아 진영을 다 끄면 0명", s == 200 and c.get("mafia") == 0, str(c))
 
     # 랜덤 구성: 마피아 없이 스파이·암살자로 시작
-    toks, room_id, roles = _random_game(9, ["MAFIA"])
+    toks, room_id, roles = _random_game(9, ["MAFIA", "FORGER"])
     if not room_id:
         check("마피아 없는 랜덤 게임 준비", False, "방 생성 실패")
         return
@@ -1890,7 +1891,7 @@ def test_mafia_team_without_mafia():
     # 마피아 진영을 다 끄면 시작할 수 없다
     toks, room_id = make_room(9)
     rpc("set_disabled_roles", toks[0],
-        {"p_room_id": room_id, "p_disabled": ["MAFIA", "SPY", "ASSASSIN"]})
+        {"p_room_id": room_id, "p_disabled": ["MAFIA", "SPY", "ASSASSIN", "FORGER"]})
     s, b = rpc("start_game", toks[0], {"p_room_id": room_id})
     check("마피아 진영을 다 끄면 시작 차단",
           s >= 400 and "마피아 진영 직업이 하나도 없어" in str(msg(b)), msg(b))
@@ -1908,7 +1909,7 @@ ALL.extend([test_team_composition, test_random_room_setting,
 
 CITIZEN_SPECIALS = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER",
                     "MEDIUM", "VIGILANTE", "SHERIFF"]
-OTHER_SPECIALS = ["SPY", "ASSASSIN", "JESTER", "KILLER"]
+OTHER_SPECIALS = ["SPY", "ASSASSIN", "FORGER", "JESTER", "KILLER"]
 
 
 def _sheriff_game(n, keep, tries=10):
@@ -2016,3 +2017,116 @@ def test_sheriff_shoots_citizen():
 
 
 ALL.extend([test_sheriff_rules, test_sheriff_shoots_citizen])
+
+
+# ------------------------------------------------------------------
+# 위조범 (0033) — 랜덤 구성에서만 나온다
+# ------------------------------------------------------------------
+
+def _result(token, room_id, kind, day):
+    s, v = rpc("my_game_view", token, {"p_room_id": room_id})
+    for r in (v.get("privateResults") or []):
+        if r["kind"] == kind and r["day"] == day:
+            return r["payload"]
+    return {}
+
+
+def test_forger_police_detective():
+    """위조한 사람을 조사하면 경찰은 반대 진영, 탐정은 진짜 직업이 빠진 후보를 받는다"""
+    toks, room_id, roles, uids = _sheriff_game(15, ["FORGER", "POLICE", "DETECTIVE"])
+    if not room_id:
+        check("위조범 테스트 준비", False, "위조범·경찰·탐정이 함께 나오지 않았다")
+        return
+
+    forger, police, detective = (_pick(roles, "FORGER"), _pick(roles, "POLICE"),
+                                 _pick(roles, "DETECTIVE"))
+    mafia = _pick(roles, "MAFIA")
+    cits = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, v = rpc("my_game_view", forger, {"p_room_id": room_id})
+    check("위조범은 마피아 진영", v.get("team") == "MAFIA", str(v.get("team")))
+    fs = v.get("forger") or {}
+    check("15명 위조 횟수 3번", fs.get("limit") == 3 and fs.get("used") == 0, str(fs))
+    check("위조범도 마피아 동료 목록을 본다",
+          len(v.get("mafiaMembers") or []) == 4, str(len(v.get("mafiaMembers") or [])))
+
+    s, b = rpc("submit_night_action", police,
+               {"p_room_id": room_id, "p_action": "FORGE", "p_target_uid": uids[cits[0]]})
+    check("위조범이 아니면 위조 차단", s >= 400 and "사용할 수 없는" in str(msg(b)), msg(b))
+
+    # 1일차 밤: 시민0 위조. 경찰 -> 시민0, 탐정 -> 마피아(위조 안 함)
+    s, b = rpc("submit_night_action", forger,
+               {"p_room_id": room_id, "p_action": "FORGE", "p_target_uid": uids[cits[0]]})
+    check("위조 제출", s == 200 and b.get("resolved") is False, str(b))
+    s, v = rpc("my_game_view", forger, {"p_room_id": room_id})
+    check("위조만으로는 마피아 투표를 낸 것이 아니다",
+          v.get("nightActed") is False and (v.get("forger") or {}).get("tonight") == uids[cits[0]],
+          str(v.get("forger")))
+
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[1]],
+               police_uid=uids[cits[0]], detective_uid=uids[mafia])
+    check("위조범 투표까지 내야 밤이 끝난다",
+          _phase(room_id, toks[0]).get("phase") == "DAY", str(_phase(room_id, toks[0])))
+    pay = _result(police, room_id, "POLICE", 1)
+    check("위조된 시민을 경찰이 조사 -> 마피아 진영", pay.get("team") == "MAFIA", str(pay))
+    pay = _result(detective, room_id, "DETECTIVE", 1)
+    check("위조 안 된 마피아를 탐정이 조사 -> 후보에 마피아 있음",
+          "MAFIA" in (pay.get("candidates") or []), str(pay))
+
+    pass_day(room_id, roles, uids, uids[cits[2]])
+
+    # 2일차 밤: 마피아 위조. 경찰·탐정 모두 그 마피아를 조사
+    rpc("submit_night_action", forger,
+        {"p_room_id": room_id, "p_action": "FORGE", "p_target_uid": uids[mafia]})
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[3]],
+               police_uid=uids[mafia], detective_uid=uids[mafia])
+    pay = _result(police, room_id, "POLICE", 2)
+    check("위조된 마피아를 경찰이 조사 -> 시민 진영", pay.get("team") == "CITIZEN", str(pay))
+    pay = _result(detective, room_id, "DETECTIVE", 2)
+    cand = pay.get("candidates") or []
+    check("위조된 마피아를 탐정이 조사 -> 진짜 직업이 빠진 후보 3개",
+          "MAFIA" not in cand and len(cand) == 3, str(cand))
+
+    s, v = rpc("my_game_view", forger, {"p_room_id": room_id})
+    check("위조 2번 사용으로 기록", (v.get("forger") or {}).get("used") == 2, str(v.get("forger")))
+
+    close_room(toks, room_id)
+
+
+def test_forger_medium_and_limit():
+    """사망자를 위조하면 영매가 오답을 받는다. 8명은 위조 1번뿐이다."""
+    toks, room_id, roles, uids = _sheriff_game(8, ["FORGER", "MEDIUM"])
+    if not room_id:
+        check("위조범·영매 테스트 준비", False, "위조범·영매가 함께 나오지 않았다")
+        return
+
+    forger, medium, mafia = _pick(roles, "FORGER"), _pick(roles, "MEDIUM"), _pick(roles, "MAFIA")
+    cits = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    s, v = rpc("my_game_view", forger, {"p_room_id": room_id})
+    check("8명 위조 횟수 1번", (v.get("forger") or {}).get("limit") == 1, str(v.get("forger")))
+
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[0]])
+    pass_day(room_id, roles, uids, uids[cits[1]])
+
+    # 2일차 밤: 죽은 시민0 을 위조, 영매가 시민0 을 확인
+    s, b = rpc("submit_night_action", forger,
+               {"p_room_id": room_id, "p_action": "FORGE", "p_target_uid": uids[cits[0]]})
+    check("사망자도 위조할 수 있다", s == 200, str(b))
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[2]], medium_uid=uids[cits[0]])
+    pay = _result(medium, room_id, "MEDIUM", 2)
+    check("위조된 시민을 영매가 확인 -> 마피아", pay.get("role") == "MAFIA", str(pay))
+
+    # 마피아를 처형해 게임을 이어간다 (마피아1 vs 시민 진영3)
+    pass_day(room_id, roles, uids, uids[mafia])
+    check("3일차 밤으로", _phase(room_id, toks[0]).get("phase") == "NIGHT",
+          str(_phase(room_id, toks[0])))
+
+    s, b = rpc("submit_night_action", forger,
+               {"p_room_id": room_id, "p_action": "FORGE", "p_target_uid": uids[forger]})
+    check("횟수를 다 쓰면 위조 차단", s >= 400 and "위조 기회를 모두 썼습니다" in str(msg(b)), msg(b))
+
+    close_room(toks, room_id)
+
+
+ALL.extend([test_forger_police_detective, test_forger_medium_and_limit])

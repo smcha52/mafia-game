@@ -56,7 +56,8 @@ def req(path, token=None, body=None, method=None):
     r.add_header("Authorization", "Bearer " + (token or KEY))
     r.add_header("Content-Type", "application/json")
     try:
-        with urllib.request.urlopen(r) as resp:
+        # 연결이 끊긴 채 응답이 오지 않으면 테스트 전체가 멈추므로 시간 제한을 둔다
+        with urllib.request.urlopen(r, timeout=60) as resp:
             raw = resp.read().decode()
             return resp.status, (json.loads(raw) if raw.strip() else None)
     except urllib.error.HTTPError as e:
@@ -65,6 +66,9 @@ def req(path, token=None, body=None, method=None):
             return e.code, json.loads(raw)
         except ValueError:
             return e.code, raw
+    except (TimeoutError, urllib.error.URLError) as e:
+        # 응답 없음은 그 요청만 실패로 돌려주고 나머지 테스트는 계속한다
+        return 599, {"message": "요청 시간 초과: %s" % e}
 
 
 # ------------------------------------------------------------------

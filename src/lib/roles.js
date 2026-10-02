@@ -13,6 +13,7 @@ export const ROLES = {
   ASSASSIN:  { name: '암살자', emoji: '🎯', desc: '마피아 진영입니다. 상대의 직업을 맞히면 즉사시키고, 틀리면 당신이 죽습니다.' },
   KILLER:    { name: '살인자', emoji: '🪓', desc: '중립 진영입니다. 밤마다 혼자 한 명을 제거합니다. 누구와든 1:1이 되면 당신 혼자 승리합니다.' },
   VIGILANTE: { name: '자경단', emoji: '🏏', desc: '시민 진영입니다. 게임 중 단 한 번, 밤에 한 명을 제거할 수 있습니다.' },
+  FORGER:    { name: '위조범', emoji: '🖋️', desc: '마피아 진영입니다. 동료와 함께 제거 대상을 고르고, 밤에 한 명을 위조하면 그 사람을 조사한 직업이 반대 진영으로 봅니다.' },
   SHERIFF:   { name: '보안관', emoji: '🤠', desc: '시민 진영입니다. 밤마다 한 명을 제거할 수 있습니다. 마피아·중립이면 대상만 죽지만, 시민을 쏘면 당신도 함께 죽습니다.' },
 };
 
@@ -34,13 +35,13 @@ export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', des
 
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
 export const ABILITY_READY = new Set([
-  'MAFIA', 'SPY', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD',
+  'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'POLICE', 'DOCTOR', 'BODYGUARD',
   'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE', 'SHERIFF',
 ]);
 
 // 암살자가 찍을 수 있는 직업 (전부)
 export const ALL_ROLES = [
-  'MAFIA', 'SPY', 'ASSASSIN', 'POLICE', 'DOCTOR', 'BODYGUARD',
+  'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'POLICE', 'DOCTOR', 'BODYGUARD',
   'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'VIGILANTE', 'SHERIFF', 'CITIZEN',
 ];
 
@@ -49,6 +50,7 @@ export const NIGHT_ACTION = {
   MAFIA: 'MAFIA_VOTE',
   SPY: 'MAFIA_VOTE',
   ASSASSIN: 'MAFIA_VOTE',
+  FORGER: 'MAFIA_VOTE',
   POLICE: 'POLICE',
   DOCTOR: 'DOCTOR',
   BODYGUARD: 'BODYGUARD',
@@ -65,6 +67,7 @@ export const NIGHT_PROMPT = {
   MAFIA: '제거할 대상을 고르세요',
   SPY: '제거할 대상을 고르세요',
   ASSASSIN: '제거할 대상을 고르세요',
+  FORGER: '제거할 대상을 고르세요',
   POLICE: '진영을 조사할 사람을 고르세요',
   DOCTOR: '치료할 사람을 고르세요',
   BODYGUARD: '보호할 사람을 고르세요',
@@ -81,6 +84,7 @@ export const SUBMIT_LABEL = {
   MAFIA: '공격 확정',
   SPY: '공격 확정',
   ASSASSIN: '공격 확정',
+  FORGER: '공격 확정',
   POLICE: '조사 확정',
   DOCTOR: '치료 확정',
   BODYGUARD: '보호 확정',
@@ -97,6 +101,7 @@ export const SUBMITTED_NOTE = {
   MAFIA: ' 동료들을 기다리는 중입니다.',
   SPY: ' 동료들을 기다리는 중입니다.',
   ASSASSIN: ' 동료들을 기다리는 중입니다.',
+  FORGER: ' 동료들을 기다리는 중입니다.',
   POLICE: ' 아침에 결과를 알려드립니다.',
   DOCTOR: ' 오늘 밤 공격을 막을 수 있습니다.',
   BODYGUARD: ' 공격받으면 당신이 대신 죽습니다.',
@@ -113,7 +118,7 @@ export const SUBMITTED_NOTE = {
 // 마피아는 끌 수 있다. 마피아 진영(마피아·스파이·암살자)이 0명이면 시작할 수 없다.
 export const TOGGLEABLE = [
   'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
-  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF',
+  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER',
 ];
 
 // 살아 있는 사람이 아니라 사망자를 지목하는 직업
@@ -131,7 +136,7 @@ export const SPENT_NOTE = {
 };
 
 // 자신을 지목할 수 없는 직업
-export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF']);
+export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF']);
 
 // 같은 사람을 연속으로 지목할 수 없는 직업 -> 화면에 표시할 사유
 export const REPEAT_BLOCKED = {

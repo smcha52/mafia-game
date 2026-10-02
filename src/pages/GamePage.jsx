@@ -15,6 +15,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import GameOver from '../components/GameOver';
 import PlayerPicker from '../components/PlayerPicker';
 import AssassinPanel from '../components/AssassinPanel';
+import ForgePanel from '../components/ForgePanel';
 import ChatPanel from '../components/ChatPanel';
 import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
@@ -465,6 +466,18 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
             </Paper>
           )}
         </>
+      )}
+
+      {/* 위조범: 마피아 투표와 별개로 위조 */}
+      {alive && isNight && role === 'FORGER' && (
+        <ForgePanel
+          key={day}
+          players={players}
+          uid={uid}
+          state={view?.forger}
+          busy={busy}
+          onSubmit={(t) => run('forge', () => submitNightAction(roomId, 'FORGE', t))}
+        />
       )}
 
       <ChatPanel

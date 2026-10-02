@@ -52,7 +52,7 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
         s, mv0 = rpc("my_game_view", t, {"p_room_id": room_id})
         if s == 200 and mv0.get("nightActed"):
             continue
-        if r["role"] in ("MAFIA", "SPY", "ASSASSIN"):
+        if r["role"] in ("MAFIA", "SPY", "ASSASSIN", "FORGER"):
             tgt = victim_uid or next(u for u in alive if u != uids[t])
             s, last = rpc("submit_night_action", t,
                           {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": tgt})

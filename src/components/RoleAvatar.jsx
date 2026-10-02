@@ -10,6 +10,7 @@ const BG = {
   BODYGUARD: '#4A4A52', DETECTIVE: '#6B5433', REPORTER: '#7A5A2E', MEDIUM: '#5A3A7A',
   SPY: '#3A3A4E', JESTER: '#8C4A7A', ASSASSIN: '#5A1E1E', KILLER: '#3E4A2E',
   VIGILANTE: '#2E3440', SHERIFF: '#6B4A2E',
+  FORGER: '#4A2A3A',
 };
 
 function Head({ y = 30 }) {
@@ -188,6 +189,24 @@ const PARTS = {
       {/* 도끼 */}
       <path d="M48 55 l-6 -16" stroke="#6B4A2E" strokeWidth="2.6" strokeLinecap="round" />
       <path d="M40.5 36 q4 -4 8 -2 l-2.6 7 q-3 -2.6 -5.4 -5z" fill="#B9BCC4" />
+    </>
+  ),
+
+  FORGER: (
+    <>
+      <Head />
+      {SHADES}
+      {/* 베레모 */}
+      <ellipse cx="30" cy="20" rx="13" ry="5" fill="#2A1A22" />
+      <circle cx="30" cy="15.5" r="1.6" fill="#2A1A22" />
+      {/* 위조 문서와 도장 */}
+      <rect x="18" y="45" width="14" height="17" rx="1.5" fill="#F2F0E8" transform="rotate(-8 25 53)" />
+      <path d="M21 50 h8 M21 53 h7 M21 56 h5" stroke="#A29EAF" strokeWidth="1.1"
+        transform="rotate(-8 25 53)" />
+      <circle cx="28" cy="58" r="2.6" fill="none" stroke="#C0392B" strokeWidth="1.3" />
+      {/* 펜 */}
+      <path d="M48 40 l-9 17" stroke="#1C1C22" strokeWidth="3" strokeLinecap="round" />
+      <path d="M39 57 l-1.2 3 2.6 -1.8z" fill="#E8C35A" />
     </>
   ),
 
