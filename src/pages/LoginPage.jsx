@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 import { signIn, signUp } from '../lib/supabase';
 
@@ -15,6 +19,35 @@ function today() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// 눈 모양 버튼을 누르면 입력한 비밀번호가 보이는 입력칸
+function PasswordField(props) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <TextField
+      {...props}
+      type={show ? 'text' : 'password'}
+      fullWidth
+      slotProps={{
+        input: {
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label={show ? '비밀번호 숨기기' : '비밀번호 보기'}
+                onClick={() => setShow((v) => !v)}
+                onMouseDown={(e) => e.preventDefault()}
+                edge="end"
+              >
+                {show ? <VisibilityOff /> : <Visibility />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        },
+      }}
+    />
+  );
 }
 
 // 게임 시작 전 화면. 로그인하거나 닉네임·비밀번호·생년월일로 가입한다.
@@ -84,27 +117,23 @@ export default function LoginPage({ onLoggedIn }) {
             autoComplete="username"
           />
 
-          <TextField
+          <PasswordField
             label="비밀번호"
-            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={shortPassword}
             helperText={isSignUp ? '6자 이상' : ' '}
-            fullWidth
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
           />
 
           {isSignUp && (
             <>
-              <TextField
+              <PasswordField
                 label="비밀번호 확인"
-                type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 error={mismatch}
                 helperText={mismatch ? '비밀번호가 같지 않습니다' : ' '}
-                fullWidth
                 autoComplete="new-password"
               />
 
