@@ -2,6 +2,8 @@
 1단계 테스트 — 온라인 방 / 대기실 / 준비 / 시작 / 재접속
 """
 
+import uuid
+
 from harness import check, close_room, msg, req, rpc, uid_of, user_pool, start_game
 
 
@@ -232,4 +234,71 @@ def test_room_list():
     close_room(toks[:5], room_id)
 
 
-ALL = [test_lobby, test_kick, test_room_list]
+# ------------------------------------------------------------------
+# 회원가입 / 로그인 (0037)
+# ------------------------------------------------------------------
+
+def test_account():
+    # 가입한 계정은 지울 수 없으므로(service_role 필요) 실행마다 다른 닉네임을 쓴다
+    tag = uuid.uuid4().hex[:6]
+    nick = "가입" + tag
+    email = "%s@mafia-game.local" % uuid.uuid4().hex
+    password = "test-" + uuid.uuid4().hex[:10]
+
+    s, b = rpc("nickname_available", None, {"p_nickname": nick})
+    check("가입 전 닉네임 사용 가능", s == 200 and b is True, str(b))
+
+    s, b = req("/auth/v1/signup", None, {
+        "email": email, "password": password,
+        "data": {"nickname": nick, "birth": "2000-01-02"},
+    })
+    tok = b.get("access_token") if isinstance(b, dict) else None
+    check("가입하면 바로 로그인", s == 200 and bool(tok),
+          "HTTP %d %s" % (s, "" if tok else str(msg(b))[:60]))
+    if not tok:
+        return
+
+    s, b = req("/rest/v1/profiles?select=nickname,birth", tok)
+    check("가입 시 프로필 생성", b == [{"nickname": nick, "birth": "2000-01-02"}], str(b))
+
+    s, b = rpc("nickname_available", None, {"p_nickname": nick.upper()})
+    check("가입 후 같은 닉네임 사용 불가 (대소문자 무시)", b is False, str(b))
+
+    s, b = rpc("login_email", None, {"p_nickname": " %s " % nick})
+    check("닉네임으로 로그인 이메일 찾기", b == email, str(b))
+
+    s, b = rpc("login_email", None, {"p_nickname": "없는" + tag})
+    check("없는 닉네임은 이메일 없음", b is None, str(b))
+
+    s, b = req("/auth/v1/token?grant_type=password", None, {"email": email, "password": password})
+    check("닉네임 계정 로그인", s == 200 and isinstance(b, dict) and "access_token" in b,
+          "HTTP %d" % s)
+
+    s, b = req("/auth/v1/token?grant_type=password", None, {"email": email, "password": "wrong-pass"})
+    check("틀린 비밀번호 거부", s >= 400, "HTTP %d" % s)
+
+    s, b = req("/auth/v1/signup", None, {
+        "email": "%s@mafia-game.local" % uuid.uuid4().hex, "password": password,
+        "data": {"nickname": nick, "birth": "2000-01-02"},
+    })
+    check("닉네임 중복 가입 차단", s >= 400, "HTTP %d" % s)
+
+    s, b = req("/auth/v1/signup", None, {
+        "email": "%s@mafia-game.local" % uuid.uuid4().hex, "password": password,
+        "data": {"nickname": "미래" + tag, "birth": "2999-01-01"},
+    })
+    check("미래 생년월일 가입 차단", s >= 400, "HTTP %d" % s)
+
+    # 다른 사람(익명 사용자)은 프로필이 없고, 남의 프로필도 읽을 수 없다
+    other = user_pool(1)[0]
+    s, b = req("/rest/v1/profiles?select=nickname", other)
+    check("남의 프로필 읽기 차단(RLS)", s == 200 and b == [], str(b))
+
+    # 가입한 닉네임으로 방을 만든다
+    s, b = rpc("create_room", tok, {"p_nickname": nick})
+    check("가입 계정으로 방 만들기", s == 200, msg(b) if s >= 400 else "HTTP 200")
+    if s == 200:
+        close_room([tok], b["room_id"])
+
+
+ALL = [test_lobby, test_kick, test_room_list, test_account]

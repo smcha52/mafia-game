@@ -10,8 +10,8 @@ import Typography from '@mui/material/Typography';
 import RoomListPage from './RoomListPage';
 import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
-export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
-  const [nickname, setNickname] = useState('');
+// 로그인한 닉네임으로 방에 들어간다
+export default function HomePage({ nickname, onEntered, notice = '', onCloseNotice }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -31,12 +31,10 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
     }
   }
 
-  const nicknameEmpty = nickname.trim().length === 0;
-
   if (finding) {
     return (
       <RoomListPage
-        nickname={nickname.trim()}
+        nickname={nickname}
         onEntered={onEntered}
         onBack={() => setFinding(false)}
       />
@@ -60,23 +58,13 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
 
       <Paper sx={{ p: 3, width: '100%' }}>
         <Stack spacing={2.5}>
-          <TextField
-            label="닉네임"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            slotProps={{ htmlInput: { maxLength: 12 } }}
-            helperText="12자 이내"
-            fullWidth
-            autoComplete="off"
-          />
-
           <Button
             variant="contained"
             color="secondary"
             size="large"
-            disabled={nicknameEmpty || busy !== ''}
+            disabled={busy !== ''}
             loading={busy === 'quick'}
-            onClick={() => run('quick', () => quickJoin(nickname.trim()))}
+            onClick={() => run('quick', () => quickJoin(nickname))}
           >
             빠른 시작
           </Button>
@@ -84,9 +72,9 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
           <Button
             variant="contained"
             size="large"
-            disabled={nicknameEmpty || busy !== ''}
+            disabled={busy !== ''}
             loading={busy === 'create'}
-            onClick={() => run('create', () => createRoom(nickname.trim()))}
+            onClick={() => run('create', () => createRoom(nickname))}
           >
             방 만들기
           </Button>
@@ -94,7 +82,7 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
           <Button
             variant="outlined"
             size="large"
-            disabled={nicknameEmpty || busy !== ''}
+            disabled={busy !== ''}
             onClick={() => {
               setError('');
               setFinding(true);
@@ -118,9 +106,9 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
           <Button
             variant="outlined"
             size="large"
-            disabled={nicknameEmpty || code.trim().length !== 6 || busy !== ''}
+            disabled={code.trim().length !== 6 || busy !== ''}
             loading={busy === 'join'}
-            onClick={() => run('join', () => joinRoom(code.trim(), nickname.trim()))}
+            onClick={() => run('join', () => joinRoom(code.trim(), nickname))}
           >
             입장하기
           </Button>

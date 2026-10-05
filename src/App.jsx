@@ -4,23 +4,42 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import AccountBar from './components/AccountBar';
 import HomePage from './pages/HomePage';
 import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
+import LoginPage from './pages/LoginPage';
 import SetupNotice from './pages/SetupNotice';
-import { ensureSession, isConfigured, supabase } from './lib/supabase';
+import { isConfigured, myProfile, supabase } from './lib/supabase';
 import { heartbeat, myActiveRoom, takeKickNotice } from './lib/api';
 
 export default function App() {
   const [booting, setBooting] = useState(true);
   const [bootError, setBootError] = useState('');
   const [uid, setUid] = useState(null);
+  // 로그인한 사람의 프로필. 없으면 로그인 화면을 보여준다
+  const [profile, setProfile] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [phase, setPhase] = useState(null);
   // 첫 화면에 띄울 안내 (추방 등)
   const [notice, setNotice] = useState('');
 
-  // 앱 시작 시 익명 로그인 후, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
+  // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
+  const loadAccount = useCallback(async () => {
+    const me = await myProfile();
+    if (!me) return false;
+
+    const active = await myActiveRoom();
+    setUid(me.uid);
+    setProfile(me);
+    if (active) {
+      setRoomId(active.room_id);
+      setPhase(active.phase);
+    }
+    return true;
+  }, []);
+
+  // 앱 시작 시 저장된 로그인이 있으면 이어서 쓴다
   useEffect(() => {
     if (!isConfigured) {
       setBooting(false);
@@ -30,16 +49,7 @@ export default function App() {
 
     (async () => {
       try {
-        const session = await ensureSession();
-        if (cancelled) return;
-        setUid(session.user.id);
-
-        const active = await myActiveRoom();
-        if (cancelled) return;
-        if (active) {
-          setRoomId(active.room_id);
-          setPhase(active.phase);
-        }
+        await loadAccount();
       } catch (e) {
         if (!cancelled) setBootError(e.message);
       } finally {
@@ -50,7 +60,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadAccount]);
 
   const handleLeave = useCallback(() => {
     setRoomId(null);
@@ -122,17 +132,24 @@ export default function App() {
         <Typography color="text.secondary" variant="body2" textAlign="center">
           {bootError}
         </Typography>
-        <Typography color="text.secondary" variant="caption" textAlign="center">
-          Supabase 대시보드에서 익명 로그인(Anonymous sign-ins)이 켜져 있는지 확인해 주세요.
-        </Typography>
       </Stack>
     );
   }
 
+  if (!profile) {
+    return (
+      <Box sx={{ minHeight: '100dvh', px: 2, py: 4 }}>
+        <LoginPage onLoggedIn={loadAccount} />
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ minHeight: '100dvh', px: 2, py: 4 }}>
+    <Box sx={{ minHeight: '100dvh', px: 2, py: 2 }}>
+      <AccountBar nickname={profile.nickname} />
       {!roomId ? (
         <HomePage
+          nickname={profile.nickname}
           onEntered={handleEntered}
           notice={notice}
           onCloseNotice={() => setNotice('')}
@@ -157,7 +174,7 @@ export default function App() {
   );
 }
 
-// 다른 탭에서 로그아웃되는 등 세션이 사라지면 첫 화면으로 되돌린다
+// 로그아웃하거나 다른 탭에서 로그아웃되면 처음부터 다시 불러 로그인 화면으로 돌아간다
 if (isConfigured) {
   supabase.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT') window.location.reload();
