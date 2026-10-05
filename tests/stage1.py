@@ -183,4 +183,53 @@ def test_kick():
     close_room(toks, room_id)
 
 
-ALL = [test_lobby, test_kick]
+# ------------------------------------------------------------------
+# 방 찾기 (0036)
+# ------------------------------------------------------------------
+
+def test_room_list():
+    toks = user_pool(6)
+
+    s, b = rpc("list_rooms", None, {})
+    check("비로그인 방 찾기 차단", s >= 400 and "로그인" in str(msg(b)), msg(b))
+
+    s, b = rpc("create_room", toks[0], {"p_nickname": "목록방장"})
+    if s != 200:
+        check("방 찾기 테스트 준비", False, "방 생성 실패")
+        return
+    room_id, code = b["room_id"], b["room_code"]
+
+    s, b = rpc("list_rooms", toks[5], {})
+    rooms = b if isinstance(b, list) else []
+    check("방 목록 조회", s == 200 and isinstance(b, list), msg(b) if s >= 400 else "%d개" % len(rooms))
+    check("목록은 10개 이하", len(rooms) <= 10, "%d개" % len(rooms))
+
+    mine = [r for r in rooms if r["id"] == room_id]
+    check("새 대기실이 목록에 나온다", len(mine) == 1, str(mine)[:60])
+    check("방 코드·방장·인원 표시",
+          bool(mine) and mine[0]["code"] == code and mine[0]["host"] == "목록방장"
+          and mine[0]["players"] == 1, str(mine)[:60])
+
+    # 새로고침하면 보고 있던 방을 빼고 다음 방을 받는다
+    s, b = rpc("list_rooms", toks[5], {"p_exclude": [room_id]})
+    check("보던 방은 새로고침에서 빠진다",
+          isinstance(b, list) and all(r["id"] != room_id for r in b), str(msg(b))[:60])
+
+    for i, t in enumerate(toks[1:5], start=1):
+        rpc("join_room", t, {"p_code": code, "p_nickname": "목록%d" % i})
+        rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
+    s, b = rpc("list_rooms", toks[5], {})
+    n = [r["players"] for r in b if r["id"] == room_id] if isinstance(b, list) else []
+    check("입장하면 인원이 늘어난다", n == [5], str(n))
+
+    s, b = start_game(toks[0], room_id)
+    check("방 찾기 테스트: 게임 시작", s in (200, 204), msg(b) if s >= 400 else "HTTP %d" % s)
+
+    s, b = rpc("list_rooms", toks[5], {})
+    check("게임 중인 방은 목록에서 빠진다",
+          isinstance(b, list) and all(r["id"] != room_id for r in b), str(msg(b))[:60])
+
+    close_room(toks[:5], room_id)
+
+
+ALL = [test_lobby, test_kick, test_room_list]

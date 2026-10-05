@@ -7,6 +7,7 @@ import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
+import RoomListPage from './RoomListPage';
 import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
 export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
@@ -14,6 +15,8 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  // 방 찾기 화면을 보고 있는지
+  const [finding, setFinding] = useState(false);
 
   async function run(kind, fn) {
     setBusy(kind);
@@ -29,6 +32,16 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
   }
 
   const nicknameEmpty = nickname.trim().length === 0;
+
+  if (finding) {
+    return (
+      <RoomListPage
+        nickname={nickname.trim()}
+        onEntered={onEntered}
+        onBack={() => setFinding(false)}
+      />
+    );
+  }
 
   return (
     <Stack alignItems="center" spacing={3} sx={{ maxWidth: 420, mx: 'auto' }}>
@@ -76,6 +89,18 @@ export default function HomePage({ onEntered, notice = '', onCloseNotice }) {
             onClick={() => run('create', () => createRoom(nickname.trim()))}
           >
             방 만들기
+          </Button>
+
+          <Button
+            variant="outlined"
+            size="large"
+            disabled={nicknameEmpty || busy !== ''}
+            onClick={() => {
+              setError('');
+              setFinding(true);
+            }}
+          >
+            방 찾기
           </Button>
 
           <Divider>또는</Divider>

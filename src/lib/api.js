@@ -19,6 +19,11 @@ export async function quickJoin(nickname) {
   return unwrap(await supabase.rpc('quick_join', { p_nickname: nickname }));
 }
 
+// 들어갈 수 있는 대기실 10개. exclude 에 넣은 방은 빼고 준다
+export async function listRooms(exclude = []) {
+  return unwrap(await supabase.rpc('list_rooms', { p_exclude: exclude })) ?? [];
+}
+
 // 화면이 열려 있음을 알린다. 60초 넘게 오지 않으면 서버가 나간 것으로 처리한다
 export async function heartbeat(roomId) {
   unwrap(await supabase.rpc('heartbeat', { p_room_id: roomId }));
