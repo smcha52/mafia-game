@@ -206,6 +206,26 @@ def start_game(token, room_id):
     return rpc("start_game", token, {"p_room_id": room_id})
 
 
+def skip_vote_result(room_id, token):
+    """낮 투표 뒤 결과 시간(DAY_RESULT, 10초 · 0035)이면 끝날 때까지 기다려 밤으로 넘긴다.
+
+    결과 시간은 클라이언트가 줄일 수 없으므로 마감까지 실제로 기다린다.
+    결과 시간이 아니면 아무것도 하지 않는다. 마지막 tick_phase 응답을 돌려준다.
+    """
+    import time
+    last = None
+    for _ in range(30):
+        s, b = req("/rest/v1/rooms?select=phase&id=eq." + room_id, token)
+        if not (s == 200 and b and b[0]["phase"] == "DAY_RESULT"):
+            return last
+        s, last = rpc("tick_phase", token, {"p_room_id": room_id})
+        if isinstance(last, dict) and last.get("resolved"):
+            return last
+        wait = last.get("remaining") if isinstance(last, dict) else None
+        time.sleep(max(1, wait or 1))
+    return last
+
+
 # ------------------------------------------------------------------
 # 결과 수집
 # ------------------------------------------------------------------

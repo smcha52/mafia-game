@@ -16,7 +16,7 @@ import { sendChat } from '../lib/api';
 function writeState({ phase, alive, team }) {
   if (phase === 'LOBBY') return { can: true, note: '' };
   if (phase === 'ENDED') return { can: true, note: '' };
-  if (phase === 'DAY') {
+  if (phase === 'DAY' || phase === 'DAY_RESULT') {
     return alive
       ? { can: true, note: '' }
       : { can: false, note: '사망하여 대화할 수 없습니다. 읽기만 가능합니다.' };

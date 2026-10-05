@@ -8,7 +8,7 @@
   · 게임이 무한히 이어지지 않고 끝나는가
 """
 
-from harness import check, close_room, msg, req, rpc, user_pool, start_game
+from harness import check, close_room, msg, req, rpc, skip_vote_result, user_pool, start_game
 from stage2 import _pick, alive_uids, make_game, pass_day, pass_night, uid_map
 
 # §5 인원별 기본 직업 구성. 서버의 role_composition() 과 일치해야 한다.
@@ -1252,6 +1252,7 @@ def _split_votes(room_id, roles, uids, a, b, c):
         tgt = max(opts, key=lambda u: quota[u])
         quota[tgt] -= 1
         s, last = rpc("submit_day_vote", t, {"p_room_id": room_id, "p_target_uid": tgt})
+    skip_vote_result(room_id, voters[0])
     return last
 
 
@@ -2228,3 +2229,86 @@ def test_survivor_wins():
 
 
 ALL.extend([test_survivor_target, test_survivor_blocked_short_game, test_survivor_wins])
+
+
+# ------------------------------------------------------------------
+# 투표 결과 시간 (0035) — 낮 투표 뒤 10초 동안 득표 수와 처형자 진영을 공개한다
+# ------------------------------------------------------------------
+
+def test_vote_result_phase():
+    """낮 투표가 끝나면 DAY_RESULT(10초 고정)를 거쳐 다음 날 밤으로 간다"""
+    toks, room_id, roles = make_game(5)
+    if not room_id:
+        check("투표 결과 시간 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+    mafia = _pick(roles, "MAFIA")
+    cits = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+
+    # 밤에 의사가 공격 대상을 살려 5명 모두 낮으로 간다
+    pass_night(room_id, roles, uids, victim_uid=uids[cits[0]], doctor_uid=uids[cits[0]])
+
+    # --- 낮: 시민1 에게 4표, 시민0 에게 1표 ---
+    last = None
+    for t in roles:
+        tgt = uids[cits[0]] if t == cits[1] else uids[cits[1]]
+        s, last = rpc("submit_day_vote", t, {"p_room_id": room_id, "p_target_uid": tgt})
+    check("전원 투표 후 자동 처리", isinstance(last, dict) and last.get("resolved") is True,
+          str(last))
+
+    st = _phase(room_id, toks[0])
+    check("투표 뒤 결과 시간으로 (같은 날)",
+          st.get("phase") == "DAY_RESULT" and st.get("day_number") == 1, str(st))
+
+    s, b = rpc("tick_phase", toks[1], {"p_room_id": room_id})
+    check("결과 시간은 10초 고정, 마감 전 tick 은 무시",
+          s == 200 and b.get("resolved") is False and 0 < (b.get("remaining") or 0) <= 10,
+          str(b))
+
+    pay = _day_payload(room_id, toks[0], 1)
+    votes = {v["uid"]: v["count"] for v in pay.get("votes") or []}
+    check("득표 수 공개: 사람별",
+          votes == {uids[cits[1]]: 4, uids[cits[0]]: 1}, str(pay.get("votes")))
+    check("득표 수 공개: 처형자 4표",
+          pay.get("executed") == uids[cits[1]] and pay.get("executedVotes") == 4, str(pay))
+    check("처형자 진영 공개: 시민 진영",
+          pay.get("executedTeam") == "CITIZEN" and pay.get("executedRole") is None, str(pay))
+
+    # --- 결과 시간에는 투표·능력 불가, 생존자 대화 가능 ---
+    s, b = rpc("submit_day_vote", mafia, {"p_room_id": room_id, "p_target_uid": uids[cits[0]]})
+    check("결과 시간 투표 차단", s >= 400, msg(b))
+    s, b = rpc("submit_night_action", mafia,
+               {"p_room_id": room_id, "p_action": "MAFIA_VOTE", "p_target_uid": uids[cits[0]]})
+    check("결과 시간 능력 차단", s >= 400, msg(b))
+    s, b = rpc("send_chat", cits[0], {"p_room_id": room_id, "p_body": "결과 확인"})
+    check("결과 시간 생존자 대화", s == 200 and b.get("channel") == "PUBLIC", str(b))
+    s, b = rpc("send_chat", cits[1], {"p_room_id": room_id, "p_body": "억울"})
+    check("결과 시간 사망자 대화 차단", s >= 400 and "사망한" in str(msg(b)), msg(b))
+
+    # --- 10초가 지나면 다음 날 밤 ---
+    b = skip_vote_result(room_id, toks[0])
+    st = _phase(room_id, toks[0])
+    check("결과 시간 뒤 2일차 밤으로",
+          isinstance(b, dict) and b.get("resolved") is True
+          and st.get("phase") == "NIGHT" and st.get("day_number") == 2, str(st))
+
+    close_room(toks, room_id)
+
+
+def test_vote_result_skipped_on_game_end():
+    """투표로 게임이 끝나면 결과 시간 없이 바로 종료한다"""
+    toks, room_id, roles = make_game(5)
+    if not room_id:
+        check("결과 시간 생략 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+    pass_night(room_id, roles, uids, victim_uid=uids[_pick(roles, "POLICE")],
+               doctor_uid=uids[_pick(roles, "POLICE")])
+    pass_day(room_id, roles, uids, uids[_pick(roles, "MAFIA")])
+    st = _phase(room_id, toks[0])
+    check("마피아 처형 -> 결과 시간 없이 시민 승리",
+          st.get("phase") == "ENDED" and st.get("winner") == "CITIZEN", str(st))
+    close_room(toks, room_id)
+
+
+ALL.extend([test_vote_result_phase, test_vote_result_skipped_on_game_end])

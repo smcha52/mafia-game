@@ -69,7 +69,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   // 기다렸다가 다시 시도한다.
   const expired = remaining !== null && remaining <= 0;
   useEffect(() => {
-    if (phase !== 'NIGHT' && phase !== 'DAY') return undefined;
+    if (phase !== 'NIGHT' && phase !== 'DAY' && phase !== 'DAY_RESULT') return undefined;
     if (!expired) return undefined;
 
     let stopped = false;
@@ -145,6 +145,10 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   const lastDay = phase === 'NIGHT'
     ? results.find((r) => r.kind === 'DAY' && r.day_number === day - 1)
     : null;
+  // 투표 결과 시간에는 방금 끝난 투표를 보여준다
+  const dayResult = phase === 'DAY_RESULT'
+    ? results.find((r) => r.kind === 'DAY' && r.day_number === day)
+    : null;
 
   const leaveButton = (
     <Button
@@ -198,6 +202,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
   }
 
   const isNight = phase === 'NIGHT';
+  const isResult = phase === 'DAY_RESULT';
   const alive = view?.alive ?? false;
   const role = view?.role;
   const nightAction = NIGHT_ACTION[role] ?? null;
@@ -219,9 +224,9 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
       <Paper sx={{ p: 2, bgcolor: isNight ? '#161428' : 'background.paper' }}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Stack direction="row" spacing={1} alignItems="center">
-            <Box sx={{ fontSize: 26, lineHeight: 1 }}>{isNight ? '🌙' : '☀️'}</Box>
+            <Box sx={{ fontSize: 26, lineHeight: 1 }}>{isNight ? '🌙' : isResult ? '⚖️' : '☀️'}</Box>
             <Box>
-              <Typography variant="h6">{isNight ? '밤' : '낮'}</Typography>
+              <Typography variant="h6">{isNight ? '밤' : isResult ? '투표 결과' : '낮'}</Typography>
               <Typography variant="caption" color="text.secondary">
                 {day}일차
               </Typography>
@@ -324,6 +329,62 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
         );
       })}
 
+      {/* 투표 결과 시간 (10초) — 득표 수와 처형자의 진영, 중립이면 직업 */}
+      {isResult && (
+        <Paper sx={{ p: 2 }}>
+          <Stack spacing={1.5}>
+            {dayResult?.payload?.executed ? (
+              <Alert severity="error" icon={false}>
+                <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <strong>{nickOf(dayResult.payload.executed)}</strong>
+                  <span>님이</span>
+                  <Chip size="small" label={`${dayResult.payload.executedVotes}표`} />
+                  <span>로 처형되었습니다.</span>
+                  {dayResult.payload.executedRole ? (
+                    <Chip size="small" color="warning" label={roleInfo(dayResult.payload.executedRole).name} />
+                  ) : TEAM_RESULT[dayResult.payload.executedTeam] && (
+                    <Chip
+                      size="small"
+                      color={TEAM_RESULT[dayResult.payload.executedTeam].color}
+                      label={TEAM_RESULT[dayResult.payload.executedTeam].label}
+                    />
+                  )}
+                </Stack>
+              </Alert>
+            ) : (
+              <Alert severity="info">
+                {dayResult?.payload?.tie
+                  ? '투표가 동점이라 아무도 처형되지 않았습니다.'
+                  : '아무도 처형되지 않았습니다.'}
+              </Alert>
+            )}
+
+            <Typography variant="subtitle2" color="text.secondary">득표 수</Typography>
+            {(dayResult?.payload?.votes ?? []).length ? (
+              <Stack spacing={0.75}>
+                {dayResult.payload.votes.map((v) => (
+                  <Stack key={v.uid} direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography>{nickOf(v.uid)}</Typography>
+                    <Chip
+                      size="small"
+                      color={v.uid === dayResult.payload.executed ? 'error' : 'default'}
+                      label={`${v.count}표`}
+                      sx={{ fontVariantNumeric: 'tabular-nums' }}
+                    />
+                  </Stack>
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" color="text.secondary">투표한 사람이 없습니다.</Typography>
+            )}
+
+            <Typography variant="caption" color="text.secondary">
+              잠시 후 밤이 됩니다.
+            </Typography>
+          </Stack>
+        </Paper>
+      )}
+
       {!alive && (
         <Alert severity="info">
           사망하여 관전 중입니다. 능력과 투표를 사용할 수 없습니다.
@@ -331,7 +392,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
       )}
 
       {/* 행동 영역 */}
-      {alive && (
+      {alive && !isResult && (
         <>
           <Divider />
           {role === 'ASSASSIN' && aiming ? (

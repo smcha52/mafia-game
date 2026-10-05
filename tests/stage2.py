@@ -4,7 +4,8 @@
 e2e.py 에서 불러 쓴다. 단독 실행하지 않는다.
 """
 
-from harness import KEY, check, close_room, msg, req, rpc, uid_of, user_pool, start_game
+from harness import (KEY, check, close_room, msg, req, rpc, skip_vote_result, uid_of,
+                     user_pool, start_game)
 
 
 def uid_map(roles):
@@ -121,7 +122,8 @@ def pass_night(room_id, roles, uids, victim_uid=None, police_uid=None,
 
 
 def pass_day(room_id, roles, uids, target_uid):
-    """살아 있는 전원이 target 에게 투표해 낮을 넘긴다."""
+    """살아 있는 전원이 target 에게 투표해 낮을 넘긴다.
+    투표 결과 시간(0035)까지 기다려 다음 밤으로 넘긴다. 돌려주는 값은 마지막 투표 응답이다."""
     any_tok = next(iter(roles))
     alive = alive_uids(room_id, any_tok)
     last = None
@@ -132,6 +134,7 @@ def pass_day(room_id, roles, uids, target_uid):
             continue
         s, last = rpc("submit_day_vote", t,
                       {"p_room_id": room_id, "p_target_uid": target_uid})
+    skip_vote_result(room_id, any_tok)
     return last
 
 
