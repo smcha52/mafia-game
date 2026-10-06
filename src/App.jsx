@@ -10,6 +10,7 @@ import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
 import LoginPage from './pages/LoginPage';
 import SetupNotice from './pages/SetupNotice';
+import TutorialPage from './pages/TutorialPage';
 import { isConfigured, myProfile, supabase } from './lib/supabase';
 import { heartbeat, myActiveRoom, takeKickNotice } from './lib/api';
 
@@ -23,15 +24,19 @@ export default function App() {
   const [phase, setPhase] = useState(null);
   // 첫 화면에 띄울 안내 (추방 등)
   const [notice, setNotice] = useState('');
+  // 로그인 화면에서 로그인(가입)하면 튜토리얼부터 한다
+  const [tutorial, setTutorial] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
-  const loadAccount = useCallback(async () => {
+  // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다
+  const loadAccount = useCallback(async (fromLogin = false) => {
     const me = await myProfile();
     if (!me) return false;
 
     const active = await myActiveRoom();
     setUid(me.uid);
     setProfile(me);
+    if (fromLogin) setTutorial(true);
     if (active) {
       setRoomId(active.room_id);
       setPhase(active.phase);
@@ -139,7 +144,7 @@ export default function App() {
   if (!profile) {
     return (
       <Box sx={{ minHeight: '100dvh', px: 2, py: 4 }}>
-        <LoginPage onLoggedIn={loadAccount} />
+        <LoginPage onLoggedIn={() => loadAccount(true)} />
       </Box>
     );
   }
@@ -147,7 +152,9 @@ export default function App() {
   return (
     <Box sx={{ minHeight: '100dvh', px: 2, py: 2 }}>
       <AccountBar nickname={profile.nickname} />
-      {!roomId ? (
+      {tutorial ? (
+        <TutorialPage nickname={profile.nickname} onDone={() => setTutorial(false)} />
+      ) : !roomId ? (
         <HomePage
           nickname={profile.nickname}
           onEntered={handleEntered}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
@@ -107,6 +108,23 @@ export default function LoginPage({ onLoggedIn }) {
         </Tabs>
 
         <Stack component="form" onSubmit={submit} spacing={2.5} sx={{ p: 3 }}>
+          {isSignUp && (
+            <Alert severity="info">
+              <AlertTitle sx={{ mb: 0.5 }}>회원가입 방법</AlertTitle>
+              <Stack component="ol" spacing={0.5} sx={{ m: 0, pl: 2.5 }}>
+                <li>닉네임을 정하세요. 게임에서 쓰는 이름이고, 로그인할 때도 씁니다.</li>
+                <li>
+                  비밀번호를 6자 이상 입력하세요.{' '}
+                  <strong>비밀번호는 다시 찾을 수 없으니 까먹지 마세요!</strong>
+                </li>
+                <li>비밀번호를 한 번 더 입력하고 생년월일을 고르세요.</li>
+              </Stack>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                가입하면 바로 튜토리얼 게임이 시작됩니다.
+              </Typography>
+            </Alert>
+          )}
+
           <TextField
             label="닉네임"
             value={nickname}
@@ -122,7 +140,7 @@ export default function LoginPage({ onLoggedIn }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={shortPassword}
-            helperText={isSignUp ? '6자 이상' : ' '}
+            helperText={isSignUp ? '6자 이상 · 까먹지 마세요!' : ' '}
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
           />
 
