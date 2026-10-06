@@ -11,7 +11,7 @@ import LobbyPage from './pages/LobbyPage';
 import LoginPage from './pages/LoginPage';
 import SetupNotice from './pages/SetupNotice';
 import TutorialPage from './pages/TutorialPage';
-import { isConfigured, myProfile, supabase } from './lib/supabase';
+import { isConfigured, markTutorialDone, myProfile, supabase } from './lib/supabase';
 import { heartbeat, myActiveRoom, takeKickNotice } from './lib/api';
 
 export default function App() {
@@ -26,9 +26,15 @@ export default function App() {
   const [notice, setNotice] = useState('');
   // 로그인 화면에서 로그인(가입)하면 튜토리얼부터 한다
   const [tutorial, setTutorial] = useState(false);
+  // 튜토리얼을 끝까지 마친 적이 있는지. 없으면 건너뛸 수 없다
+  const [tutorialDone, setTutorialDone] = useState(false);
+  // 튜토리얼을 마친 뒤의 안내 단계.
+  // READY: 첫 화면 "한판 돌려 봅시다" · 승패 화면 "재시작" 안내 → FREE: 첫 화면 "자유롭게 하세요"
+  const [guide, setGuide] = useState(null);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
-  // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다
+  // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
+  // 튜토리얼을 한 번도 마치지 않았으면 새로고침해도 튜토리얼부터 한다
   const loadAccount = useCallback(async (fromLogin = false) => {
     const me = await myProfile();
     if (!me) return false;
@@ -36,7 +42,8 @@ export default function App() {
     const active = await myActiveRoom();
     setUid(me.uid);
     setProfile(me);
-    if (fromLogin) setTutorial(true);
+    setTutorialDone(me.tutorialDone);
+    if (fromLogin || !me.tutorialDone) setTutorial(true);
     if (active) {
       setRoomId(active.room_id);
       setPhase(active.phase);
@@ -87,8 +94,27 @@ export default function App() {
 
   const handleEntered = useCallback((id) => {
     setNotice('');
+    // "자유롭게 하세요" 는 다음 방에 들어가면 더 보여주지 않는다
+    setGuide((g) => (g === 'FREE' ? null : g));
     setRoomId(id);
   }, []);
+
+  // 게임 화면에서 나가 첫 화면으로 돌아오면 마지막 안내를 보여준다
+  const handleLeaveGame = useCallback(() => {
+    handleLeave();
+    setGuide((g) => (g === 'READY' ? 'FREE' : g));
+  }, [handleLeave]);
+
+  // 튜토리얼을 끝까지 마쳤다. 처음이면 계정에 남긴다
+  const handleTutorialDone = useCallback(() => {
+    setTutorial(false);
+    setGuide('READY');
+    if (!tutorialDone) {
+      setTutorialDone(true);
+      // 저장에 실패하면 다음 로그인 때 한 번 더 할 뿐이다
+      markTutorialDone().catch(() => {});
+    }
+  }, [tutorialDone]);
 
   // 방에 있는 동안 heartbeat 를 보낸다. 브라우저를 닫으면 끊기고,
   // 60초 뒤 서버가 방에서 내보낸다. 새로고침은 그 안에 다시 보내므로 자리가 유지된다.
@@ -153,20 +179,31 @@ export default function App() {
     <Box sx={{ minHeight: '100dvh', px: 2, py: 2 }}>
       <AccountBar nickname={profile.nickname} />
       {tutorial ? (
-        <TutorialPage nickname={profile.nickname} onDone={() => setTutorial(false)} />
+        <TutorialPage
+          nickname={profile.nickname}
+          canSkip={tutorialDone}
+          onDone={handleTutorialDone}
+          onSkip={() => setTutorial(false)}
+        />
       ) : !roomId ? (
         <HomePage
           nickname={profile.nickname}
           onEntered={handleEntered}
           notice={notice}
           onCloseNotice={() => setNotice('')}
+          hint={guide === 'READY'
+            ? '준비됐나요? 한판 돌려 봅시다!'
+            : guide === 'FREE'
+              ? '이제 더 알려줄 게 없습니다. 자유롭게 하세요!'
+              : ''}
         />
       ) : phase && phase !== 'LOBBY' ? (
         <GamePage
           roomId={roomId}
           uid={uid}
-          onLeave={handleLeave}
+          onLeave={handleLeaveGame}
           onLobby={handleLobby}
+          endHint={guide === 'READY' ? '재시작을 하시면 그대로 한판 더 하실 수 있습니다.' : ''}
         />
       ) : (
         <LobbyPage

@@ -32,7 +32,8 @@ import {
 import { useChat } from '../lib/useChat';
 import { useGame } from '../lib/useGame';
 
-export default function GamePage({ roomId, uid, onLeave, onLobby }) {
+// endHint 가 있으면 승패 화면에 안내 문구로 보여준다 (튜토리얼 뒤 첫 게임)
+export default function GamePage({ roomId, uid, onLeave, onLobby, endHint = '' }) {
   const { room, players, results, view, viewError, loading, error, reload } = useGame(roomId);
   const { messages } = useChat(roomId);
   const [pick, setPick] = useState(null);
@@ -169,6 +170,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby }) {
     return (
       <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
         <GameOver roomId={roomId} winner={room.winner} />
+
+        {endHint && <Alert severity="info">{endHint}</Alert>}
 
         {actionError && <Alert severity="error">{actionError}</Alert>}
 

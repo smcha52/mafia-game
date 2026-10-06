@@ -11,7 +11,8 @@ import RoomListPage from './RoomListPage';
 import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
 // 로그인한 닉네임으로 방에 들어간다
-export default function HomePage({ nickname, onEntered, notice = '', onCloseNotice }) {
+// hint 가 있으면 맨 아래에 안내 문구로 보여준다 (튜토리얼 뒤 안내)
+export default function HomePage({ nickname, onEntered, notice = '', onCloseNotice, hint = '' }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -116,6 +117,12 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </Paper>
+
+      {hint && (
+        <Alert severity="success" sx={{ width: '100%' }}>
+          {hint}
+        </Alert>
+      )}
     </Stack>
   );
 }

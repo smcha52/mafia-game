@@ -101,6 +101,15 @@ export default function LoginPage({ onLoggedIn }) {
         </Typography>
       </Stack>
 
+      <Stack spacing={0.5} alignItems="center" sx={{ textAlign: 'center' }}>
+        <Typography variant="body2">
+          계정을 만들 때는 <strong>회원가입</strong>을 하고, 로그아웃을 하면 <strong>로그인</strong>을 해주세요.
+        </Typography>
+        <Typography variant="body2" color="error" fontWeight={700}>
+          &lt;주의&gt; 비밀번호를 잊어버리면 안 됩니다 &lt;주의&gt;
+        </Typography>
+      </Stack>
+
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         <Tabs value={mode} onChange={(_, v) => changeMode(v)} variant="fullWidth">
           <Tab value="login" label="로그인" disabled={busy} />

@@ -18,13 +18,15 @@ import SkipNextIcon from '@mui/icons-material/SkipNext';
 import PlayerList from '../components/PlayerList';
 import PlayerPicker from '../components/PlayerPicker';
 import PrivateResults from '../components/PrivateResults';
+import ResultChips from '../components/ResultChips';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
-  NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, SUBMIT_LABEL, TEAMS, TEAM_RESULT, WINNERS, roleInfo,
+  NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, SUBMIT_LABEL, TEAMS, TEAM_RESULT, WINNERS, didWin,
+  roleInfo,
 } from '../lib/roles';
 
-// 가입 직후 봇 4명과 하는 연습 게임. 서버 없이 이 화면 안에서만 진행된다.
+// 로그인 직후 봇 4명과 하는 연습 게임. 서버 없이 이 화면 안에서만 진행된다.
 // 판마다 직업이 정해져 있고, 봇은 사람이 반드시 이기도록 움직인다.
 
 const ME = 'me';
@@ -161,7 +163,8 @@ function TipBox({ round, children }) {
   );
 }
 
-export default function TutorialPage({ nickname, onDone }) {
+// canSkip 이 false 이면 (첫 튜토리얼) 건너뛰기 버튼을 보여주지 않는다
+export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
   const [round, setRound] = useState(1);
   // LOBBY → NIGHT → DAY → RESULT → (NIGHT …) → ENDED
   const [stage, setStage] = useState('LOBBY');
@@ -175,8 +178,8 @@ export default function TutorialPage({ nickname, onDone }) {
 
   const me = players.find((p) => p.uid === ME);
   // 어느 화면에서든 튜토리얼을 끝내고 첫 화면으로 간다
-  const skipButton = (
-    <Button color="inherit" startIcon={<SkipNextIcon />} onClick={onDone}>
+  const skipButton = canSkip && (
+    <Button color="inherit" startIcon={<SkipNextIcon />} onClick={onSkip}>
       튜토리얼 건너뛰기
     </Button>
   );
@@ -307,8 +310,8 @@ export default function TutorialPage({ nickname, onDone }) {
                         <Chip size="small" color={team.color} label={roleInfo(p.role).name} />
                       </Stack>
                     }
-                    secondary={p.alive ? '생존' : '사망'}
                   />
+                  <ResultChips alive={p.alive} win={didWin(winner, p.role, teamOf(p.role))} />
                 </ListItem>
               );
             })}

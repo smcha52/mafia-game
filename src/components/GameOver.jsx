@@ -10,8 +10,9 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
+import ResultChips from './ResultChips';
 import RoleAvatar from './RoleAvatar';
-import { TEAMS, WINNERS, roleInfo } from '../lib/roles';
+import { TEAMS, WINNERS, didWin, roleInfo } from '../lib/roles';
 import { finalRoles } from '../lib/api';
 
 export default function GameOver({ roomId, winner }) {
@@ -60,8 +61,8 @@ export default function GameOver({ roomId, winner }) {
                         <Chip size="small" color={team.color} label={info.name} />
                       </Stack>
                     }
-                    secondary={r.alive ? '생존' : '사망'}
                   />
+                  <ResultChips alive={r.alive} win={didWin(winner, r.role, r.team)} />
                 </ListItem>
               );
             })}

@@ -27,6 +27,7 @@ function authMessage(error) {
 }
 
 // 로그인한 사람의 프로필. 로그인하지 않았거나 프로필이 없으면 null
+// tutorialDone 은 튜토리얼을 끝까지 한 번 마쳤는지 (계정 메타데이터)
 export async function myProfile() {
   const { data } = await supabase.auth.getSession();
   const user = data.session?.user;
@@ -37,7 +38,14 @@ export async function myProfile() {
     .select('uid, nickname, birth')
     .eq('uid', user.id);
   if (error) throw new Error(error.message);
-  return rows[0] ?? null;
+  if (!rows[0]) return null;
+  return { ...rows[0], tutorialDone: Boolean(user.user_metadata?.tutorial_done) };
+}
+
+// 튜토리얼을 끝까지 마쳤다고 계정에 남긴다. 다른 기기에서 로그인해도 유지된다
+export async function markTutorialDone() {
+  const { error } = await supabase.auth.updateUser({ data: { tutorial_done: true } });
+  if (error) throw new Error(error.message);
 }
 
 // 닉네임·비밀번호·생년월일로 가입한다. 로그인용 이메일은 내부용으로 만든다 (0037)

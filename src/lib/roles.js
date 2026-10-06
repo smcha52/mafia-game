@@ -33,6 +33,14 @@ export const WINNERS = {
   DRAW:    { title: '무승부', emoji: '🤝', color: 'text.secondary' },
 };
 
+// 게임 결과에서 이 사람이 이겼는지. 무승부면 null
+// 시민·마피아 승리는 진영으로, 광대·살인자·생존자 단독 승리는 직업으로 판단한다
+export function didWin(winner, role, team) {
+  if (winner === 'DRAW') return null;
+  if (winner === 'CITIZEN' || winner === 'MAFIA') return team === winner;
+  return role === winner;
+}
+
 export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', desc: '' };
 
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
