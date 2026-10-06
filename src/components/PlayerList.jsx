@@ -31,6 +31,7 @@ export default function PlayerList({ players, uid, onKick, kickingUid = null }) 
                 primary={
                   <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap">
                     <span>{p.nickname}</span>
+                    {p.level != null && <Chip size="small" variant="outlined" label={`Lv.${p.level}`} />}
                     {isMe && <Chip size="small" label="나" />}
                     {p.is_host && (
                       <Chip size="small" color="primary" icon={<StarIcon />} label="방장" />

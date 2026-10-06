@@ -42,6 +42,7 @@ export default function PlayerPicker({
                 primary={
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <span>{p.nickname}</span>
+                    {p.level != null && <Chip size="small" variant="outlined" label={`Lv.${p.level}`} />}
                     {p.uid === uid && <Chip size="small" label="나" />}
                     {blocked && blockedNote && <Chip size="small" label={blockedNote} />}
                   </Stack>

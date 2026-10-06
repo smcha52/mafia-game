@@ -76,10 +76,14 @@ export default function GameOver({ roomId, winner, uid }) {
                         <span style={{ textDecoration: r.alive ? 'none' : 'line-through' }}>
                           {r.nickname}
                         </span>
+                        {r.level != null && (
+                          <Chip size="small" variant="outlined" label={`Lv.${r.level}`} />
+                        )}
                         <Chip size="small" color={team.color} label={info.name} />
                       </Stack>
                     }
                   />
+                  {/* 이번 판 XP 는 서버가 본인 것만 준다 (0039) */}
                   {r.xpGained != null && (
                     <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>
                       +{r.xpGained}
