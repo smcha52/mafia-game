@@ -35,11 +35,12 @@ export async function myProfile() {
 
   const { data: rows, error } = await supabase
     .from('profiles')
-    .select('uid, nickname, birth')
+    // xp 는 0038 에서 생긴다. 적용 전이어도 로그인은 되도록 * 로 읽는다
+    .select('*')
     .eq('uid', user.id);
   if (error) throw new Error(error.message);
   if (!rows[0]) return null;
-  return { ...rows[0], tutorialDone: Boolean(user.user_metadata?.tutorial_done) };
+  return { ...rows[0], xp: rows[0].xp ?? 0, tutorialDone: Boolean(user.user_metadata?.tutorial_done) };
 }
 
 // 튜토리얼을 끝까지 마쳤다고 계정에 남긴다. 다른 기기에서 로그인해도 유지된다

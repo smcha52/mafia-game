@@ -15,7 +15,8 @@ import RoleAvatar from './RoleAvatar';
 import { TEAMS, WINNERS, didWin, roleInfo } from '../lib/roles';
 import { finalRoles } from '../lib/api';
 
-export default function GameOver({ roomId, winner }) {
+// uid 를 넘기면 내가 이번 판에 얻은 XP 를 따로 보여준다
+export default function GameOver({ roomId, winner, uid }) {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
 
@@ -24,6 +25,9 @@ export default function GameOver({ roomId, winner }) {
   }, [roomId]);
 
   const w = WINNERS[winner] ?? { title: '게임 종료', emoji: '🏁', color: 'text.primary' };
+  // XP 는 0038 적용 뒤에만 온다
+  const mine = rows?.find((r) => r.uid === uid);
+  const hasXp = mine?.xpGained != null;
 
   return (
     <Stack spacing={2}>
@@ -38,6 +42,20 @@ export default function GameOver({ roomId, winner }) {
           </Typography>
         )}
       </Paper>
+
+      {hasXp && (
+        <Paper sx={{ p: 2 }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Typography fontWeight={700}>이번 판 XP</Typography>
+            <Typography variant="h6" color="primary.main">+{mine.xpGained} XP</Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+            {didWin(winner, mine.role, mine.team)
+              ? `직업 행동 ${mine.xpBase} XP × 2 (승리)`
+              : `직업 행동 ${mine.xpBase} XP${winner === 'DRAW' ? ' (무승부)' : ' (패배)'}`}
+          </Typography>
+        </Paper>
+      )}
 
       {error && <Alert severity="error">{error}</Alert>}
 
@@ -62,6 +80,11 @@ export default function GameOver({ roomId, winner }) {
                       </Stack>
                     }
                   />
+                  {r.xpGained != null && (
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1, flexShrink: 0 }}>
+                      +{r.xpGained}
+                    </Typography>
+                  )}
                   <ResultChips alive={r.alive} win={didWin(winner, r.role, r.team)} />
                 </ListItem>
               );

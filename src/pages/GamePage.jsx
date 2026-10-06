@@ -33,7 +33,7 @@ import { useChat } from '../lib/useChat';
 import { useGame } from '../lib/useGame';
 
 // endHint 가 있으면 승패 화면에 안내 문구로 보여준다 (튜토리얼 뒤 첫 게임)
-export default function GamePage({ roomId, uid, onLeave, onLobby, endHint = '' }) {
+export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHint = '' }) {
   const { room, players, results, view, viewError, loading, error, reload } = useGame(roomId);
   const { messages } = useChat(roomId);
   const [pick, setPick] = useState(null);
@@ -50,6 +50,11 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, endHint = '' }
   useEffect(() => {
     if (phase === 'LOBBY') onLobby?.();
   }, [phase, onLobby]);
+
+  // 게임이 끝나면 XP 가 계정에 더해지므로 상단 레벨을 새로 읽게 한다
+  useEffect(() => {
+    if (phase === 'ENDED') onEnded?.();
+  }, [phase, onEnded]);
 
   // 1초마다 남은 시간을 다시 계산한다
   const [now, setNow] = useState(() => Date.now());
@@ -169,7 +174,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, endHint = '' }
   if (phase === 'ENDED') {
     return (
       <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
-        <GameOver roomId={roomId} winner={room.winner} />
+        <GameOver roomId={roomId} winner={room.winner} uid={uid} />
 
         {endHint && <Alert severity="info">{endHint}</Alert>}
 

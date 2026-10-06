@@ -142,6 +142,15 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
+  // 게임이 끝나면 늘어난 XP 를 다시 읽는다
+  const handleEnded = useCallback(async () => {
+    try {
+      const me = await myProfile();
+      if (me) setProfile(me);
+    } catch {
+      // 못 읽으면 다음 접속 때 반영된다
+    }
+  }, []);
   // 다시하기로 방이 대기실로 돌아가면 화면도 되돌린다
   const handleLobby = useCallback(() => setPhase('LOBBY'), []);
 
@@ -177,7 +186,7 @@ export default function App() {
 
   return (
     <Box sx={{ minHeight: '100dvh', px: 2, py: 2 }}>
-      <AccountBar nickname={profile.nickname} />
+      <AccountBar nickname={profile.nickname} xp={profile.xp} />
       {tutorial ? (
         <TutorialPage
           nickname={profile.nickname}
@@ -203,6 +212,7 @@ export default function App() {
           uid={uid}
           onLeave={handleLeaveGame}
           onLobby={handleLobby}
+          onEnded={handleEnded}
           endHint={guide === 'READY' ? '재시작을 하시면 그대로 한판 더 하실 수 있습니다.' : ''}
         />
       ) : (
