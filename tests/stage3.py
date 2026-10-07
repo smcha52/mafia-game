@@ -108,7 +108,7 @@ def test_all_abilities_same_night():
     check("15명 밤: 영매는 1일차에 못 쓴다",
           s >= 400 and "사망한 참가자만" in str(msg(b)), msg(b))
 
-    # 마피아 2 + 암살자 1 + 스파이 1 이 같은 사람을 공격
+    # 마피아 2 + 저격수 1 + 스파이 1 이 같은 사람을 공격
     killer = _pick(roles, "ASSASSIN")
     for t in mafias + [spy, killer]:
         rpc("submit_night_action", t,
@@ -495,7 +495,7 @@ def test_chat_night_mafia_only():
     s, b = rpc("send_chat", spy, {"p_room_id": room_id, "p_body": "경찰부터"})
     check("밤: 스파이도 전송", s == 200 and b.get("channel") == "MAFIA", str(b))
 
-    # 읽기 — 마피아 진영만 보인다 (동료는 암살자로 확인)
+    # 읽기 — 마피아 진영만 보인다 (동료는 저격수로 확인)
     m_msgs = _chat_of(_pick(roles, "ASSASSIN"), room_id)
     check("마피아 동료가 읽는다", len(m_msgs) == 2, "%d건" % len(m_msgs))
 
@@ -832,7 +832,7 @@ def test_role_toggle_applies_to_game():
     check("대신 시민이 늘었다", c.get("CITIZEN") == 4, "시민 %s명" % c.get("CITIZEN"))
     check("마피아 진영은 그대로 2명",
           c.get("MAFIA", 0) + c.get("ASSASSIN", 0) == 2,
-          "마피아 %s + 암살자 %s" % (c.get("MAFIA"), c.get("ASSASSIN")))
+          "마피아 %s + 저격수 %s" % (c.get("MAFIA"), c.get("ASSASSIN")))
     check("전원 배정", len(roles) == 7, "%d/7" % len(roles))
 
     # 광대가 없으니 jester_uid 도 비어 있어야 한다
@@ -881,41 +881,41 @@ ALL.extend([test_role_toggle_composition, test_role_toggle_permission,
 
 
 # ------------------------------------------------------------------
-# 암살자 (요구사항 외 추가)
+# 저격수 (요구사항 외 추가)
 # ------------------------------------------------------------------
 
 def test_assassin_composition():
-    """구성표에 암살자가 들어가고, 끄면 마피아로 돌아간다"""
+    """구성표에 저격수가 들어가고, 끄면 마피아로 돌아간다"""
     from collections import Counter
     from harness import KEY
 
     # 5~6명에는 없다
     for n in (5, 6):
         s, c = rpc("role_composition", KEY, {"p_count": n, "p_disabled": []})
-        check("%d명엔 암살자 없음" % n, s == 200 and "ASSASSIN" not in c, str(c))
+        check("%d명엔 저격수 없음" % n, s == 200 and "ASSASSIN" not in c, str(c))
 
-    # 7명 이상에는 마피아 1명이 암살자로 바뀐다
+    # 7명 이상에는 마피아 1명이 저격수로 바뀐다
     s, c7 = rpc("role_composition", KEY, {"p_count": 7, "p_disabled": []})
     cc = Counter(c7)
-    check("7명: 마피아1 + 암살자1",
+    check("7명: 마피아1 + 저격수1",
           cc.get("MAFIA") == 1 and cc.get("ASSASSIN") == 1, str(dict(cc)))
 
     s, c13 = rpc("role_composition", KEY, {"p_count": 13, "p_disabled": []})
     cc13 = Counter(c13)
-    check("13명: 마피아2 + 암살자1",
+    check("13명: 마피아2 + 저격수1",
           cc13.get("MAFIA") == 2 and cc13.get("ASSASSIN") == 1, str(dict(cc13)))
 
     # 끄면 시민이 아니라 마피아로 돌아간다
     s, off = rpc("role_composition", KEY,
                  {"p_count": 13, "p_disabled": ["ASSASSIN"]})
     co = Counter(off)
-    check("암살자를 끄면 마피아로 복귀",
+    check("저격수를 끄면 마피아로 복귀",
           "ASSASSIN" not in co and co.get("MAFIA") == 3, str(dict(co)))
     check("끄더라도 인원수 유지", len(off or []) == 13, "%d개" % len(off or []))
 
 
 def _assassin_game(n=7):
-    """암살자가 있는 게임. (토큰맵, room_id, 직업맵, uid맵) 반환"""
+    """저격수가 있는 게임. (토큰맵, room_id, 직업맵, uid맵) 반환"""
     toks, room_id, roles = make_game(n)
     if not room_id:
         return None, None, None, None
@@ -923,11 +923,11 @@ def _assassin_game(n=7):
 
 
 def test_assassin_hit_and_miss():
-    """맞히면 대상이 죽고, 틀리면 암살자가 죽는다"""
+    """맞히면 대상이 죽고, 틀리면 저격수가 죽는다"""
     # --- 성공 ---
     toks, room_id, roles, uids = _assassin_game(7)
     if not room_id:
-        check("암살 성공 준비", False, "방 생성 실패")
+        check("저격 성공 준비", False, "방 생성 실패")
         return
 
     killer = _pick(roles, "ASSASSIN")
@@ -935,7 +935,7 @@ def test_assassin_hit_and_miss():
     citizens = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
 
     s, v = rpc("my_game_view", killer, {"p_room_id": room_id})
-    check("암살자는 마피아 진영", v.get("team") == "MAFIA", str(v.get("team")))
+    check("저격수는 마피아 진영", v.get("team") == "MAFIA", str(v.get("team")))
     check("저격 가능 여부 제공", v.get("canAssassinate") is True, str(v.get("canAssassinate")))
 
     # 경찰을 경찰로 찍는다 -> 성공
@@ -960,12 +960,12 @@ def test_assassin_hit_and_miss():
     alive = {p["uid"]: p["alive"] for p in pl} if isinstance(pl, list) else {}
     check("저격 성공 -> 대상 사망", alive.get(uids[police]) is False,
           "경찰 생존=%s" % alive.get(uids[police]))
-    check("저격 성공 -> 암살자 생존", alive.get(uids[killer]) is True,
-          "암살자 생존=%s" % alive.get(uids[killer]))
+    check("저격 성공 -> 저격수 생존", alive.get(uids[killer]) is True,
+          "저격수 생존=%s" % alive.get(uids[killer]))
 
     s, v = rpc("my_game_view", killer, {"p_room_id": room_id})
     res = [x for x in (v.get("privateResults") or []) if x["kind"] == "ASSASSIN"]
-    check("암살자만 결과를 받는다",
+    check("저격수만 결과를 받는다",
           len(res) == 1 and res[0]["payload"]["success"] is True,
           str(res[0]["payload"]) if res else "없음")
 
@@ -978,7 +978,7 @@ def test_assassin_hit_and_miss():
     # --- 실패 ---
     toks, room_id, roles, uids = _assassin_game(7)
     if not room_id:
-        check("암살 실패 준비", False, "방 생성 실패")
+        check("저격 실패 준비", False, "방 생성 실패")
         return
     killer = _pick(roles, "ASSASSIN")
     police = _pick(roles, "POLICE")
@@ -991,8 +991,8 @@ def test_assassin_hit_and_miss():
 
     s, pl = req("/rest/v1/players?select=uid,alive&room_id=eq." + room_id, citizens[1])
     alive = {p["uid"]: p["alive"] for p in pl} if isinstance(pl, list) else {}
-    check("저격 실패 -> 암살자 사망", alive.get(uids[killer]) is False,
-          "암살자 생존=%s" % alive.get(uids[killer]))
+    check("저격 실패 -> 저격수 사망", alive.get(uids[killer]) is False,
+          "저격수 생존=%s" % alive.get(uids[killer]))
     check("저격 실패 -> 대상 생존", alive.get(uids[police]) is True,
           "경찰 생존=%s" % alive.get(uids[police]))
 
@@ -1045,7 +1045,7 @@ def test_assassin_rules():
     """권한과 제한"""
     toks, room_id, roles, uids = _assassin_game(7)
     if not room_id:
-        check("암살 규칙 준비", False, "방 생성 실패")
+        check("저격 규칙 준비", False, "방 생성 실패")
         return
 
     killer = _pick(roles, "ASSASSIN")
@@ -1054,7 +1054,7 @@ def test_assassin_rules():
 
     s, b = rpc("submit_assassination", police,
                {"p_room_id": room_id, "p_target_uid": uids[citizens[0]], "p_guess": "CITIZEN"})
-    check("비암살자 저격 차단", s >= 400 and "저격수만" in str(msg(b)), msg(b))
+    check("비저격수 저격 차단", s >= 400 and "저격수만" in str(msg(b)), msg(b))
 
     s, b = rpc("submit_assassination", killer,
                {"p_room_id": room_id, "p_target_uid": uids[killer], "p_guess": "ASSASSIN"})
@@ -1072,7 +1072,7 @@ def test_assassin_rules():
 def test_assassin_all_citizens_blocked():
     """같은 편을 뺀 상대가 전부 시민이면 저격할 수 없다 (0021)
 
-    암살자는 mafiaMembers 로 같은 편을 전부 안다. 팀원이 살아 있다는 이유로
+    저격수는 mafiaMembers 로 같은 편을 전부 안다. 팀원이 살아 있다는 이유로
     판정을 통과시키면, 남은 대상이 전원 시민이어도 "시민"이라고만 찍어서
     무위험 저격을 반복할 수 있다. 실제 판(YUX83H)에서 이렇게 끝났다.
     """
@@ -1089,7 +1089,7 @@ def test_assassin_all_citizens_blocked():
         rpc("join_room", t, {"p_code": code, "p_nickname": "P%d" % i})
         rpc("set_ready", t, {"p_room_id": room_id, "p_ready": True})
 
-    # 암살자만 남기고 전부 끈다 -> 마피아1 + 암살자1 + 시민5
+    # 저격수만 남기고 전부 끈다 -> 마피아1 + 저격수1 + 시민5
     off = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE",
            "REPORTER", "MEDIUM", "SPY", "JESTER"]
     s, b = rpc("set_disabled_roles", toks[0],
@@ -1107,7 +1107,7 @@ def test_assassin_all_citizens_blocked():
 
     from collections import Counter
     cc = Counter(r["role"] for r in roles.values())
-    check("구성: 마피아1 + 암살자1 + 시민5",
+    check("구성: 마피아1 + 저격수1 + 시민5",
           cc.get("MAFIA") == 1 and cc.get("ASSASSIN") == 1 and cc.get("CITIZEN") == 5,
           str(dict(cc)))
 
@@ -1322,12 +1322,12 @@ def test_day_reveal_mafia_and_jester():
     pass_night(room_id, roles, uids, victim_uid=uids[citizens[0]],
                doctor_uid=uids[_pick(roles, "MAFIA")])
 
-    # --- 1일차: 암살자 처형 -> 마피아 진영, 직업은 숨긴다 ---
+    # --- 1일차: 저격수 처형 -> 마피아 진영, 직업은 숨긴다 ---
     pass_day(room_id, roles, uids, uids[assassin])
     pay = _day_payload(room_id, citizens[1], 1)
     check("마피아 처형 공개: executedTeam=MAFIA",
           pay.get("executedTeam") == "MAFIA", str(pay))
-    check("마피아 처형 공개: 암살자 직업은 숨긴다",
+    check("마피아 처형 공개: 저격수 직업은 숨긴다",
           pay.get("executedRole") is None and "ASSASSIN" not in str(pay), str(pay))
 
     s, rm = req("/rest/v1/rooms?select=phase,day_number&id=eq." + room_id, toks[0])
@@ -1381,7 +1381,7 @@ def _killer_game(n, off):
     return toks, room_id, roles, uid_map(roles)
 
 
-# 살인자만 남기고 전부 끈다 -> 9명: 마피아2(암살자 자리 포함) + 살인자1 + 시민6
+# 살인자만 남기고 전부 끈다 -> 9명: 마피아2(저격수 자리 포함) + 살인자1 + 시민6
 ALL_BUT_KILLER = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE",
                   "REPORTER", "MEDIUM", "SPY", "JESTER", "ASSASSIN", "VIGILANTE"]
 
@@ -1604,7 +1604,7 @@ ALL.extend([test_killer_composition, test_killer_night_rules,
 # 자경단 (0029)
 # ------------------------------------------------------------------
 
-# 자경단만 남기고 전부 끈다 -> 10명: 마피아2(암살자 자리 포함) + 자경단1 + 시민7
+# 자경단만 남기고 전부 끈다 -> 10명: 마피아2(저격수 자리 포함) + 자경단1 + 시민7
 ALL_BUT_VIGILANTE = ["POLICE", "DOCTOR", "BODYGUARD", "DETECTIVE", "REPORTER",
                      "MEDIUM", "SPY", "JESTER", "ASSASSIN", "KILLER"]
 
@@ -1858,35 +1858,35 @@ def test_random_respects_disabled():
 
 
 def test_mafia_team_without_mafia():
-    """마피아를 꺼도 스파이·암살자가 있으면 시작할 수 있다 (0031)"""
+    """마피아를 꺼도 스파이·저격수가 있으면 시작할 수 있다 (0031)"""
     from collections import Counter
     from harness import KEY
 
     s, c = rpc("team_composition", KEY,
                {"p_count": 9, "p_disabled": ["MAFIA", "FORGER"]})
-    check("마피아를 끄면 마피아 진영은 켜진 스파이·암살자·위조범 수까지",
+    check("마피아를 끄면 마피아 진영은 켜진 스파이·저격수·위조범 수까지",
           s == 200 and c == {"mafia": 2, "neutral": 2, "citizen": 5}, str(c))
     s, c = rpc("team_composition", KEY,
                {"p_count": 9, "p_disabled": ["MAFIA", "SPY", "ASSASSIN", "FORGER"]})
     check("마피아 진영을 다 끄면 0명", s == 200 and c.get("mafia") == 0, str(c))
 
-    # 랜덤 구성: 마피아 없이 스파이·암살자로 시작
+    # 랜덤 구성: 마피아 없이 스파이·저격수로 시작
     toks, room_id, roles = _random_game(9, ["MAFIA", "FORGER"])
     if not room_id:
         check("마피아 없는 랜덤 게임 준비", False, "방 생성 실패")
         return
     cc = Counter(r["role"] for r in roles.values())
-    check("랜덤: 마피아 없이 스파이+암살자로 시작",
+    check("랜덤: 마피아 없이 스파이+저격수로 시작",
           len(roles) == 9 and "MAFIA" not in cc
           and cc.get("SPY") == 1 and cc.get("ASSASSIN") == 1, str(dict(cc)))
     close_room(toks, room_id)
 
-    # 고정 구성: 7명 구성표의 암살자가 마피아 진영을 맡는다
+    # 고정 구성: 7명 구성표의 저격수가 마피아 진영을 맡는다
     from stage2 import make_room
     toks, room_id = make_room(7)
     rpc("set_disabled_roles", toks[0], {"p_room_id": room_id, "p_disabled": ["MAFIA"]})
     s, b = start_game(toks[0], room_id)
-    check("고정: 마피아를 꺼도 암살자가 있으면 시작", s in (200, 204), msg(b))
+    check("고정: 마피아를 꺼도 저격수가 있으면 시작", s in (200, 204), msg(b))
     close_room(toks, room_id)
 
     # 마피아 진영을 다 끄면 시작할 수 없다

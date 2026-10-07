@@ -320,7 +320,7 @@ def test_night_tie():
         check("동점 테스트 준비", False, "방 생성 실패")
         return
 
-    # 7명 구성은 마피아1 + 암살자1 이다. 둘 다 공격 투표를 낸다.
+    # 7명 구성은 마피아1 + 저격수1 이다. 둘 다 공격 투표를 낸다.
     mafia_toks = [t for t, r in roles.items() if r["role"] in ("MAFIA", "ASSASSIN")]
     others = [t for t, r in roles.items() if r["role"] not in ("MAFIA", "ASSASSIN")]
 
@@ -360,7 +360,7 @@ def test_game_view():
         check("화면조회 준비", False, "방 생성 실패")
         return
 
-    # 7명 구성은 마피아1 + 암살자1. 둘 다 공격 투표에 참여한다.
+    # 7명 구성은 마피아1 + 저격수1. 둘 다 공격 투표에 참여한다.
     mafia = [t for t, r in roles.items() if r["role"] in ("MAFIA", "ASSASSIN")]
     plain = [t for t, r in roles.items() if r["role"] not in ("MAFIA", "SPY", "ASSASSIN")]
 
@@ -674,7 +674,7 @@ def test_role_doctor():
                {"p_room_id": room_id, "p_action": "DOCTOR", "p_target_uid": uids[citizen]})
     check("치료 대상 변경 가능", s == 200, str(b)[:40])
 
-    # 7명 구성은 마피아1 + 암살자1 이므로 암살자도 공격 투표를 내야 밤이 끝난다
+    # 7명 구성은 마피아1 + 저격수1 이므로 저격수도 공격 투표를 내야 밤이 끝난다
     killer = next((t for t, r in roles.items() if r["role"] == "ASSASSIN"), None)
     for t in mafias + ([killer] if killer else []):
         rpc("submit_night_action", t,
@@ -1399,8 +1399,8 @@ def test_spy():
 def test_spy_counts_for_mafia_win():
     """마피아가 전멸해도 스파이가 살아 있으면 시민이 이기지 않는다 (§4.2)
 
-    9명 구성은 마피아1 + 암살자1 + 스파이1 이다. 스파이만 남기려면
-    마피아와 암살자를 모두 제거해야 한다.
+    9명 구성은 마피아1 + 저격수1 + 스파이1 이다. 스파이만 남기려면
+    마피아와 저격수를 모두 제거해야 한다.
     """
     toks, room_id, roles = make_game(9)
     if not room_id:
