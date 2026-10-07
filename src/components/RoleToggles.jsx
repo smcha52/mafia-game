@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
 import Chip from '@mui/material/Chip';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Paper from '@mui/material/Paper';
@@ -9,6 +10,7 @@ import Switch from '@mui/material/Switch';
 import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
+import RoleInfoDialog from './RoleInfoDialog';
 import { roleInfo, survivorTarget } from '../lib/roles';
 import {
   roleComposition, setDisabledRoles, setRandomRoles, teamComposition,
@@ -25,17 +27,22 @@ const NAME_COLOR = {
   KILLER: '#42A5F5',
 };
 
-// 직업 설정을 진영별로 묶어 보여준다
+// 시민 진영 특수 직업. 시민을 끄면 시민 진영 자리를 이 직업들로만 채운다
+const CITIZEN_SPECIALS = ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'];
+
+// 직업 설정을 진영별로 묶어 보여준다. 시민은 랜덤 구성일 때만 목록에 나온다
 const GROUPS = [
-  { title: '시민 진영', roles: ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'] },
+  { title: '시민 진영', roles: ['CITIZEN', ...CITIZEN_SPECIALS] },
   { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'] },
   { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR'] },
 ];
 
-// 대기실에서 직업을 켜고 끈다. 끈 직업 자리는 시민이 채운다.
-export default function RoleToggles({ room, isHost, playerCount }) {
-  const disabled = room?.disabled_roles ?? [];
+// 대기실에서 직업을 켜고 끈다. 스위치를 누르면 켜고 끄고, 이름을 누르면 설명이 뜬다.
+// onBlockedChange: 지금 설정으로는 시작할 수 없는지(마피아 진영 0명, 시민 진영 직업 부족)를 알린다
+export default function RoleToggles({ room, isHost, playerCount, onBlockedChange }) {
   const random = room?.random_roles ?? true;
+  // 고정 구성은 끈 직업 자리를 시민이 채우므로 시민 끄기를 무시한다 (서버와 같다, 0040)
+  const disabled = (room?.disabled_roles ?? []).filter((r) => random || r !== 'CITIZEN');
   // 최대 일수가 2일 이하이면 생존자는 이길 날이 없어 넣을 수 없다 (서버도 뺀다)
   const target = survivorTarget(room?.max_days ?? 15);
   const survivorBlocked = target === null;
@@ -43,6 +50,8 @@ export default function RoleToggles({ room, isHost, playerCount }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);
+  // 설명을 보고 있는 직업
+  const [info, setInfo] = useState(null);
 
   // 지금 인원과 설정으로 어떤 구성이 나오는지 서버에 물어 미리 보여준다.
   // 구성표를 화면에 또 적어두면 서버와 어긋날 수 있다.
@@ -66,7 +75,47 @@ export default function RoleToggles({ room, isHost, playerCount }) {
     };
   }, [room, playerCount, random, effectiveOff.join(',')]);
 
+  // 마피아 진영이 0명이면 시작할 수 없다. 미리보기가 없으면 켜진 직업으로만 판단한다.
+  const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'];
+  const noMafiaTeam = preview
+    ? (Array.isArray(preview)
+      ? !preview.some((r) => MAFIA_TEAM.includes(r))
+      : preview.mafia === 0)
+    : MAFIA_TEAM.every((r) => disabled.includes(r));
+
+  // 랜덤 구성에서 시민을 끄면 시민 진영 자리를 켜진 시민 진영 직업(각 1명)만으로 채운다
+  const citizenOpen = CITIZEN_SPECIALS.filter((r) => !effectiveOff.includes(r)).length;
+  const citizenShort = random && disabled.includes('CITIZEN')
+    && preview && !Array.isArray(preview) && citizenOpen < preview.citizen;
+
+  const blocked = Boolean(noMafiaTeam || citizenShort);
+  useEffect(() => {
+    onBlockedChange?.(blocked);
+  }, [blocked, onBlockedChange]);
+
   if (!room) return null;
+
+  // 그룹에 보여줄 직업. 시민은 랜덤 구성일 때만
+  const shown = (roles) => roles.filter((code) => random || code !== 'CITIZEN');
+
+  // 누르면 설명이 뜨는 직업 이름
+  const nameButton = (code, on) => (
+    <ButtonBase
+      onClick={() => setInfo(code)}
+      aria-label={`${roleInfo(code).name} 설명 보기`}
+      sx={{ borderRadius: 1, px: 0.5, py: 0.25, justifyContent: 'flex-start' }}
+    >
+      <Stack direction="row" spacing={0.5} alignItems="center">
+        <RoleAvatar role={code} size={20} hidden={!on} />
+        <Typography
+          variant="body2"
+          sx={{ color: NAME_COLOR[code], textDecoration: 'underline dotted', textUnderlineOffset: 3 }}
+        >
+          {roleInfo(code).name}
+        </Typography>
+      </Stack>
+    </ButtonBase>
+  );
 
   async function toggle(code, on) {
     const next = on
@@ -100,14 +149,6 @@ export default function RoleToggles({ room, isHost, playerCount }) {
     return acc;
   }, {});
 
-  // 마피아 진영이 0명이면 시작할 수 없다. 미리보기가 없으면 켜진 직업으로만 판단한다.
-  const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'];
-  const noMafiaTeam = preview
-    ? (Array.isArray(preview)
-      ? !preview.some((r) => MAFIA_TEAM.includes(r))
-      : preview.mafia === 0)
-    : MAFIA_TEAM.every((r) => disabled.includes(r));
-
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
@@ -138,6 +179,12 @@ export default function RoleToggles({ room, isHost, playerCount }) {
         />
       )}
 
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+        랜덤 구성을 키면 마음대로 키고 끄실 수 있습니다.
+        <br />
+        직업 이름을 누르면 능력과 XP 얻는 법을 볼 수 있습니다.
+      </Typography>
+
       <Stack spacing={1.5}>
         {GROUPS.map((group) => (
           <Box key={group.title}>
@@ -153,39 +200,31 @@ export default function RoleToggles({ room, isHost, playerCount }) {
                   columnGap: 1,
                 }}
               >
-                {group.roles.map((code) => {
-                  const blocked = code === 'SURVIVOR' && survivorBlocked;
-                  const on = !disabled.includes(code) && !blocked;
+                {shown(group.roles).map((code) => {
+                  const locked = code === 'SURVIVOR' && survivorBlocked;
+                  const on = !disabled.includes(code) && !locked;
                   return (
-                    <FormControlLabel
-                      key={code}
-                      sx={{ ml: 0, mr: 0 }}
-                      control={
-                        <Switch
-                          size="small"
-                          checked={on}
-                          disabled={busy || blocked}
-                          onChange={(e) => toggle(code, e.target.checked)}
-                        />
-                      }
-                      label={
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <RoleAvatar role={code} size={20} hidden={!on} />
-                          <Typography variant="body2" sx={{ color: NAME_COLOR[code] }}>
-                            {roleInfo(code).name}
-                          </Typography>
-                        </Stack>
-                      }
-                    />
+                    // 스위치는 켜고 끄기, 이름은 설명 보기로 따로 누른다
+                    <Stack key={code} direction="row" alignItems="center" sx={{ minWidth: 0 }}>
+                      <Switch
+                        size="small"
+                        checked={on}
+                        disabled={busy || locked}
+                        onChange={(e) => toggle(code, e.target.checked)}
+                        slotProps={{ input: { 'aria-label': `${roleInfo(code).name} 켜기/끄기` } }}
+                      />
+                      {nameButton(code, on)}
+                    </Stack>
                   );
                 })}
               </Box>
             ) : (
               <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                {group.roles.map((code) => (
+                {shown(group.roles).map((code) => (
                   <Chip
                     key={code}
                     size="small"
+                    onClick={() => setInfo(code)}
                     variant={effectiveOff.includes(code) ? 'outlined' : 'filled'}
                     // 색 이름은 주황 배경에서 안 보이므로 회색 배경을 쓴다
                     color={effectiveOff.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
@@ -238,7 +277,9 @@ export default function RoleToggles({ room, isHost, playerCount }) {
       )}
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-        시민은 끌 수 없습니다.
+        {random
+          ? '시민을 끄면 시민 진영 자리를 켜진 시민 진영 직업으로만 채웁니다.'
+          : '고정 구성에서는 시민을 끌 수 없습니다.'}
         {survivorBlocked
           ? ' 최대 일수가 2일 이하라 생존자는 넣을 수 없습니다.'
           : ` 생존자는 ${target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.`}
@@ -250,7 +291,16 @@ export default function RoleToggles({ room, isHost, playerCount }) {
         </Alert>
       )}
 
+      {citizenShort && (
+        <Alert severity="warning" sx={{ mt: 1 }}>
+          시민 진영 직업이 부족해 게임을 시작할 수 없습니다.
+          (시민 진영 {preview.citizen}자리, 켜진 직업 {citizenOpen}개)
+        </Alert>
+      )}
+
       {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
+
+      <RoleInfoDialog role={info} onClose={() => setInfo(null)} />
     </Paper>
   );
 }

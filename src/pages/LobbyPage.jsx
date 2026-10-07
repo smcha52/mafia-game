@@ -29,6 +29,8 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
   const [copied, setCopied] = useState(false);
+  // 직업 설정 때문에 시작할 수 없는지 (마피아 진영 0명, 시민 진영 직업 부족)
+  const [rolesBlocked, setRolesBlocked] = useState(false);
 
   const started = Boolean(room) && room.phase !== 'LOBBY';
 
@@ -63,7 +65,7 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
   const off = room?.disabled_roles ?? [];
   const mafiaTeamOff = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'].every((r) => off.includes(r));
   const canStart = total >= MIN_PLAYERS && total <= MAX_PLAYERS && readyCount === total
-    && !mafiaTeamOff;
+    && !mafiaTeamOff && !rolesBlocked;
 
   async function run(kind, fn) {
     setBusy(kind);
@@ -136,7 +138,12 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
 
       <RoomSettings room={room} isHost={isHost} />
 
-      <RoleToggles room={room} isHost={isHost} playerCount={total} />
+      <RoleToggles
+        room={room}
+        isHost={isHost}
+        playerCount={total}
+        onBlockedChange={setRolesBlocked}
+      />
 
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography variant="h6">참가자</Typography>

@@ -41,6 +41,33 @@ export function didWin(winner, role, team) {
   return role === winner;
 }
 
+// 직업의 진영
+export function roleTeam(code) {
+  if (['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'].includes(code)) return 'MAFIA';
+  if (['JESTER', 'KILLER', 'SURVIVOR'].includes(code)) return 'NEUTRAL';
+  return 'CITIZEN';
+}
+
+// 직업별 XP 얻는 법. 서버 base_xp() 와 일치해야 한다 (0038_levels.sql)
+export const XP_RULES = {
+  CITIZEN:   ['낮 투표가 끝날 때 살아 있으면 하루당 2 XP'],
+  SURVIVOR:  ['낮 투표가 끝날 때 살아 있으면 하루당 2 XP'],
+  POLICE:    ['조사한 사람이 시민 진영이면 1 XP', '중립이면 3 XP', '마피아 진영이면 5 XP'],
+  DOCTOR:    ['공격받은 사람을 치료해 살리면 7 XP'],
+  BODYGUARD: ['보호 대상 대신 죽어 공격을 막으면 5 XP', '그 밖에 보호할 때마다 1 XP'],
+  DETECTIVE: ['조사할 때마다 3 XP'],
+  REPORTER:  ['보도에 성공해 마피아 진영을 밝히면 5 XP', '그 밖의 보도 성공은 2 XP'],
+  MEDIUM:    ['사망자를 조사할 때마다 2 XP', '자신이 죽으면 3 XP (한 번)'],
+  VIGILANTE: ['쏜 대상이 그 밤에 죽으면 3 XP'],
+  SHERIFF:   ['마피아·중립을 쏘면 10 XP', '시민 진영을 쏘면 1 XP'],
+  MAFIA:     ['마피아 공격에 참여하고 대상이 죽으면 2 XP'],
+  SPY:       ['마피아 공격에 참여하고 대상이 죽으면 2 XP', '투표로 직업을 알아낼 때마다 2 XP'],
+  ASSASSIN:  ['저격에 성공하면 15 XP', '저격에 실패하면 2 XP'],
+  FORGER:    ['다른 사람을 위조할 때마다 5 XP'],
+  JESTER:    ['낮 투표에서 받은 1표당 2 XP'],
+  KILLER:    ['쏜 대상이 그 밤에 죽으면 3 XP'],
+};
+
 export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', desc: '' };
 
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
@@ -124,11 +151,11 @@ export const SUBMITTED_NOTE = {
 };
 
 // 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
-// 시민은 끌 수 없다 — 끈 직업을 대체하는 자리다.
+// 시민은 랜덤 구성에서만 끌 수 있다 (0040). 고정 구성에서는 끈 직업을 대체하는 자리다.
 // 마피아는 끌 수 있다. 마피아 진영(마피아·스파이·암살자)이 0명이면 시작할 수 없다.
 export const TOGGLEABLE = [
   'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
-  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR',
+  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR', 'CITIZEN',
 ];
 
 // 생존자의 목표 날. 서버 survivor_target() 과 일치해야 한다.
