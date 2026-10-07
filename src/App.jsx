@@ -11,7 +11,9 @@ import LobbyPage from './pages/LobbyPage';
 import LoginPage from './pages/LoginPage';
 import SetupNotice from './pages/SetupNotice';
 import TutorialPage from './pages/TutorialPage';
-import { isConfigured, markTutorialDone, myProfile, supabase } from './lib/supabase';
+import {
+  expireIfIdle, isConfigured, markTutorialDone, myProfile, supabase, touchActive,
+} from './lib/supabase';
 import { heartbeat, myActiveRoom, takeKickNotice } from './lib/api';
 
 export default function App() {
@@ -38,6 +40,7 @@ export default function App() {
   const loadAccount = useCallback(async (fromLogin = false) => {
     const me = await myProfile();
     if (!me) return false;
+    touchActive();
 
     const active = await myActiveRoom();
     setUid(me.uid);
@@ -61,6 +64,8 @@ export default function App() {
 
     (async () => {
       try {
+        // 한 달 넘게 접속하지 않았으면 로그아웃한다. 로그아웃되면 화면이 새로 불린다
+        if (await expireIfIdle()) return;
         await loadAccount();
       } catch (e) {
         if (!cancelled) setBootError(e.message);
@@ -73,6 +78,21 @@ export default function App() {
       cancelled = true;
     };
   }, [loadAccount]);
+
+  // 로그인해 있는 동안 접속 시각을 갱신한다. 탭을 오래 열어 둔 채여도 접속으로 본다
+  const loggedIn = Boolean(profile);
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') touchActive();
+    };
+    const timer = setInterval(touchActive, 10 * 60 * 1000);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [loggedIn]);
 
   const handleLeave = useCallback(() => {
     setRoomId(null);

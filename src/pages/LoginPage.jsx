@@ -108,6 +108,9 @@ export default function LoginPage({ onLoggedIn }) {
         <Typography variant="body2" color="error" fontWeight={700}>
           &lt;주의&gt; 비밀번호를 잊어버리면 안 됩니다 &lt;주의&gt;
         </Typography>
+        <Typography variant="body2" color="text.secondary">
+          한 달 이상 접속이 없을 시 자동으로 로그아웃 됩니다.
+        </Typography>
       </Stack>
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>

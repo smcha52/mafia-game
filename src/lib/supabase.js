@@ -80,6 +80,37 @@ export async function signIn(nickname, password) {
   if (error) throw new Error(authMessage(error));
 }
 
+// --- 자동 로그아웃 ---
+// 마지막 접속 시각을 이 브라우저에 남기고, 한 달(30일) 넘게 비어 있으면 로그아웃한다
+const LAST_ACTIVE_KEY = 'mafia-game:lastActive';
+const IDLE_LIMIT_MS = 30 * 24 * 60 * 60 * 1000;
+
+// 지금 접속 중이라고 남긴다. 저장소를 쓸 수 없으면 자동 로그아웃만 되지 않는다
+export function touchActive() {
+  try {
+    localStorage.setItem(LAST_ACTIVE_KEY, String(Date.now()));
+  } catch {
+    // 무시
+  }
+}
+
+// 저장된 로그인이 한 달 넘게 쓰이지 않았으면 로그아웃한다. 로그아웃했으면 true
+export async function expireIfIdle() {
+  let last = null;
+  try {
+    last = Number(localStorage.getItem(LAST_ACTIVE_KEY)) || null;
+  } catch {
+    return false;
+  }
+  // 기록이 없으면(이 기능 이전 로그인) 지금부터 센다
+  if (last === null || Date.now() - last <= IDLE_LIMIT_MS) return false;
+
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) return false;
+  await signOut();
+  return true;
+}
+
 export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) throw new Error(error.message);
