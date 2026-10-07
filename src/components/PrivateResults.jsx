@@ -42,7 +42,7 @@ export default function PrivateResults({ results }) {
                   <strong>{r.payload.targetNickname}</strong>
                   <span>님은 정말</span>
                   <Chip size="small" color="success" label={roleInfo(r.payload.guess).name} />
-                  <span>이었습니다. 암살 성공.</span>
+                  <span>이었습니다. 저격 성공.</span>
                 </Stack>
               ) : (
                 <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>

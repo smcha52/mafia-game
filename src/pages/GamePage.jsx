@@ -39,7 +39,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
   const [pick, setPick] = useState(null);
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
-  // 암살자가 저격 버튼을 눌렀는지 (일반 공격 화면 <-> 암살 화면)
+  // 저격수가 저격 버튼을 눌렀는지 (일반 공격 화면 <-> 저격 화면)
   const [aiming, setAiming] = useState(false);
 
   const phase = room?.phase;

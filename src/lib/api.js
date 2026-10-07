@@ -204,7 +204,7 @@ export async function roleComposition(count, disabled) {
   }));
 }
 
-// 암살 — 대상과 찍은 직업을 함께 보낸다
+// 저격 — 대상과 찍은 직업을 함께 보낸다
 export async function submitAssassination(roomId, targetUid, guess) {
   return unwrap(await supabase.rpc('submit_assassination', {
     p_room_id: roomId,

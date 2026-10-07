@@ -10,7 +10,7 @@ export const ROLES = {
   MEDIUM:    { name: '영매',   emoji: '🔮', desc: '밤마다 사망자 한 명의 직업을 확인합니다.' },
   SPY:       { name: '스파이', emoji: '🎭', desc: '마피아 진영입니다. 낮에 투표한 사람의 직업을 반드시 알아냅니다.' },
   JESTER:    { name: '광대',   emoji: '🤡', desc: '낮에 처형당하면 당신 혼자 승리합니다.' },
-  ASSASSIN:  { name: '암살자', emoji: '🎯', desc: '마피아 진영입니다. 상대의 직업을 맞히면 즉사시키고, 틀리면 당신이 죽습니다.' },
+  ASSASSIN:  { name: '저격수', emoji: '🎯', desc: '마피아 진영입니다. 상대의 직업을 맞히면 즉사시키고, 틀리면 당신이 죽습니다.' },
   KILLER:    { name: '살인자', emoji: '🪓', desc: '중립 진영입니다. 밤마다 혼자 한 명을 제거합니다. 누구와든 1:1이 되면 당신 혼자 승리합니다.' },
   VIGILANTE: { name: '자경단', emoji: '🏏', desc: '시민 진영입니다. 게임 중 단 한 번, 밤에 한 명을 제거할 수 있습니다.' },
   FORGER:    { name: '위조범', emoji: '🖋️', desc: '마피아 진영입니다. 동료와 함께 제거 대상을 고르고, 밤에 한 명을 위조하면 그 사람을 조사한 직업이 반대 진영으로 봅니다.' },
@@ -76,7 +76,7 @@ export const ABILITY_READY = new Set([
   'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE', 'SHERIFF',
 ]);
 
-// 암살자가 찍을 수 있는 직업 (전부)
+// 저격수가 찍을 수 있는 직업 (전부)
 export const ALL_ROLES = [
   'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'POLICE', 'DOCTOR', 'BODYGUARD',
   'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'SURVIVOR', 'VIGILANTE', 'SHERIFF', 'CITIZEN',
@@ -152,7 +152,7 @@ export const SUBMITTED_NOTE = {
 
 // 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
 // 시민은 랜덤 구성에서만 끌 수 있다 (0040). 고정 구성에서는 끈 직업을 대체하는 자리다.
-// 마피아는 끌 수 있다. 마피아 진영(마피아·스파이·암살자)이 0명이면 시작할 수 없다.
+// 마피아는 끌 수 있다. 마피아 진영(마피아·스파이·저격수)이 0명이면 시작할 수 없다.
 export const TOGGLEABLE = [
   'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
   'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR', 'CITIZEN',

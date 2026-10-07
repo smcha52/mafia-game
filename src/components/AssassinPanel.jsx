@@ -15,8 +15,8 @@ import Typography from '@mui/material/Typography';
 import RoleAvatar from './RoleAvatar';
 import { ALL_ROLES, roleInfo } from '../lib/roles';
 
-// 암살 화면. 대상을 고르고 그 사람의 직업을 맞힌다.
-// 맞히면 대상이 죽고, 틀리면 암살자가 죽는다.
+// 저격 화면. 대상을 고르고 그 사람의 직업을 맞힌다.
+// 맞히면 대상이 죽고, 틀리면 저격수가 죽는다.
 export default function AssassinPanel({
   players, uid, onSubmit, onCancel, busy, error, state, isNight,
 }) {
@@ -68,7 +68,7 @@ export default function AssassinPanel({
   return (
     <Paper sx={{ p: 2 }}>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-        <Typography variant="subtitle1">🎯 암살</Typography>
+        <Typography variant="subtitle1">🎯 저격</Typography>
         <Chip size="small" color="error" label="틀리면 내가 죽습니다" />
         <Chip size="small" variant="outlined" label={isNight ? '아침에 결과' : '즉시 처리'} />
       </Stack>
@@ -140,7 +140,7 @@ export default function AssassinPanel({
           loading={busy === 'assassin'}
           onClick={() => onSubmit(target, pick)}
         >
-          암살 확정
+          저격 확정
         </Button>
         <Button color="inherit" disabled={busy !== ''} onClick={onCancel}>
           돌아가기
