@@ -1054,7 +1054,7 @@ def test_assassin_rules():
 
     s, b = rpc("submit_assassination", police,
                {"p_room_id": room_id, "p_target_uid": uids[citizens[0]], "p_guess": "CITIZEN"})
-    check("비암살자 저격 차단", s >= 400 and "암살자만" in str(msg(b)), msg(b))
+    check("비암살자 저격 차단", s >= 400 and "저격수만" in str(msg(b)), msg(b))
 
     s, b = rpc("submit_assassination", killer,
                {"p_room_id": room_id, "p_target_uid": uids[killer], "p_guess": "ASSASSIN"})
