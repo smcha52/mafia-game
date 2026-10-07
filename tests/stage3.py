@@ -2312,3 +2312,109 @@ def test_vote_result_skipped_on_game_end():
 
 
 ALL.extend([test_vote_result_phase, test_vote_result_skipped_on_game_end])
+
+
+# ------------------------------------------------------------------
+# 낮 투표 건너뛰기 (0043, 요구사항 외 추가)
+# ------------------------------------------------------------------
+
+SKIP_VOTE = "00000000-0000-0000-0000-000000000000"
+
+
+def _skip_game(plan):
+    """5명 게임의 1일차 낮에 plan 대로 투표한다.
+    plan 은 마피아·경찰·의사·시민1·시민2 순서의 대상 ('S'=건너뛰기, 'A'=시민1, 'B'=시민2).
+    (낮 결과, 생존 uid, 페이즈, uid맵, 시민 토큰) 반환"""
+    toks, room_id, roles = make_game(5)
+    if not room_id:
+        return None
+    uids = uid_map(roles)
+    cits = [t for t, r in roles.items() if r["role"] == "CITIZEN"]
+    pol = _pick(roles, "POLICE")
+    pass_night(room_id, roles, uids, victim_uid=uids[pol], doctor_uid=uids[pol])
+
+    target = {"S": SKIP_VOTE, "A": uids[cits[0]], "B": uids[cits[1]]}
+    order = [_pick(roles, "MAFIA"), pol, _pick(roles, "DOCTOR")] + cits
+    for t, k in zip(order, plan):
+        s, b = rpc("submit_day_vote", t, {"p_room_id": room_id, "p_target_uid": target[k]})
+        if s >= 400:
+            check("건너뛰기 투표 제출", False, msg(b))
+
+    p = _day_payload(room_id, toks[0], 1)
+    alive = alive_uids(room_id, toks[0])
+    st = _phase(room_id, toks[0])
+    close_room(toks, room_id)
+    return p, alive, st, uids, cits
+
+
+def test_day_skip_majority():
+    """건너뛰기가 과반수면 아무도 처형되지 않는다"""
+    r = _skip_game("SSSAA")
+    if not r:
+        check("건너뛰기 과반수 준비", False, "방 생성 실패")
+        return
+    p, alive, st, uids, cits = r
+    check("건너뛰기 3 / A 2 -> 아무도 안 죽음",
+          p.get("executed") is None and len(alive) == 5, str(p))
+    check("건너뛰기 결과 skipped·skipVotes",
+          p.get("skipped") is True and p.get("skipVotes") == 3, str(p))
+    check("사람별 득표 수에 건너뛰기 없음",
+          all(v["uid"] != SKIP_VOTE for v in p.get("votes", [])), str(p.get("votes")))
+    check("건너뛰기 뒤 결과 시간으로", st.get("phase") == "DAY_RESULT", str(st))
+
+
+def test_day_skip_as_candidate():
+    """과반수가 아니어도 건너뛰기가 최다 득표와 같거나 많으면 아무도 처형되지 않는다"""
+    r = _skip_game("SSAAB")
+    if not r:
+        check("건너뛰기 동점 준비", False, "방 생성 실패")
+        return
+    p = r[0]
+    check("건너뛰기 2 = A 2 -> 아무도 안 죽음",
+          p.get("executed") is None and p.get("skipped") is True and p.get("tie") is False, str(p))
+
+    r = _skip_game("SAAAB")
+    if not r:
+        check("건너뛰기 소수 준비", False, "방 생성 실패")
+        return
+    p, alive, st, uids, cits = r
+    check("건너뛰기 1 < A 3 -> A 처형",
+          p.get("executed") == uids[cits[0]] and p.get("skipped") is False
+          and p.get("skipVotes") == 1, str(p))
+
+    r = _skip_game("SAABB")
+    if not r:
+        check("건너뛰기 사람 동점 준비", False, "방 생성 실패")
+        return
+    p = r[0]
+    check("건너뛰기 1, A 2 = B 2 -> 동점",
+          p.get("executed") is None and p.get("tie") is True and p.get("skipped") is False, str(p))
+
+
+def test_day_skip_spy():
+    """건너뛰기를 고른 스파이는 직업을 알아내지 못한다"""
+    toks, room_id, roles = make_game(9)
+    if not room_id:
+        check("스파이 건너뛰기 준비", False, "방 생성 실패")
+        return
+    uids = uid_map(roles)
+    pol = _pick(roles, "POLICE")
+    pass_night(room_id, roles, uids, victim_uid=uids[pol], doctor_uid=uids[pol])
+
+    spy = _pick(roles, "SPY")
+    s, b = rpc("submit_day_vote", spy, {"p_room_id": room_id, "p_target_uid": SKIP_VOTE})
+    check("스파이 건너뛰기 제출", s == 200, msg(b))
+
+    s, v = rpc("my_game_view", spy, {"p_room_id": room_id})
+    spy_results = [r for r in (v.get("privateResults") or []) if r.get("kind") == "SPY"] \
+        if isinstance(v, dict) else []
+    check("건너뛰기 스파이는 결과 없음", not spy_results, str(spy_results))
+    check("건너뛰기도 제출로 표시",
+          isinstance(v, dict) and v.get("daySubmitted") == SKIP_VOTE, str(v.get("daySubmitted")))
+
+    s, b = rpc("submit_day_vote", spy, {"p_room_id": room_id, "p_target_uid": uids[pol]})
+    check("건너뛰기 뒤 투표 변경 차단", s >= 400 and "변경할 수 없습니다" in str(msg(b)), msg(b))
+    close_room(toks, room_id)
+
+
+ALL.extend([test_day_skip_majority, test_day_skip_as_candidate, test_day_skip_spy])
