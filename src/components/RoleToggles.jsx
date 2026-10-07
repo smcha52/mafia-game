@@ -13,7 +13,7 @@ import RoleAvatar from './RoleAvatar';
 import RoleInfoDialog from './RoleInfoDialog';
 import { roleInfo, survivorTarget } from '../lib/roles';
 import {
-  roleComposition, setDisabledRoles, setRandomRoles, teamComposition,
+  roleComposition, setDisabledRoles, setRandomRoles, setRoleMax, teamComposition,
 } from '../lib/api';
 
 // 진영별 이름 색. 목록에 없는 직업(시민 진영)은 기본 흰색.
@@ -43,6 +43,9 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
   const random = room?.random_roles ?? true;
   // 고정 구성은 끈 직업 자리를 시민이 채우므로 시민 끄기를 무시한다 (서버와 같다, 0040)
   const disabled = (room?.disabled_roles ?? []).filter((r) => random || r !== 'CITIZEN');
+  // 랜덤 구성에서 특수 직업마다 넣을 최대 인원 (1~3, 기본 1). 고정 구성은 구성표 그대로다 (0041)
+  const roleMax = room?.role_max ?? {};
+  const maxOf = (code) => Math.min(3, Math.max(1, Number(roleMax[code]) || 1));
   // 최대 일수가 2일 이하이면 생존자는 이길 날이 없어 넣을 수 없다 (서버도 뺀다)
   const target = survivorTarget(room?.max_days ?? 15);
   const survivorBlocked = target === null;
@@ -62,7 +65,9 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
     }
     let cancelled = false;
     // 랜덤 구성은 직업이 매번 달라서 진영별 인원만 보여준다
-    const ask = random ? teamComposition : roleComposition;
+    const ask = random
+      ? (count, off) => teamComposition(count, off, roleMax)
+      : roleComposition;
     ask(playerCount, effectiveOff)
       .then((rows) => {
         if (!cancelled) setPreview(rows);
@@ -73,7 +78,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
     return () => {
       cancelled = true;
     };
-  }, [room, playerCount, random, effectiveOff.join(',')]);
+  }, [room, playerCount, random, effectiveOff.join(','), JSON.stringify(roleMax)]);
 
   // 마피아 진영이 0명이면 시작할 수 없다. 미리보기가 없으면 켜진 직업으로만 판단한다.
   const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'];
@@ -83,8 +88,10 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
       : preview.mafia === 0)
     : MAFIA_TEAM.every((r) => disabled.includes(r));
 
-  // 랜덤 구성에서 시민을 끄면 시민 진영 자리를 켜진 시민 진영 직업(각 1명)만으로 채운다
-  const citizenOpen = CITIZEN_SPECIALS.filter((r) => !effectiveOff.includes(r)).length;
+  // 랜덤 구성에서 시민을 끄면 시민 진영 자리를 켜진 시민 진영 직업(각 최대 인원만큼)만으로 채운다
+  const citizenOpen = CITIZEN_SPECIALS
+    .filter((r) => !effectiveOff.includes(r))
+    .reduce((sum, r) => sum + maxOf(r), 0);
   const citizenShort = random && disabled.includes('CITIZEN')
     && preview && !Array.isArray(preview) && citizenOpen < preview.citizen;
 
@@ -125,6 +132,19 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
     setError('');
     try {
       await setDisabledRoles(room.id, next);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // ×1 → ×2 → ×3 → ×1 순서로 바꾼다
+  async function cycleMax(code) {
+    setBusy(true);
+    setError('');
+    try {
+      await setRoleMax(room.id, code, (maxOf(code) % 3) + 1);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -182,6 +202,12 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
         랜덤 구성을 키면 마음대로 키고 끄실 수 있습니다.
         <br />
+        {random && (
+          <>
+            직업 옆 ×1을 누르면 그 직업을 최대 3명까지 넣을 수 있습니다.
+            <br />
+          </>
+        )}
         직업 이름을 누르면 능력과 XP 얻는 법을 볼 수 있습니다.
       </Typography>
 
@@ -214,6 +240,27 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
                         slotProps={{ input: { 'aria-label': `${roleInfo(code).name} 켜기/끄기` } }}
                       />
                       {nameButton(code, on)}
+                      {/* 랜덤 구성에서 켜진 특수 직업은 최대 인원을 정한다 */}
+                      {random && on && code !== 'CITIZEN' && code !== 'MAFIA' && (
+                        <ButtonBase
+                          onClick={() => cycleMax(code)}
+                          disabled={busy}
+                          aria-label={`${roleInfo(code).name} 최대 ${maxOf(code)}명, 눌러서 바꾸기`}
+                          sx={{
+                            ml: 'auto',
+                            px: 0.75,
+                            borderRadius: 1,
+                            border: 1,
+                            borderColor: maxOf(code) > 1 ? 'primary.main' : 'divider',
+                            color: maxOf(code) > 1 ? 'primary.main' : 'text.secondary',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            flexShrink: 0,
+                          }}
+                        >
+                          ×{maxOf(code)}
+                        </ButtonBase>
+                      )}
                     </Stack>
                   );
                 })}
@@ -228,7 +275,9 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
                     variant={effectiveOff.includes(code) ? 'outlined' : 'filled'}
                     // 색 이름은 주황 배경에서 안 보이므로 회색 배경을 쓴다
                     color={effectiveOff.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
-                    label={roleInfo(code).name}
+                    label={random && maxOf(code) > 1 && code !== 'CITIZEN' && code !== 'MAFIA'
+                      ? `${roleInfo(code).name} ×${maxOf(code)}`
+                      : roleInfo(code).name}
                     sx={{ color: NAME_COLOR[code] }}
                   />
                 ))}

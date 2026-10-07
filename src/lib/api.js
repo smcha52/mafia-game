@@ -177,11 +177,21 @@ export async function setRandomRoles(roomId, on) {
   }));
 }
 
-// 랜덤 구성일 때 진영별 인원을 서버에 물어본다
-export async function teamComposition(count, disabled) {
+// 랜덤 구성일 때 진영별 인원을 서버에 물어본다. max = 직업별 최대 인원 (0041)
+export async function teamComposition(count, disabled, max = {}) {
   return unwrap(await supabase.rpc('team_composition', {
     p_count: count,
     p_disabled: disabled,
+    p_max: max,
+  }));
+}
+
+// 랜덤 구성에서 특수 직업의 최대 인원(1~3)을 정한다 (방장만)
+export async function setRoleMax(roomId, role, max) {
+  unwrap(await supabase.rpc('set_role_max', {
+    p_room_id: roomId,
+    p_role: role,
+    p_max: max,
   }));
 }
 

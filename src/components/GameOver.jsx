@@ -50,7 +50,7 @@ export default function GameOver({ roomId, winner, uid }) {
             <Typography variant="h6" color="primary.main">+{mine.xpGained} XP</Typography>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            {didWin(winner, mine.role, mine.team)
+            {(mine.won ?? didWin(winner, mine.role, mine.team))
               ? `직업 행동 ${mine.xpBase} XP × 2 (승리)`
               : `직업 행동 ${mine.xpBase} XP${winner === 'DRAW' ? ' (무승부)' : ' (패배)'}`}
           </Typography>
@@ -89,7 +89,11 @@ export default function GameOver({ roomId, winner, uid }) {
                       +{r.xpGained}
                     </Typography>
                   )}
-                  <ResultChips alive={r.alive} win={didWin(winner, r.role, r.team)} />
+                  {/* 같은 직업이 여럿일 수 있어 서버가 사람 단위로 판정한 won 을 쓴다 (0041) */}
+                  <ResultChips
+                    alive={r.alive}
+                    win={winner === 'DRAW' ? null : (r.won ?? didWin(winner, r.role, r.team))}
+                  />
                 </ListItem>
               );
             })}
