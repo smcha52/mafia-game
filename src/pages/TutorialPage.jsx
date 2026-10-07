@@ -22,7 +22,7 @@ import ResultChips from '../components/ResultChips';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
-  NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, SUBMIT_LABEL, TEAMS, TEAM_RESULT, WINNERS, didWin,
+  NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, SKIP_VOTE, SUBMIT_LABEL, TEAMS, TEAM_RESULT, WINNERS, didWin,
   roleInfo,
 } from '../lib/roles';
 
@@ -53,7 +53,7 @@ const TIPS = {
   },
   3: {
     NIGHT: '당신은 의사입니다. 마피아가 노릴 것 같은 사람을 치료하면 그 사람은 죽지 않습니다. 자신을 치료해도 됩니다.',
-    DAY: '누가 마피아일까요? 이번에도 봇3에게 투표해 보세요.',
+    DAY: '누가 마피아일까요? 확신이 없으면 맨 아래 "아무도 죽지 않음: 건너뛰기" 를 고를 수도 있습니다. 이번에는 봇3에게 투표해 보세요.',
   },
   4: {
     NIGHT: '이번에는 당신이 마피아입니다! 밤마다 제거할 사람을 고르세요. 살아 있는 시민 수가 마피아 수 이하가 되면 이깁니다.',
@@ -143,15 +143,24 @@ function botVotes(round, players) {
   }));
 }
 
-// 득표를 세어 최다 득표자를 처형한다. 동점이면 아무도 처형되지 않는다
+// 득표를 세어 최다 득표자를 처형한다. 동점이면 아무도 처형되지 않는다.
+// 건너뛰기는 후보 하나처럼 센다. 최다 득표자보다 많거나 같으면 아무도 처형되지 않는다 (서버 resolve_day 와 같다)
 function tally(votes) {
   const counts = new Map();
-  votes.forEach((v) => counts.set(v.target, (counts.get(v.target) ?? 0) + 1));
+  let skipVotes = 0;
+  votes.forEach((v) => {
+    if (v.target === SKIP_VOTE) skipVotes += 1;
+    else counts.set(v.target, (counts.get(v.target) ?? 0) + 1);
+  });
   const rows = [...counts.entries()]
     .map(([uid, count]) => ({ uid, count }))
     .sort((a, b) => b.count - a.count);
-  const tie = rows.length > 1 && rows[0].count === rows[1].count;
-  return { rows, executed: tie ? null : rows[0]?.uid ?? null, tie };
+  const skipped = skipVotes > 0 && skipVotes >= (rows[0]?.count ?? 0);
+  const tie = !skipped && rows.length > 1 && rows[0].count === rows[1].count;
+  return {
+    rows, skipVotes, skipped, tie,
+    executed: skipped || tie ? null : rows[0]?.uid ?? null,
+  };
 }
 
 function TipBox({ round, children }) {
@@ -392,9 +401,11 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
               </Alert>
             ) : (
               <Alert severity="info">
-                {vote.tie
-                  ? '투표가 동점이라 아무도 처형되지 않았습니다.'
-                  : '아무도 처형되지 않았습니다.'}
+                {vote.skipped
+                  ? `건너뛰기 ${vote.skipVotes}표로 아무도 처형되지 않았습니다.`
+                  : vote.tie
+                    ? '투표가 동점이라 아무도 처형되지 않았습니다.'
+                    : '아무도 처형되지 않았습니다.'}
               </Alert>
             )}
 
@@ -411,6 +422,17 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
                   />
                 </Stack>
               ))}
+              {vote.skipVotes > 0 && (
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                  <Typography color="text.secondary">건너뛰기</Typography>
+                  <Chip
+                    size="small"
+                    color={vote.skipped ? 'info' : 'default'}
+                    label={`${vote.skipVotes}표`}
+                    sx={{ fontVariantNumeric: 'tabular-nums' }}
+                  />
+                </Stack>
+              )}
             </Stack>
 
             <Button variant="contained" size="large" onClick={afterResult}>
@@ -451,6 +473,7 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
                 value={pick}
                 onChange={setPick}
                 excludeSelf={isNight && NO_SELF_TARGET.has(me.role)}
+                skip={isNight ? null : { value: SKIP_VOTE, label: '아무도 죽지 않음: 건너뛰기' }}
               />
 
               <Button
