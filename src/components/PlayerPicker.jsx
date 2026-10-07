@@ -7,12 +7,14 @@ import ListItemText from '@mui/material/ListItemText';
 import Paper from '@mui/material/Paper';
 import Radio from '@mui/material/Radio';
 import Stack from '@mui/material/Stack';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
 
 // 살아 있는 참가자 중에서 대상을 고른다.
 // locked 이면 이미 제출한 상태라 바꿀 수 없다.
+// skip 을 주면 목록 끝에 사람 대신 고를 수 있는 항목을 하나 더 둔다 ({ value, label })
 export default function PlayerPicker({
   players, uid, value, onChange, locked = false, excludeSelf = false,
-  blockedUid = null, blockedNote = '', dead = false,
+  blockedUid = null, blockedNote = '', dead = false, skip = null,
 }) {
   // 영매처럼 사망자를 지목하는 직업은 dead 로 목록을 뒤집는다
   const candidates = players.filter(
@@ -52,6 +54,21 @@ export default function PlayerPicker({
             </ListItemButton>
           );
         })}
+        {skip && (
+          <ListItemButton
+            selected={value === skip.value}
+            disabled={locked && value !== skip.value}
+            onClick={() => !locked && onChange(skip.value)}
+          >
+            <ListItemAvatar>
+              <Avatar sx={{ bgcolor: value === skip.value ? 'primary.main' : 'action.disabledBackground' }}>
+                <SkipNextIcon />
+              </Avatar>
+            </ListItemAvatar>
+            <ListItemText primary={skip.label} />
+            <Radio checked={value === skip.value} disabled={locked} tabIndex={-1} />
+          </ListItemButton>
+        )}
       </List>
     </Paper>
   );

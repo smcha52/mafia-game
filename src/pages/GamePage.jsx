@@ -22,7 +22,7 @@ import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
   ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
-  REPEAT_BLOCKED, SKIPPABLE, SPENT_NOTE, survivorTarget, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
+  REPEAT_BLOCKED, SKIP_VOTE, SKIPPABLE, SPENT_NOTE, survivorTarget, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
   roleInfo,
 } from '../lib/roles';
 import {
@@ -314,9 +314,11 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
           </Alert>
         ) : (
           <Alert severity="info">
-            {lastDay.payload?.tie
-              ? '⚖️ 투표가 동점이라 아무도 처형되지 않았습니다.'
-              : '⚖️ 오늘 낮에는 아무도 처형되지 않았습니다.'}
+            {lastDay.payload?.skipped
+              ? '⚖️ 건너뛰기로 아무도 처형되지 않았습니다.'
+              : lastDay.payload?.tie
+                ? '⚖️ 투표가 동점이라 아무도 처형되지 않았습니다.'
+                : '⚖️ 오늘 낮에는 아무도 처형되지 않았습니다.'}
           </Alert>
         )
       )}
@@ -361,14 +363,16 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
               </Alert>
             ) : (
               <Alert severity="info">
-                {dayResult?.payload?.tie
-                  ? '투표가 동점이라 아무도 처형되지 않았습니다.'
-                  : '아무도 처형되지 않았습니다.'}
+                {dayResult?.payload?.skipped
+                  ? `건너뛰기 ${dayResult.payload.skipVotes}표로 아무도 처형되지 않았습니다.`
+                  : dayResult?.payload?.tie
+                    ? '투표가 동점이라 아무도 처형되지 않았습니다.'
+                    : '아무도 처형되지 않았습니다.'}
               </Alert>
             )}
 
             <Typography variant="subtitle2" color="text.secondary">득표 수</Typography>
-            {(dayResult?.payload?.votes ?? []).length ? (
+            {(dayResult?.payload?.votes ?? []).length || dayResult?.payload?.skipVotes ? (
               <Stack spacing={0.75}>
                 {dayResult.payload.votes.map((v) => (
                   <Stack key={v.uid} direction="row" alignItems="center" justifyContent="space-between">
@@ -381,6 +385,17 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                     />
                   </Stack>
                 ))}
+                {dayResult.payload.skipVotes > 0 && (
+                  <Stack direction="row" alignItems="center" justifyContent="space-between">
+                    <Typography color="text.secondary">건너뛰기</Typography>
+                    <Chip
+                      size="small"
+                      color={dayResult.payload.skipped ? 'info' : 'default'}
+                      label={`${dayResult.payload.skipVotes}표`}
+                      sx={{ fontVariantNumeric: 'tabular-nums' }}
+                    />
+                  </Stack>
+                )}
               </Stack>
             ) : (
               <Typography variant="body2" color="text.secondary">투표한 사람이 없습니다.</Typography>
@@ -438,7 +453,13 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                 </Alert>
               )}
 
-              {submitted && (
+              {submitted && submitted === SKIP_VOTE && (
+                <Alert severity="success">
+                  <strong>아무도 죽지 않음: 건너뛰기</strong>를 선택했습니다. 투표는 변경할 수 없습니다.
+                </Alert>
+              )}
+
+              {submitted && submitted !== SKIP_VOTE && (
                 <Alert severity="success">
                   <strong>{nickOf(submitted)}</strong>님을 선택했습니다.
                   {!isNight
@@ -457,6 +478,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                 excludeSelf={isNight && NO_SELF_TARGET.has(role)}
                 blockedUid={isNight && REPEAT_BLOCKED[role] ? view?.lastTargetId : null}
                 blockedNote={REPEAT_BLOCKED[role] ?? ''}
+                skip={isNight ? null : { value: SKIP_VOTE, label: '아무도 죽지 않음: 건너뛰기' }}
               />
 
               {actionError && <Alert severity="error">{actionError}</Alert>}

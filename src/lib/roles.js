@@ -172,6 +172,9 @@ export const TARGETS_DEAD = new Set(['MEDIUM']);
 // 게임 중 한 번만 쓸 수 있는 직업
 export const ONE_SHOT = new Set(['REPORTER', 'VIGILANTE']);
 
+// 낮 투표 "아무도 죽지 않음: 건너뛰기" 의 대상 값. 서버 skip_vote_uid() 와 일치해야 한다.
+export const SKIP_VOTE = '00000000-0000-0000-0000-000000000000';
+
 // 대상 없이 "오늘은 사용하지 않기" 로 넘길 수 있는 직업
 export const SKIPPABLE = new Set(['REPORTER', 'VIGILANTE', 'SHERIFF']);
 
