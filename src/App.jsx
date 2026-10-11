@@ -162,7 +162,7 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
-  // 게임이 끝나면 늘어난 XP 를 다시 읽는다
+  // 게임이 끝나면 늘어난 XP·코인을 다시 읽는다
   const handleEnded = useCallback(async () => {
     try {
       const me = await myProfile();
@@ -206,7 +206,13 @@ export default function App() {
 
   return (
     <Box sx={{ minHeight: '100dvh', px: 2, py: 2 }}>
-      <AccountBar nickname={profile.nickname} xp={profile.xp} />
+      <AccountBar
+        nickname={profile.nickname}
+        xp={profile.xp}
+        stars={profile.stars}
+        gems={profile.gems}
+        coins={profile.coins}
+      />
       {tutorial ? (
         <TutorialPage
           nickname={profile.nickname}

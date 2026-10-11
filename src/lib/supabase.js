@@ -40,7 +40,15 @@ export async function myProfile() {
     .eq('uid', user.id);
   if (error) throw new Error(error.message);
   if (!rows[0]) return null;
-  return { ...rows[0], xp: rows[0].xp ?? 0, tutorialDone: Boolean(user.user_metadata?.tutorial_done) };
+  // 재화(stars·gems·coins)는 0046 에서 생긴다
+  return {
+    ...rows[0],
+    xp: rows[0].xp ?? 0,
+    stars: rows[0].stars ?? 0,
+    gems: rows[0].gems ?? 0,
+    coins: rows[0].coins ?? 0,
+    tutorialDone: Boolean(user.user_metadata?.tutorial_done),
+  };
 }
 
 // 튜토리얼을 끝까지 마쳤다고 계정에 남긴다. 다른 기기에서 로그인해도 유지된다

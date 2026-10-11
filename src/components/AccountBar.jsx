@@ -5,13 +5,29 @@ import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import DiamondIcon from '@mui/icons-material/Diamond';
 import LogoutIcon from '@mui/icons-material/Logout';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import StarIcon from '@mui/icons-material/Star';
 
 import { levelInfo } from '../lib/level';
 import { signOut } from '../lib/supabase';
 
-// 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(닉네임 첫 글자)과 닉네임·레벨, 오른쪽에 로그아웃
-export default function AccountBar({ nickname, xp = 0 }) {
+// 재화 하나 — 아이콘과 개수
+function Currency({ icon, label, value, color }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={0.25} aria-label={`${label} ${value}개`}>
+      {icon}
+      <Typography variant="body2" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums', color }}>
+        {value.toLocaleString()}
+      </Typography>
+    </Stack>
+  );
+}
+
+// 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(닉네임 첫 글자)과 닉네임·레벨,
+// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃
+export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0 }) {
   const lv = levelInfo(xp);
 
   const [busy, setBusy] = useState(false);
@@ -29,7 +45,7 @@ export default function AccountBar({ nickname, xp = 0 }) {
   return (
     <Stack
       direction="row"
-      alignItems="center"
+      alignItems="flex-start"
       justifyContent="space-between"
       spacing={2}
       sx={{ mb: 3 }}
@@ -58,17 +74,23 @@ export default function AccountBar({ nickname, xp = 0 }) {
         </Stack>
       </Stack>
 
-      <Button
-        variant="outlined"
-        color="inherit"
-        size="small"
-        startIcon={<LogoutIcon />}
-        onClick={logout}
-        loading={busy}
-        sx={{ flexShrink: 0 }}
-      >
-        로그아웃
-      </Button>
+      <Stack alignItems="flex-end" spacing={0.75} sx={{ flexShrink: 0 }}>
+        <Stack direction="row" alignItems="center" spacing={1.25}>
+          <Currency label="별" value={stars} icon={<StarIcon fontSize="small" sx={{ color: '#f5b301' }} />} />
+          <Currency label="보석" value={gems} icon={<DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} />} />
+          <Currency label="코인" value={coins} icon={<MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} />} />
+        </Stack>
+        <Button
+          variant="outlined"
+          color="inherit"
+          size="small"
+          startIcon={<LogoutIcon />}
+          onClick={logout}
+          loading={busy}
+        >
+          로그아웃
+        </Button>
+      </Stack>
     </Stack>
   );
 }
