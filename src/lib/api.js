@@ -222,3 +222,15 @@ export async function submitAssassination(roomId, targetUid, guess) {
     p_guess: guess,
   }));
 }
+
+// --- 퀘스트 ---
+
+// 밀린 퀘스트를 만들고 내 퀘스트와 진행도를 준다. next = 종류별 다음 퀘스트 시각
+export async function myQuests() {
+  return unwrap(await supabase.rpc('my_quests'));
+}
+
+// 다 깬 퀘스트의 보상을 받는다
+export async function claimQuest(questId) {
+  return unwrap(await supabase.rpc('claim_quest', { p_quest_id: questId }));
+}

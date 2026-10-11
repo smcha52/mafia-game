@@ -5,6 +5,7 @@ import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
@@ -26,8 +27,8 @@ function Currency({ icon, label, value, color }) {
 }
 
 // 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(닉네임 첫 글자)과 닉네임·레벨,
-// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃
-export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0 }) {
+// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트
+export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0, onQuest }) {
   const lv = levelInfo(xp);
 
   const [busy, setBusy] = useState(false);
@@ -89,6 +90,14 @@ export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coin
           loading={busy}
         >
           로그아웃
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<AssignmentIcon />}
+          onClick={onQuest}
+        >
+          퀘스트
         </Button>
       </Stack>
     </Stack>
