@@ -5,21 +5,56 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
 import Slider from '@mui/material/Slider';
 import Stack from '@mui/material/Stack';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
+import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
+import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
-import { AGE_MAX, AGE_MIN, LEVEL_MAX, LEVEL_MIN, ruleLabel } from '../lib/roomRules';
+import { AGE_MAX, AGE_MIN, AGE_RANGE_MAX, LEVEL_MAX, LEVEL_MIN, ruleLabel } from '../lib/roomRules';
 
 // 나이 바로가기. +N 은 N세 이상, -N 은 N세 미만
 const AGE_PRESETS = ['+7', '-7', '+13', '-13', '+16', '-16', '+19', '-19'];
 
 const toggleSx = { flexWrap: 'wrap', gap: 0.75, '& .MuiToggleButton-root': { border: 1, borderColor: 'divider', borderRadius: 1, px: 1.5, py: 0.5 } };
 
-// 직접 조절(+/- 와 값 하나) 또는 범위(값 두 개)
-function CustomRule({ choice, sign, onSign, value, onValue, range, onRange, min, max, unit }) {
+// 화살표로 값을 1씩 내리고 올린다
+function Stepper({ label, value, min, max, unit, onChange }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={0.25}>
+      {label && (
+        <Typography variant="body2" color="text.secondary" sx={{ mr: 0.5 }}>
+          {label}
+        </Typography>
+      )}
+      <IconButton
+        size="small"
+        aria-label={`${label ?? ''} 1 내리기`}
+        disabled={value <= min}
+        onClick={() => onChange(value - 1)}
+      >
+        <KeyboardArrowLeftIcon />
+      </IconButton>
+      <Typography fontWeight={700} sx={{ minWidth: 56, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
+        {value}{unit}
+      </Typography>
+      <IconButton
+        size="small"
+        aria-label={`${label ?? ''} 1 올리기`}
+        disabled={value >= max}
+        onClick={() => onChange(value + 1)}
+      >
+        <KeyboardArrowRightIcon />
+      </IconButton>
+    </Stack>
+  );
+}
+
+// 직접 조절(+/- 와 값 하나) 또는 범위(값 두 개). rangeMax = 범위 설정의 최대값
+function CustomRule({ choice, sign, onSign, value, onValue, range, onRange, min, max, rangeMax = max, unit }) {
   if (choice === 'CUSTOM') {
     // - 는 그 값보다 낮은 것만 들어올 수 있으므로 최소값보다 커야 한다
     const lo = sign === '-' ? min + 1 : min;
@@ -35,9 +70,13 @@ function CustomRule({ choice, sign, onSign, value, onValue, range, onRange, min,
             <ToggleButton value="+" sx={{ px: 2 }}>+ 이상</ToggleButton>
             <ToggleButton value="-" sx={{ px: 2 }}>- 미만</ToggleButton>
           </ToggleButtonGroup>
-          <Typography fontWeight={700}>
-            {sign}{Math.max(lo, value)}{unit}
-          </Typography>
+          <Stepper
+            value={Math.max(lo, value)}
+            min={lo}
+            max={max}
+            unit={unit}
+            onChange={onValue}
+          />
         </Stack>
         <Slider
           value={Math.max(lo, value)}
@@ -55,17 +94,32 @@ function CustomRule({ choice, sign, onSign, value, onValue, range, onRange, min,
   if (choice === 'RANGE') {
     return (
       <Stack spacing={1} sx={{ mt: 1.5 }}>
-        <Typography fontWeight={700}>
-          {range[0]}{unit} ~ {range[1]}{unit}
-        </Typography>
+        <Stack direction="row" alignItems="center" flexWrap="wrap" useFlexGap columnGap={1}>
+          <Stepper
+            label="시작"
+            value={range[0]}
+            min={min}
+            max={range[1]}
+            unit={unit}
+            onChange={(v) => onRange([v, range[1]])}
+          />
+          <Stepper
+            label="끝"
+            value={range[1]}
+            min={range[0]}
+            max={rangeMax}
+            unit={unit}
+            onChange={(v) => onRange([range[0], v])}
+          />
+        </Stack>
         <Slider
           value={range}
           min={min}
-          max={max}
+          max={rangeMax}
           step={1}
           valueLabelDisplay="auto"
           onChange={(_, v) => onRange(v)}
-          marks={[{ value: min, label: min }, { value: max, label: max }]}
+          marks={[{ value: min, label: min }, { value: rangeMax, label: rangeMax }]}
           sx={{ mx: 1, width: 'auto' }}
         />
       </Stack>
@@ -141,6 +195,7 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
               onRange={setAgeRange}
               min={AGE_MIN}
               max={AGE_MAX}
+              rangeMax={AGE_RANGE_MAX}
               unit="세"
             />
           </div>
