@@ -17,6 +17,7 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import StarIcon from '@mui/icons-material/Star';
 
+import { Wallet } from './AccountBar';
 import { claimQuest, myQuests } from '../lib/api';
 
 const TABS = [
@@ -103,7 +104,8 @@ function QuestCard({ q, busy, onClaim }) {
 }
 
 // 로그아웃 아래 퀘스트 버튼으로 여는 화면. 보상을 받으면 onRewarded 로 재화를 다시 읽게 한다
-export default function QuestDialog({ open, onClose, onRewarded }) {
+// wallet = 내 재화 { stars, gems, coins } — 오른쪽 위에 보여준다
+export default function QuestDialog({ open, onClose, onRewarded, wallet }) {
   const [tab, setTab] = useState('MAIN');
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -145,7 +147,8 @@ export default function QuestDialog({ open, onClose, onRewarded }) {
           <IconButton onClick={onClose} aria-label="뒤로">
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6">퀘스트</Typography>
+          <Typography variant="h6" sx={{ flex: 1 }}>퀘스트</Typography>
+          <Wallet {...wallet} />
         </Stack>
 
         <Tabs

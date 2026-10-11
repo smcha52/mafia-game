@@ -26,6 +26,17 @@ function Currency({ icon, label, value, color }) {
   );
 }
 
+// 별·보석·코인 개수. 계정 줄과 퀘스트 화면에서 함께 쓴다
+export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
+  return (
+    <Stack direction="row" alignItems="center" spacing={1.25}>
+      <Currency label="별" value={stars} icon={<StarIcon fontSize="small" sx={{ color: '#f5b301' }} />} />
+      <Currency label="보석" value={gems} icon={<DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} />} />
+      <Currency label="코인" value={coins} icon={<MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} />} />
+    </Stack>
+  );
+}
+
 // 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(닉네임 첫 글자)과 닉네임·레벨,
 // 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트
 export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0, onQuest }) {
@@ -76,11 +87,7 @@ export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coin
       </Stack>
 
       <Stack alignItems="flex-end" spacing={0.75} sx={{ flexShrink: 0 }}>
-        <Stack direction="row" alignItems="center" spacing={1.25}>
-          <Currency label="별" value={stars} icon={<StarIcon fontSize="small" sx={{ color: '#f5b301' }} />} />
-          <Currency label="보석" value={gems} icon={<DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} />} />
-          <Currency label="코인" value={coins} icon={<MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} />} />
-        </Stack>
+        <Wallet stars={stars} gems={gems} coins={coins} />
         <Button
           variant="outlined"
           color="inherit"

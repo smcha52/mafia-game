@@ -221,6 +221,7 @@ export default function App() {
         open={questOpen}
         onClose={() => setQuestOpen(false)}
         onRewarded={handleEnded}
+        wallet={{ stars: profile.stars, gems: profile.gems, coins: profile.coins }}
       />
       {tutorial ? (
         <TutorialPage
