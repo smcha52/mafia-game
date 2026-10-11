@@ -6,8 +6,18 @@ function unwrap({ data, error }) {
   return data;
 }
 
-export async function createRoom(nickname) {
-  return unwrap(await supabase.rpc('create_room', { p_nickname: nickname }));
+// options = { isPublic, age: { mode, a, b }, level: { mode, a, b } } — 방 설정 화면에서 고른 값
+export async function createRoom(nickname, { isPublic, age, level }) {
+  return unwrap(await supabase.rpc('create_room', {
+    p_nickname: nickname,
+    p_public: isPublic,
+    p_age_mode: age.mode,
+    p_age_a: age.a ?? null,
+    p_age_b: age.b ?? null,
+    p_level_mode: level.mode,
+    p_level_a: level.a ?? null,
+    p_level_b: level.b ?? null,
+  }));
 }
 
 export async function joinRoom(code, nickname) {

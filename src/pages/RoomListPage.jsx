@@ -11,8 +11,22 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { joinRoom, listRooms } from '../lib/api';
+import { ruleLabel } from '../lib/roomRules';
 
 const MAX_PLAYERS = 15;
+
+// 방 설정의 나이 · 레벨 제한. 설정 안 한 것은 보이지 않는다
+function RuleChips({ room }) {
+  const age = ruleLabel(room.ageMode, room.ageA, room.ageB, '세');
+  const level = ruleLabel(room.levelMode, room.levelA, room.levelB, '레벨');
+  if (!age && !level) return null;
+  return (
+    <Stack direction="row" spacing={0.5} sx={{ pt: 0.5 }}>
+      {age && <Chip size="small" variant="outlined" label={`나이 ${age}`} />}
+      {level && <Chip size="small" variant="outlined" label={`Lv ${level}`} />}
+    </Stack>
+  );
+}
 
 // 들어갈 수 있는 대기실 목록. 10개씩 보여주고, 새로고침하면 아직 안 본 방 10개를 보여준다.
 // 더 볼 방이 없으면 처음부터 다시 보여준다.
@@ -110,6 +124,7 @@ export default function RoomListPage({ nickname, onEntered, onBack }) {
                     <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: '0.2em' }}>
                       {r.code}
                     </Typography>
+                    <RuleChips room={r} />
                   </Stack>
                   {busy === r.id ? (
                     <CircularProgress size={20} />

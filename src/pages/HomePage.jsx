@@ -8,6 +8,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import RoomListPage from './RoomListPage';
+import CreateRoomDialog from '../components/CreateRoomDialog';
 import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
 // 로그인한 닉네임으로 방에 들어간다
@@ -18,6 +19,21 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
   const [error, setError] = useState('');
   // 방 찾기 화면을 보고 있는지
   const [finding, setFinding] = useState(false);
+  // 방 설정 화면이 열려 있는지와 그 화면의 오류
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+
+  async function create(options) {
+    setBusy('create');
+    setCreateError('');
+    try {
+      const result = await createRoom(nickname, options);
+      onEntered(result.room_id);
+    } catch (e) {
+      setCreateError(e.message);
+      setBusy('');
+    }
+  }
 
   async function run(kind, fn) {
     setBusy(kind);
@@ -74,8 +90,11 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
             variant="contained"
             size="large"
             disabled={busy !== ''}
-            loading={busy === 'create'}
-            onClick={() => run('create', () => createRoom(nickname))}
+            onClick={() => {
+              setError('');
+              setCreateError('');
+              setCreating(true);
+            }}
           >
             방 만들기
           </Button>
@@ -117,6 +136,14 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
           {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </Paper>
+
+      <CreateRoomDialog
+        open={creating}
+        busy={busy === 'create'}
+        error={createError}
+        onClose={() => setCreating(false)}
+        onCreate={create}
+      />
 
       {hint && (
         <Alert severity="success" sx={{ width: '100%' }}>
