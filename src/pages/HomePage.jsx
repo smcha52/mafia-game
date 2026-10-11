@@ -6,6 +6,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 import RoomListPage from './RoomListPage';
 import CreateRoomDialog from '../components/CreateRoomDialog';
@@ -19,6 +20,19 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
   const [error, setError] = useState('');
   // 방 찾기 화면을 보고 있는지
   const [finding, setFinding] = useState(false);
+  const [reloading, setReloading] = useState(false);
+
+  // Ctrl+Shift+R 과 같다. location.reload() 는 캐시를 쓸 수 있으므로
+  // 먼저 페이지를 캐시 없이 다시 받아 캐시를 새 배포로 바꾼 뒤 새로고침한다
+  async function hardReload() {
+    setReloading(true);
+    try {
+      await fetch(window.location.href, { cache: 'reload' });
+    } catch {
+      // 받기에 실패해도 새로고침은 한다
+    }
+    window.location.reload();
+  }
   // 방 설정 화면이 열려 있는지와 그 화면의 오류
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
@@ -150,6 +164,21 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
           {hint}
         </Alert>
       )}
+
+      <Stack alignItems="center" spacing={0.75}>
+        <Button
+          variant="outlined"
+          color="inherit"
+          startIcon={<RefreshIcon />}
+          loading={reloading}
+          onClick={hardReload}
+        >
+          새로고침
+        </Button>
+        <Typography variant="caption" color="text.secondary" textAlign="center">
+          눌러 보세요. 새로운 기능을 사용할 수 있을지도 모릅니다.
+        </Typography>
+      </Stack>
     </Stack>
   );
 }
