@@ -5,6 +5,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import AccountBar from './components/AccountBar';
+import ExchangeDialog from './components/ExchangeDialog';
 import QuestDialog from './components/QuestDialog';
 import HomePage from './pages/HomePage';
 import GamePage from './pages/GamePage';
@@ -36,6 +37,8 @@ export default function App() {
   const [guide, setGuide] = useState(null);
   // 퀘스트 화면이 열려 있는지
   const [questOpen, setQuestOpen] = useState(false);
+  // 재화 교환소 화면이 열려 있는지
+  const [exchangeOpen, setExchangeOpen] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -165,7 +168,7 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
-  // 게임이 끝나거나 퀘스트 보상을 받으면 늘어난 XP·재화를 다시 읽는다
+  // 게임이 끝나거나 퀘스트 보상을 받거나 재화를 교환하면 바뀐 XP·재화를 다시 읽는다
   const handleEnded = useCallback(async () => {
     try {
       const me = await myProfile();
@@ -216,6 +219,13 @@ export default function App() {
         gems={profile.gems}
         coins={profile.coins}
         onQuest={() => setQuestOpen(true)}
+        onExchange={() => setExchangeOpen(true)}
+      />
+      <ExchangeDialog
+        open={exchangeOpen}
+        onClose={() => setExchangeOpen(false)}
+        onExchanged={handleEnded}
+        wallet={{ stars: profile.stars, gems: profile.gems, coins: profile.coins }}
       />
       <QuestDialog
         open={questOpen}

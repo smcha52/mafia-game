@@ -234,3 +234,10 @@ export async function myQuests() {
 export async function claimQuest(questId) {
   return unwrap(await supabase.rpc('claim_quest', { p_quest_id: questId }));
 }
+
+// --- 재화 교환소 ---
+
+// kind = COIN_TO_STAR · STAR_TO_GEM · STAR_TO_COIN · GEM_TO_STAR, times = 1 · 5 · 10 · 50 (0048)
+export async function exchangeCurrency(kind, times) {
+  return unwrap(await supabase.rpc('exchange_currency', { p_kind: kind, p_times: times }));
+}

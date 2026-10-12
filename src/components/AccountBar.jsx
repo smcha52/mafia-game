@@ -6,6 +6,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
@@ -38,8 +39,8 @@ export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
 }
 
 // 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(닉네임 첫 글자)과 닉네임·레벨,
-// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트
-export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0, onQuest }) {
+// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트, 그 아래 재화 교환소
+export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0, onQuest, onExchange }) {
   const lv = levelInfo(xp);
 
   const [busy, setBusy] = useState(false);
@@ -105,6 +106,14 @@ export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coin
           onClick={onQuest}
         >
           퀘스트
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<CurrencyExchangeIcon />}
+          onClick={onExchange}
+        >
+          재화 교환소
         </Button>
       </Stack>
     </Stack>
