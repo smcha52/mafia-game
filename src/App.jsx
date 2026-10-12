@@ -19,6 +19,7 @@ import {
   expireIfIdle, isConfigured, markTutorialDone, myProfile, supabase, touchActive,
 } from './lib/supabase';
 import { heartbeat, myActiveRoom, takeKickNotice } from './lib/api';
+import { halloween } from './theme';
 
 export default function App() {
   const [booting, setBooting] = useState(true);
@@ -200,7 +201,7 @@ export default function App() {
   if (bootError) {
     return (
       <Stack sx={{ minHeight: '100dvh', p: 3 }} alignItems="center" justifyContent="center" spacing={1}>
-        <Typography color="error">접속에 실패했습니다.</Typography>
+        <Typography color={halloween ? 'text.primary' : 'error'}>접속에 실패했습니다.</Typography>
         <Typography color="text.secondary" variant="body2" textAlign="center">
           {bootError}
         </Typography>

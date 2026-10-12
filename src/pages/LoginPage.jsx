@@ -14,6 +14,7 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 import { signIn, signUp } from '../lib/supabase';
+import { halloween } from '../theme';
 
 // 오늘 날짜 (생년월일 입력의 최댓값)
 function today() {
@@ -105,7 +106,7 @@ export default function LoginPage({ onLoggedIn }) {
         <Typography variant="body2">
           계정을 만들 때는 <strong>회원가입</strong>을 하고, 로그아웃을 하면 <strong>로그인</strong>을 해주세요.
         </Typography>
-        <Typography variant="body2" color="error" fontWeight={700}>
+        <Typography variant="body2" color={halloween ? 'text.primary' : 'error'} fontWeight={700}>
           &lt;주의&gt; 비밀번호를 잊어버리면 안 됩니다 &lt;주의&gt;
         </Typography>
         <Typography variant="body2" color="text.secondary">

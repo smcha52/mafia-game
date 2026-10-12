@@ -16,6 +16,7 @@ import StorefrontIcon from '@mui/icons-material/Storefront';
 import ProfileAvatar from './ProfileAvatar';
 import { levelInfo } from '../lib/level';
 import { signOut } from '../lib/supabase';
+import { halloween } from '../theme';
 
 // 재화 하나 — 아이콘과 개수
 function Currency({ icon, label, value, color }) {
@@ -30,9 +31,15 @@ function Currency({ icon, label, value, color }) {
 }
 
 // 별·보석·코인 개수. 계정 줄과 퀘스트 화면에서 함께 쓴다
+// 할로윈 주황 배경에서는 노란 아이콘이 묻혀서 어두운 바탕을 깐다
 export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={1.25}>
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={1.25}
+      sx={halloween ? { bgcolor: 'background.paper', borderRadius: 4, px: 1.25, py: 0.5 } : undefined}
+    >
       <Currency label="별" value={stars} icon={<StarIcon fontSize="small" sx={{ color: '#f5b301' }} />} />
       <Currency label="보석" value={gems} icon={<DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} />} />
       <Currency label="코인" value={coins} icon={<MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} />} />
