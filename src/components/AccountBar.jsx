@@ -11,6 +11,7 @@ import DiamondIcon from '@mui/icons-material/Diamond';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import StarIcon from '@mui/icons-material/Star';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 
 import { levelInfo } from '../lib/level';
 import { signOut } from '../lib/supabase';
@@ -39,8 +40,8 @@ export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
 }
 
 // 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(닉네임 첫 글자)과 닉네임·레벨,
-// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트, 그 아래 재화 교환소
-export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0, onQuest, onExchange }) {
+// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트, 그 아래 재화 교환소, 그 아래 상점
+export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0, onQuest, onExchange, onShop }) {
   const lv = levelInfo(xp);
 
   const [busy, setBusy] = useState(false);
@@ -114,6 +115,14 @@ export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coin
           onClick={onExchange}
         >
           재화 교환소
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<StorefrontIcon />}
+          onClick={onShop}
+        >
+          상점
         </Button>
       </Stack>
     </Stack>

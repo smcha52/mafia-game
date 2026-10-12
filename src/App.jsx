@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography';
 import AccountBar from './components/AccountBar';
 import ExchangeDialog from './components/ExchangeDialog';
 import QuestDialog from './components/QuestDialog';
+import ShopDialog from './components/ShopDialog';
 import HomePage from './pages/HomePage';
 import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
@@ -39,6 +40,8 @@ export default function App() {
   const [questOpen, setQuestOpen] = useState(false);
   // 재화 교환소 화면이 열려 있는지
   const [exchangeOpen, setExchangeOpen] = useState(false);
+  // 상점 화면이 열려 있는지
+  const [shopOpen, setShopOpen] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -220,6 +223,12 @@ export default function App() {
         coins={profile.coins}
         onQuest={() => setQuestOpen(true)}
         onExchange={() => setExchangeOpen(true)}
+        onShop={() => setShopOpen(true)}
+      />
+      <ShopDialog
+        open={shopOpen}
+        onClose={() => setShopOpen(false)}
+        wallet={{ stars: profile.stars, gems: profile.gems, coins: profile.coins }}
       />
       <ExchangeDialog
         open={exchangeOpen}
