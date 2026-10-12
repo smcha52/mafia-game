@@ -5,6 +5,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import AccountBar from './components/AccountBar';
+import EquipDialog from './components/EquipDialog';
 import ExchangeDialog from './components/ExchangeDialog';
 import QuestDialog from './components/QuestDialog';
 import ShopDialog from './components/ShopDialog';
@@ -42,6 +43,8 @@ export default function App() {
   const [exchangeOpen, setExchangeOpen] = useState(false);
   // 상점 화면이 열려 있는지
   const [shopOpen, setShopOpen] = useState(false);
+  // 장착 화면이 열려 있는지
+  const [equipOpen, setEquipOpen] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -171,7 +174,7 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
-  // 게임이 끝나거나 퀘스트 보상을 받거나 재화를 교환하면 바뀐 XP·재화를 다시 읽는다
+  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착으로 XP·재화·프로필이 바뀌면 다시 읽는다
   const handleEnded = useCallback(async () => {
     try {
       const me = await myProfile();
@@ -217,6 +220,7 @@ export default function App() {
     <Box sx={{ minHeight: '100dvh', px: 2, py: 2 }}>
       <AccountBar
         nickname={profile.nickname}
+        avatar={profile.avatar}
         xp={profile.xp}
         stars={profile.stars}
         gems={profile.gems}
@@ -224,11 +228,19 @@ export default function App() {
         onQuest={() => setQuestOpen(true)}
         onExchange={() => setExchangeOpen(true)}
         onShop={() => setShopOpen(true)}
+        onEquip={() => setEquipOpen(true)}
       />
       <ShopDialog
         open={shopOpen}
         onClose={() => setShopOpen(false)}
+        onBought={handleEnded}
         wallet={{ stars: profile.stars, gems: profile.gems, coins: profile.coins }}
+      />
+      <EquipDialog
+        open={equipOpen}
+        onClose={() => setEquipOpen(false)}
+        onEquipped={handleEnded}
+        nickname={profile.nickname}
       />
       <ExchangeDialog
         open={exchangeOpen}

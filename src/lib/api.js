@@ -246,3 +246,19 @@ export async function claimQuest(questId) {
 export async function exchangeCurrency(kind, times) {
   return unwrap(await supabase.rpc('exchange_currency', { p_kind: kind, p_times: times }));
 }
+
+// --- 상점 · 장착 ---
+
+// 지금 파는 물건(items), 내가 산 물건(owned), 장착한 프로필(avatar) (0051)
+export async function myShop() {
+  return unwrap(await supabase.rpc('my_shop'));
+}
+
+export async function buyItem(itemId) {
+  return unwrap(await supabase.rpc('buy_item', { p_item_id: itemId }));
+}
+
+// 산 프로필을 장착한다. null 이면 기본 프로필로 돌아간다
+export async function equipAvatar(itemId) {
+  unwrap(await supabase.rpc('equip_avatar', { p_item_id: itemId }));
+}

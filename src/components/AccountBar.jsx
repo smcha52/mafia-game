@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
 import LinearProgress from '@mui/material/LinearProgress';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import CheckroomIcon from '@mui/icons-material/Checkroom';
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import DiamondIcon from '@mui/icons-material/Diamond';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -13,6 +13,7 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import StarIcon from '@mui/icons-material/Star';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 
+import ProfileAvatar from './ProfileAvatar';
 import { levelInfo } from '../lib/level';
 import { signOut } from '../lib/supabase';
 
@@ -39,9 +40,11 @@ export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
   );
 }
 
-// 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(닉네임 첫 글자)과 닉네임·레벨,
-// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트, 그 아래 재화 교환소, 그 아래 상점
-export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coins = 0, onQuest, onExchange, onShop }) {
+// 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(장착한 그림, 없으면 닉네임 첫 글자)과 닉네임·레벨,
+// 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트, 그 아래 재화 교환소, 그 아래 상점, 그 아래 장착
+export default function AccountBar({
+  nickname, avatar = null, xp = 0, stars = 0, gems = 0, coins = 0, onQuest, onExchange, onShop, onEquip,
+}) {
   const lv = levelInfo(xp);
 
   const [busy, setBusy] = useState(false);
@@ -67,9 +70,7 @@ export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coin
       {/* 프로필 줄 아래에 레벨 진행 상황 */}
       <Stack spacing={0.75} sx={{ minWidth: 0 }}>
         <Stack direction="row" alignItems="center" spacing={1.25} sx={{ minWidth: 0 }}>
-          <Avatar sx={{ bgcolor: 'primary.main', width: 36, height: 36, fontSize: 16, fontWeight: 700 }}>
-            {Array.from(nickname)[0]}
-          </Avatar>
+          <ProfileAvatar avatar={avatar} nickname={nickname} size={36} />
           <Typography fontWeight={700} noWrap>
             {nickname}
           </Typography>
@@ -123,6 +124,14 @@ export default function AccountBar({ nickname, xp = 0, stars = 0, gems = 0, coin
           onClick={onShop}
         >
           상점
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<CheckroomIcon />}
+          onClick={onEquip}
+        >
+          장착
         </Button>
       </Stack>
     </Stack>
