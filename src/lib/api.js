@@ -109,6 +109,11 @@ export async function finalRoles(roomId) {
   return unwrap(await supabase.rpc('final_roles', { p_room_id: roomId }));
 }
 
+// 비공개 방에서 죽은 사람만 받는 전체 직업. 그 밖에는 서버가 거절한다 (0050)
+export async function deadRoles(roomId) {
+  return unwrap(await supabase.rpc('dead_roles', { p_room_id: roomId }));
+}
+
 export async function fetchResults(roomId) {
   return unwrap(
     await supabase

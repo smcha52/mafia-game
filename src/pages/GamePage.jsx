@@ -17,6 +17,7 @@ import PlayerPicker from '../components/PlayerPicker';
 import AssassinPanel from '../components/AssassinPanel';
 import ForgePanel from '../components/ForgePanel';
 import ChatPanel from '../components/ChatPanel';
+import DeadRoles from '../components/DeadRoles';
 import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
@@ -34,7 +35,7 @@ import { useGame } from '../lib/useGame';
 
 // endHint 가 있으면 승패 화면에 안내 문구로 보여준다 (튜토리얼 뒤 첫 게임)
 export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHint = '' }) {
-  const { room, players, results, view, viewError, loading, error, reload } = useGame(roomId);
+  const { room, players, results, view, viewError, roles, loading, error, reload } = useGame(roomId);
   const { messages } = useChat(roomId);
   const [pick, setPick] = useState(null);
   const [busy, setBusy] = useState('');
@@ -413,6 +414,9 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
           사망하여 관전 중입니다. 능력과 투표를 사용할 수 없습니다.
         </Alert>
       )}
+
+      {/* 비공개 방의 사망자는 모든 참가자의 직업을 본다 */}
+      {!alive && <DeadRoles rows={roles} uid={uid} />}
 
       {/* 행동 영역 */}
       {alive && !isResult && (
