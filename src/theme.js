@@ -22,15 +22,38 @@ function cobweb(flip) {
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 }
 
-// 네 구석에 거미줄을 붙이는 배경
+// 호박 한 개. (x, 바닥) 에 놓고 k 배로 그린다
+function pumpkin(x, k) {
+  return `<g transform="translate(${x} 70) scale(${k})" stroke="#5a2500" stroke-width="1">`
+    + '<rect x="-2" y="-34" width="4" height="7" rx="1.5" fill="#558b2f"/>'
+    + '<ellipse cx="0" cy="-14" rx="19" ry="14" fill="#f57c00"/>'
+    + '<ellipse cx="0" cy="-14" rx="9.5" ry="14" fill="#fb8c00" stroke-opacity="0.35"/>'
+    + '<g fill="#3e1c00" stroke="none">'
+    + '<path d="M-12 -17L-6 -17L-9 -22ZM6 -17L12 -17L9 -22Z"/>'
+    + '<path d="M-12 -11L-8 -8L-4 -10.5L0 -7.5L4 -10.5L8 -8L12 -11L9 -4L-9 -4Z"/>'
+    + '</g></g>';
+}
+
+// 아래 구석에 놓는 호박 무더기. 왼쪽용을 뒤집어 오른쪽에 쓴다
+function pumpkins(mirror) {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="72" viewBox="0 0 150 72">'
+    + `<g${mirror ? ' transform="translate(150 0) scale(-1 1)"' : ''}>`
+    + `${pumpkin(118, 0.6)}${pumpkin(84, 0.85)}${pumpkin(36, 1.3)}${pumpkin(64, 0.5)}`
+    + '</g></svg>';
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+// 네 구석에 거미줄을, 아래 좌우에 호박을 붙이는 배경
 const COBWEBS = {
   backgroundImage: [
+    pumpkins(false),
+    pumpkins(true),
     cobweb(''),
     cobweb('translate(120 0) scale(-1 1)'),
     cobweb('translate(0 120) scale(1 -1)'),
     cobweb('translate(120 120) scale(-1 -1)'),
   ].join(', '),
-  backgroundPosition: 'left top, right top, left bottom, right bottom',
+  backgroundPosition: 'left 6px bottom, right 6px bottom, left top, right top, left bottom, right bottom',
   backgroundRepeat: 'no-repeat',
   backgroundAttachment: 'fixed',
 };
