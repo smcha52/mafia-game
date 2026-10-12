@@ -48,8 +48,48 @@ function Spider({ delay }) {
   );
 }
 
-// 할로윈 배경 위를 도는 거미 두 마리. 서로 맞은편 구석에서 출발한다
-// 창 위에도 보이지만 누르는 것은 막지 않는다
+const GHOST = 34;
+const GHOST_FAR = `calc(100% - ${EDGE + GHOST}px)`;
+
+// 대각선 하나를 오간다. 두 대각선이 X 모양이 된다
+const driftDown = keyframes`
+  from { left: ${EDGE}px; top: ${EDGE}px; }
+  to   { left: ${GHOST_FAR}; top: ${GHOST_FAR}; }
+`;
+const driftUp = keyframes`
+  from { left: ${GHOST_FAR}; top: ${EDGE}px; }
+  to   { left: ${EDGE}px; top: ${GHOST_FAR}; }
+`;
+
+// 글씨를 가리지 않도록 반투명하게 그린다
+function Ghost({ path }) {
+  return (
+    <Box
+      component="svg"
+      viewBox="0 0 34 34"
+      sx={{
+        position: 'absolute',
+        width: GHOST,
+        height: GHOST,
+        opacity: 0.6,
+        animation: `${path} 22s ease-in-out infinite alternate`,
+      }}
+    >
+      <path
+        d="M5 32 V15 a12 12 0 0 1 24 0 V32 l-4 -3.5 l-4 3.5 l-4 -3.5 l-4 3.5 l-4 -3.5 Z"
+        fill="#f5f5f5"
+      />
+      <g fill="#1b1330">
+        <ellipse cx="12.5" cy="14.5" rx="2.2" ry="3" />
+        <ellipse cx="21.5" cy="14.5" rx="2.2" ry="3" />
+        <ellipse cx="17" cy="21" rx="2.4" ry="1.8" />
+      </g>
+    </Box>
+  );
+}
+
+// 할로윈 배경 위를 도는 거미 두 마리(서로 맞은편 구석에서 출발)와
+// X 모양으로 오가는 유령 둘. 창 위에도 보이지만 누르는 것은 막지 않는다
 export default function HalloweenSpiders() {
   return (
     <Box
@@ -58,6 +98,8 @@ export default function HalloweenSpiders() {
     >
       <Spider delay={0} />
       <Spider delay={-LAP / 2} />
+      <Ghost path={driftDown} />
+      <Ghost path={driftUp} />
     </Box>
   );
 }
