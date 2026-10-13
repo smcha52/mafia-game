@@ -16,7 +16,8 @@ import { REWARD, untilText } from './QuestDialog';
 import { claimAttendance, myAttendance } from '../lib/api';
 
 // 하루 칸 — 날짜, 보상, 받았으면 체크. 오늘은 테두리로, 지나간 날은 흐리게 보여준다
-function DayCell({ d, today }) {
+// 연속 출석 화면에서도 쓴다
+export function DayCell({ d, today }) {
   const isToday = d.day === today;
   return (
     <Paper

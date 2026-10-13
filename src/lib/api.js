@@ -279,3 +279,16 @@ export async function myAttendance() {
 export async function claimAttendance() {
   return unwrap(await supabase.rpc('claim_attendance'));
 }
+
+// --- 연속 출석 ---
+
+// 이어지고 있는 일수(streak), 오늘 출석했는지(checked), 다음 날이 되는 시각(next),
+// 30일 표에서 오늘 칸(day)과 보상·출석 여부(days) (0053)
+export async function myStreak() {
+  return unwrap(await supabase.rpc('my_streak'));
+}
+
+// 오늘 연속 출석을 한다
+export async function claimStreak() {
+  return unwrap(await supabase.rpc('claim_streak'));
+}

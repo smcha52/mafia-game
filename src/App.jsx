@@ -10,6 +10,7 @@ import EquipDialog from './components/EquipDialog';
 import ExchangeDialog from './components/ExchangeDialog';
 import QuestDialog from './components/QuestDialog';
 import ShopDialog from './components/ShopDialog';
+import StreakDialog from './components/StreakDialog';
 import HomePage from './pages/HomePage';
 import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
@@ -51,6 +52,8 @@ export default function App() {
   const [equipOpen, setEquipOpen] = useState(false);
   // 출석 화면이 열려 있는지
   const [attendanceOpen, setAttendanceOpen] = useState(false);
+  // 연속 출석 화면이 열려 있는지
+  const [streakOpen, setStreakOpen] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -182,7 +185,7 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
-  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착·출석으로 XP·재화·프로필이 바뀌면 다시 읽는다
+  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착·출석·연속 출석으로 XP·재화·프로필이 바뀌면 다시 읽는다
   const handleEnded = useCallback(async () => {
     try {
       const me = await myProfile();
@@ -238,6 +241,13 @@ export default function App() {
         onShop={() => setShopOpen(true)}
         onEquip={() => setEquipOpen(true)}
         onAttendance={() => setAttendanceOpen(true)}
+        onStreak={() => setStreakOpen(true)}
+      />
+      <StreakDialog
+        open={streakOpen}
+        onClose={() => setStreakOpen(false)}
+        onRewarded={handleEnded}
+        wallet={{ stars: profile.stars, gems: profile.gems, coins: profile.coins }}
       />
       <AttendanceDialog
         open={attendanceOpen}
