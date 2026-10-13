@@ -1,8 +1,12 @@
 import { createTheme } from '@mui/material/styles';
 
-// 할로윈 배경 — 10월 12일부터 20일, 11월 1일이 끝날 때까지 (한국 시간)
-const HALLOWEEN_UNTIL = new Date('2026-11-02T00:00:00+09:00').getTime();
-export const halloween = Date.now() < HALLOWEEN_UNTIL;
+// 할로윈 배경 — 해마다 10월 5일부터 11월 1일이 끝날 때까지 (한국 시간)
+// 상점의 할로윈 프로필과 같은 기간이다 (0054)
+// 할로윈에만 보여주는 화면은 모두 이 값을 쓴다. 서버는 is_halloween() 이 같은 기간을 본다
+const korea = new Date(Date.now() + 9 * 60 * 60 * 1000);
+const month = korea.getUTCMonth() + 1;
+const day = korea.getUTCDate();
+export const halloween = (month === 10 && day >= 5) || (month === 11 && day === 1);
 
 // 왼쪽 위 구석의 거미줄. flip 으로 뒤집어 나머지 구석에 쓴다
 function cobweb(flip) {
