@@ -1,0 +1,143 @@
+import { useCallback, useEffect, useState } from 'react';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import Dialog from '@mui/material/Dialog';
+import IconButton from '@mui/material/IconButton';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+
+import { Wallet } from './AccountBar';
+import { REWARD, untilText } from './QuestDialog';
+import { claimAttendance, myAttendance } from '../lib/api';
+
+// 하루 칸 — 날짜, 보상, 받았으면 체크. 오늘은 테두리로, 지나간 날은 흐리게 보여준다
+function DayCell({ d, today }) {
+  const isToday = d.day === today;
+  return (
+    <Paper
+      sx={{
+        p: 1,
+        minHeight: 84,
+        textAlign: 'center',
+        border: 2,
+        borderColor: isToday ? 'primary.main' : 'transparent',
+        opacity: d.day < today ? 0.5 : 1,
+      }}
+      aria-current={isToday ? 'date' : undefined}
+    >
+      <Typography variant="caption" color={isToday ? 'primary' : 'text.secondary'} fontWeight={700}>
+        {d.day}일
+      </Typography>
+      <Stack alignItems="center" spacing={0.25} sx={{ mt: 0.5 }}>
+        {d.claimed ? (
+          <CheckCircleIcon color="success" aria-label="받음" />
+        ) : d.rewards.length === 0 ? (
+          <Typography variant="caption" color="text.secondary">준비 중</Typography>
+        ) : (
+          d.rewards.map((r) => (
+            <Stack
+              key={r.type}
+              direction="row"
+              alignItems="center"
+              spacing={0.25}
+              aria-label={`${REWARD[r.type].label} ${r.amount}개`}
+            >
+              {REWARD[r.type].icon}
+              <Typography variant="body2" fontWeight={700}>{r.amount}</Typography>
+            </Stack>
+          ))
+        )}
+      </Stack>
+    </Paper>
+  );
+}
+
+// 장착 아래 출석 버튼으로 여는 화면. 보상을 받으면 onRewarded 로 재화를 다시 읽게 한다
+// wallet = 내 재화 { stars, gems, coins } — 오른쪽 위에 보여준다
+export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    setError('');
+    try {
+      setData(await myAttendance());
+    } catch (e) {
+      setError(e.message);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) load();
+  }, [open, load]);
+
+  async function claim() {
+    setBusy(true);
+    setError('');
+    try {
+      await claimAttendance();
+      await load();
+      onRewarded?.();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const todayCell = data?.days.find((d) => d.day === data.day);
+
+  return (
+    <Dialog open={open} onClose={onClose} fullScreen>
+      <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', px: 2, py: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+          <IconButton onClick={onClose} aria-label="뒤로">
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" sx={{ flex: 1 }}>출석</Typography>
+          <Wallet {...wallet} />
+        </Stack>
+
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+        {!data ? (
+          !error && (
+            <Stack alignItems="center" sx={{ py: 6 }}>
+              <CircularProgress />
+            </Stack>
+          )
+        ) : (
+          <Stack spacing={1.5}>
+            <Typography variant="caption" color="text.secondary">
+              오늘은 {data.day}일차 · 다음 날까지 {untilText(data.next)} · 그날 보상은 그날에만 받을 수 있고, 30일이 지나면 1일부터 다시 시작합니다.
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
+              {data.days.map((d) => (
+                <DayCell key={d.day} d={d} today={data.day} />
+              ))}
+            </Box>
+            <Button
+              variant="contained"
+              size="large"
+              disabled={todayCell.claimed || todayCell.rewards.length === 0}
+              loading={busy}
+              onClick={claim}
+            >
+              {todayCell.claimed
+                ? '오늘 출석 완료'
+                : todayCell.rewards.length === 0
+                  ? '오늘은 받을 보상이 없습니다'
+                  : `${data.day}일차 보상 받기`}
+            </Button>
+          </Stack>
+        )}
+      </Box>
+    </Dialog>
+  );
+}

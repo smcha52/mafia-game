@@ -262,3 +262,20 @@ export async function buyItem(itemId) {
 export async function equipAvatar(itemId) {
   unwrap(await supabase.rpc('equip_avatar', { p_item_id: itemId }));
 }
+
+// --- 출석 ---
+
+// 튜토리얼을 처음 마쳤을 때 출석 날짜를 세기 시작한다 (0052)
+export async function startAttendance() {
+  unwrap(await supabase.rpc('start_attendance'));
+}
+
+// 오늘 날짜(day), 다음 날이 되는 시각(next), 30일치 보상과 받았는지(days)
+export async function myAttendance() {
+  return unwrap(await supabase.rpc('my_attendance'));
+}
+
+// 오늘 출석 보상을 받는다
+export async function claimAttendance() {
+  return unwrap(await supabase.rpc('claim_attendance'));
+}

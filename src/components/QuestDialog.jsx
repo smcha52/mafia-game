@@ -78,14 +78,14 @@ const DIFFICULTY = {
   HARD: { label: '어려움', color: 'error' },
 };
 
-const REWARD = {
+export const REWARD = {
   STAR: { label: '별', icon: <StarIcon fontSize="small" sx={{ color: '#f5b301' }} /> },
   GEM: { label: '보석', icon: <DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} /> },
   COIN: { label: '코인', icon: <MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} /> },
 };
 
 // 다음 퀘스트까지 남은 시간
-function untilText(iso) {
+export function untilText(iso) {
   const ms = new Date(iso).getTime() - Date.now();
   if (!(ms > 0)) return '곧';
   const min = Math.ceil(ms / 60000);

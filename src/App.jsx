@@ -5,6 +5,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import AccountBar from './components/AccountBar';
+import AttendanceDialog from './components/AttendanceDialog';
 import EquipDialog from './components/EquipDialog';
 import ExchangeDialog from './components/ExchangeDialog';
 import QuestDialog from './components/QuestDialog';
@@ -18,7 +19,9 @@ import TutorialPage from './pages/TutorialPage';
 import {
   expireIfIdle, isConfigured, markTutorialDone, myProfile, supabase, touchActive,
 } from './lib/supabase';
-import { heartbeat, myActiveRoom, takeKickNotice } from './lib/api';
+import {
+  heartbeat, myActiveRoom, startAttendance, takeKickNotice,
+} from './lib/api';
 import { halloween } from './theme';
 
 export default function App() {
@@ -46,6 +49,8 @@ export default function App() {
   const [shopOpen, setShopOpen] = useState(false);
   // 장착 화면이 열려 있는지
   const [equipOpen, setEquipOpen] = useState(false);
+  // 출석 화면이 열려 있는지
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -146,6 +151,8 @@ export default function App() {
       setTutorialDone(true);
       // 저장에 실패하면 다음 로그인 때 한 번 더 할 뿐이다
       markTutorialDone().catch(() => {});
+      // 출석 날짜는 이때부터 센다. 실패하면 출석 화면을 처음 열 때부터 센다
+      startAttendance().catch(() => {});
     }
   }, [tutorialDone]);
 
@@ -175,7 +182,7 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
-  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착으로 XP·재화·프로필이 바뀌면 다시 읽는다
+  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착·출석으로 XP·재화·프로필이 바뀌면 다시 읽는다
   const handleEnded = useCallback(async () => {
     try {
       const me = await myProfile();
@@ -230,6 +237,13 @@ export default function App() {
         onExchange={() => setExchangeOpen(true)}
         onShop={() => setShopOpen(true)}
         onEquip={() => setEquipOpen(true)}
+        onAttendance={() => setAttendanceOpen(true)}
+      />
+      <AttendanceDialog
+        open={attendanceOpen}
+        onClose={() => setAttendanceOpen(false)}
+        onRewarded={handleEnded}
+        wallet={{ stars: profile.stars, gems: profile.gems, coins: profile.coins }}
       />
       <ShopDialog
         open={shopOpen}
