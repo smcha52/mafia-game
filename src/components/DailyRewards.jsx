@@ -212,8 +212,9 @@ function RewardCell({ item, onOpen }) {
   );
 }
 
-// 상자를 열고 나온 것을 보여주는 창
-function OpenDialog({ opening, onClose }) {
+// 상자를 열고 나온 것을 보여주는 창. 출석·연속 출석 화면에서도 쓴다
+// opening = { box, result?, error? } — result 가 없고 error 도 없으면 여는 중
+export function OpenDialog({ opening, onClose }) {
   const { box, result, error } = opening ?? {};
   const name = box && BOXES[box].name;
   return (

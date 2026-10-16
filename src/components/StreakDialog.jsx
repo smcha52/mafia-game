@@ -13,6 +13,7 @@ import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 
 import { Wallet } from './AccountBar';
 import { DayCell } from './AttendanceDialog';
+import { OpenDialog } from './DailyRewards';
 import { untilText } from './QuestDialog';
 import { claimStreak, myStreak } from '../lib/api';
 
@@ -24,6 +25,8 @@ export default function StreakDialog({ open, onClose, onRewarded, wallet }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // 출석하며 연 상자 { box, result }
+  const [opening, setOpening] = useState(null);
 
   const load = useCallback(async () => {
     setError('');
@@ -42,7 +45,9 @@ export default function StreakDialog({ open, onClose, onRewarded, wallet }) {
     setBusy(true);
     setError('');
     try {
-      await claimStreak();
+      const res = await claimStreak();
+      const opened = res?.boxes?.[0];
+      if (opened) setOpening({ box: opened.box, result: opened });
       await load();
       onRewarded?.();
     } catch (e) {
@@ -109,6 +114,7 @@ export default function StreakDialog({ open, onClose, onRewarded, wallet }) {
           </Stack>
         )}
       </Box>
+      <OpenDialog opening={opening} onClose={() => setOpening(null)} />
     </Dialog>
   );
 }

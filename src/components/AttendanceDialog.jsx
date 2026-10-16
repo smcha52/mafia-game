@@ -12,10 +12,13 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 import { Wallet } from './AccountBar';
+import BoxArt from './BoxArt';
+import { OpenDialog } from './DailyRewards';
 import { REWARD, untilText } from './QuestDialog';
 import { claimAttendance, myAttendance } from '../lib/api';
 
 // 하루 칸 — 날짜, 보상, 받았으면 체크. 오늘은 테두리로, 지나간 날은 흐리게 보여준다
+// 상자는 상자 그림으로 보여준다 (0059)
 // 연속 출석 화면에서도 쓴다
 export function DayCell({ d, today }) {
   const isToday = d.day === today;
@@ -40,7 +43,9 @@ export function DayCell({ d, today }) {
         ) : d.rewards.length === 0 ? (
           <Typography variant="caption" color="text.secondary">준비 중</Typography>
         ) : (
-          d.rewards.map((r) => (
+          d.rewards.map((r) => r.type === 'BOX' ? (
+            <BoxArt key={r.type} box={r.box} size={28} />
+          ) : (
             <Stack
               key={r.type}
               direction="row"
@@ -64,6 +69,8 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  // 출석하며 연 상자 { box, result }
+  const [opening, setOpening] = useState(null);
 
   const load = useCallback(async () => {
     setError('');
@@ -82,7 +89,9 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
     setBusy(true);
     setError('');
     try {
-      await claimAttendance();
+      const res = await claimAttendance();
+      const opened = res?.boxes?.[0];
+      if (opened) setOpening({ box: opened.box, result: opened });
       await load();
       onRewarded?.();
     } catch (e) {
@@ -140,6 +149,7 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
           </Stack>
         )}
       </Box>
+      <OpenDialog opening={opening} onClose={() => setOpening(null)} />
     </Dialog>
   );
 }
