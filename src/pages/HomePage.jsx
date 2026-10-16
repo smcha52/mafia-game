@@ -10,6 +10,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import RoomListPage from './RoomListPage';
 import CreateRoomDialog from '../components/CreateRoomDialog';
+import DailyRewards from '../components/DailyRewards';
 import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
 // 로그인한 닉네임으로 방에 들어간다
@@ -124,6 +125,8 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
           >
             방 찾기
           </Button>
+
+          <DailyRewards />
 
           <Divider>또는</Divider>
 

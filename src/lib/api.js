@@ -292,3 +292,11 @@ export async function myStreak() {
 export async function claimStreak() {
   return unwrap(await supabase.rpc('claim_streak'));
 }
+
+// --- 일일보상 ---
+
+// 하루 개수(limit), 다시 받을 수 있게 되는 시각(next), 오늘 받은 보상(items) (0057)
+// 보상은 이기면 서버가 바로 지급한다
+export async function myDailyRewards() {
+  return unwrap(await supabase.rpc('my_daily_rewards'));
+}
