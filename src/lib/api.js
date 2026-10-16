@@ -270,12 +270,12 @@ export async function startAttendance() {
   unwrap(await supabase.rpc('start_attendance'));
 }
 
-// 오늘 날짜(day), 다음 날이 되는 시각(next), 30일치 보상과 받았는지(days)
+// 오늘 칸(day), 오늘 출석했는지(checked), 다음 출석이 되는 시각(next), 30일치 보상과 받았는지(days) (0056)
 export async function myAttendance() {
   return unwrap(await supabase.rpc('my_attendance'));
 }
 
-// 오늘 출석 보상을 받는다
+// 오늘 출석하고 다음 칸 보상을 받는다
 export async function claimAttendance() {
   return unwrap(await supabase.rpc('claim_attendance'));
 }

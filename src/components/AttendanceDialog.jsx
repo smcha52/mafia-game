@@ -116,7 +116,8 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
         ) : (
           <Stack spacing={1.5}>
             <Typography variant="caption" color="text.secondary">
-              오늘은 {data.day}일차 · 다음 날까지 {untilText(data.next)} · 그날 보상은 그날에만 받을 수 있고, 30일이 지나면 1일부터 다시 시작합니다.
+              {data.checked ? `다음 출석까지 ${untilText(data.next)}` : `오늘은 ${data.day}일차`}
+              {' '}· 하루에 한 번 출석할 때마다 다음 날 보상을 받습니다. 빠진 날이 있어도 이어서 받고, 30일을 다 받으면 1일부터 다시 시작합니다.
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
               {data.days.map((d) => (
@@ -126,14 +127,14 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
             <Button
               variant="contained"
               size="large"
-              disabled={todayCell.claimed || todayCell.rewards.length === 0}
+              disabled={data.checked}
               loading={busy}
               onClick={claim}
             >
-              {todayCell.claimed
+              {data.checked
                 ? '오늘 출석 완료'
                 : todayCell.rewards.length === 0
-                  ? '오늘은 받을 보상이 없습니다'
+                  ? `${data.day}일차 출석하기 (보상 없음)`
                   : `${data.day}일차 보상 받기`}
             </Button>
           </Stack>
