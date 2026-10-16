@@ -103,7 +103,7 @@ function TableDialog({ open, onClose, limit }) {
       <DialogTitle>일일보상</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          승리할 때마다 아래 중 하나가 나옵니다. 하루에 {limit}개까지 받습니다.
+          하루 {limit}칸은 아래 확률로 미리 정해지고, 승리할 때마다 앞 칸부터 받습니다.
         </Typography>
         {DAILY_TABLE.map((row, i) => (
           <TableRow key={i} row={row} box={CURRENT_BOX} />
@@ -156,7 +156,7 @@ function CellBody({ item }) {
   return (
     <Stack alignItems="center" spacing={0.25} sx={{ mt: 0.25 }}>
       <BoxArt box={item.box} open={item.opened} size={30} />
-      {item.opened ? (
+      {!item.won ? null : item.opened ? (
         item.open.item && !item.open.dup ? (
           <ProfileAvatar avatar={item.open.item} size={20} />
         ) : (
@@ -170,10 +170,12 @@ function CellBody({ item }) {
 }
 
 // 칸 하나 — 위에 등급, 아래에 보상. 열지 않은 상자는 누르면 열린다
-function RewardCell({ item, onOpen }) {
+// 아직 받지 않은 칸은 받을 보상을 흐리게 보여주고, next 면 다음 승리에 받을 칸으로 점선 테두리를 그린다
+function RewardCell({ item, next = false, onOpen }) {
   const tier = item && TIER[item.tier];
+  const pending = item && !item.won;
   const special = item && item.tier !== 'NORMAL';
-  const closedBox = item?.type === 'BOX' && !item.opened;
+  const closedBox = item?.type === 'BOX' && item.won && !item.opened;
   const body = (
     <>
       <Typography
@@ -183,7 +185,9 @@ function RewardCell({ item, onOpen }) {
       >
         {tier ? tier.label : '?'}
       </Typography>
-      <CellBody item={item} />
+      <Box sx={{ opacity: pending ? 0.45 : 1 }}>
+        <CellBody item={item} />
+      </Box>
     </>
   );
   return (
@@ -193,8 +197,9 @@ function RewardCell({ item, onOpen }) {
         minHeight: 64,
         textAlign: 'center',
         overflow: 'hidden',
-        borderColor: special ? tier.color : closedBox ? 'primary.main' : undefined,
-        borderWidth: special || closedBox ? 2 : 1,
+        borderColor: special ? tier.color : closedBox || next ? 'primary.main' : undefined,
+        borderWidth: special || closedBox || next ? 2 : 1,
+        borderStyle: next ? 'dashed' : 'solid',
       }}
     >
       {closedBox ? (
@@ -251,6 +256,7 @@ export function OpenDialog({ opening, onClose }) {
 }
 
 // 홈 화면 방 찾기 아래. 이길 때마다 보상 하나, 하루에 5개까지 (0057·0058)
+// 그날 5칸의 보상은 서버가 미리 뽑아 두고, 이길 때마다 앞 칸부터 받는다 (0060)
 // 게임이 끝나 홈으로 돌아오면 다시 그려지므로 그때 새로 읽는다
 // 상자를 열어 재화가 바뀌면 onRewarded 로 다시 읽게 한다
 export default function DailyRewards({ onRewarded }) {
@@ -280,25 +286,26 @@ export default function DailyRewards({ onRewarded }) {
 
   if (!data) return null;
 
-  const done = data.items.length >= data.limit;
+  const won = data.items.filter((it) => it.won).length;
+  const done = won >= data.limit;
   return (
     <Box>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
         <Stack direction="row" alignItems="center" spacing={0.25}>
           <Typography variant="subtitle2" fontWeight={700}>
-            일일보상 {data.items.length}/{data.limit}
+            일일보상 {won}/{data.limit}
           </Typography>
           <IconButton size="small" onClick={() => setShowTable(true)} aria-label="나올 수 있는 보상 보기">
             <InfoOutlinedIcon fontSize="small" />
           </IconButton>
         </Stack>
         <Typography variant="caption" color="text.secondary">
-          {done ? `${untilText(data.next)} 뒤 다시 받을 수 있어요` : '승리하면 하나씩 받아요'}
+          {done ? `${untilText(data.next)} 뒤 다시 받을 수 있어요` : '승리하면 앞 칸부터 받아요'}
         </Typography>
       </Stack>
       <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${data.limit}, 1fr)`, gap: 0.75 }}>
         {Array.from({ length: data.limit }, (_, i) => (
-          <RewardCell key={i} item={data.items[i]} onOpen={open} />
+          <RewardCell key={i} item={data.items[i]} next={i === won} onOpen={open} />
         ))}
       </Box>
 

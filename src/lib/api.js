@@ -295,7 +295,7 @@ export async function claimStreak() {
 
 // --- 일일보상 ---
 
-// 하루 개수(limit), 다시 받을 수 있게 되는 시각(next), 오늘 받은 보상(items),
+// 하루 개수(limit), 다시 받을 수 있게 되는 시각(next), 오늘 5칸(items, won = 받았는지 · 0060),
 // 지난날 열지 않은 상자(boxes) (0057·0058)
 // 보상은 이기면 서버가 바로 지급한다
 export async function myDailyRewards() {
