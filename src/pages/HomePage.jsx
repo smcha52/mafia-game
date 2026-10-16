@@ -15,7 +15,8 @@ import { createRoom, joinRoom, quickJoin } from '../lib/api';
 
 // 로그인한 닉네임으로 방에 들어간다
 // hint 가 있으면 맨 아래에 안내 문구로 보여준다 (튜토리얼 뒤 안내)
-export default function HomePage({ nickname, onEntered, notice = '', onCloseNotice, hint = '' }) {
+// onRewarded = 일일보상 상자를 열어 재화가 바뀌었을 때
+export default function HomePage({ nickname, onEntered, notice = '', onCloseNotice, hint = '', onRewarded }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -126,7 +127,7 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
             방 찾기
           </Button>
 
-          <DailyRewards />
+          <DailyRewards onRewarded={onRewarded} />
 
           <Divider>또는</Divider>
 

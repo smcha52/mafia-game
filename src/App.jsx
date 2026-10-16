@@ -185,7 +185,7 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
-  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착·출석·연속 출석으로 XP·재화·프로필이 바뀌면 다시 읽는다
+  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착·출석·연속 출석·일일보상 상자로 XP·재화·프로필이 바뀌면 다시 읽는다
   const handleEnded = useCallback(async () => {
     try {
       const me = await myProfile();
@@ -292,6 +292,7 @@ export default function App() {
           onEntered={handleEntered}
           notice={notice}
           onCloseNotice={() => setNotice('')}
+          onRewarded={handleEnded}
           hint={guide === 'READY'
             ? '준비됐나요? 한판 돌려 봅시다!'
             : guide === 'FREE'
