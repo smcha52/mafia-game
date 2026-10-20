@@ -105,6 +105,7 @@ function TableDialog({ open, onClose, limit }) {
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {t('하루 {limit}칸은 아래 확률로 미리 정해지고, 승리할 때마다 앞 칸부터 받습니다.', { limit })}
+          {' '}{t('2연승부터 받는 코인·별·보석이 늘어납니다 (상자 제외).')}
         </Typography>
         {DAILY_TABLE.map((row, i) => (
           <TableRow key={i} row={row} box={CURRENT_BOX} />
@@ -152,7 +153,17 @@ function CellBody({ item }) {
     return <EmojiEventsIcon fontSize="small" sx={{ mt: 0.5, color: 'text.disabled' }} aria-label={t('승리하면 받음')} />;
   }
   if (item.type !== 'BOX') {
-    return <Box sx={{ mt: 0.5 }}><Amount type={item.type} amount={item.amount} /></Box>;
+    return (
+      <Box sx={{ mt: 0.5 }}>
+        <Amount type={item.type} amount={item.amount} />
+        {/* 연승 보너스로 늘어난 칸 (0062) */}
+        {item.bonus > 0 && (
+          <Typography variant="caption" fontWeight={700} sx={{ display: 'block', color: '#ff6d00', lineHeight: 1.2 }}>
+            🔥+{item.bonus}%
+          </Typography>
+        )}
+      </Box>
+    );
   }
   return (
     <Stack alignItems="center" spacing={0.25} sx={{ mt: 0.25 }}>

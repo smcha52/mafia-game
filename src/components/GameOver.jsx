@@ -14,6 +14,7 @@ import ResultChips from './ResultChips';
 import RoleAvatar from './RoleAvatar';
 import { TEAMS, WINNERS, didWin, roleInfo } from '../lib/roles';
 import { finalRoles } from '../lib/api';
+import { streakBonus } from '../lib/level';
 import { t } from '../lib/i18n';
 
 // uid 를 넘기면 내가 이번 판에 얻은 XP 를 따로 보여준다
@@ -29,6 +30,8 @@ export default function GameOver({ roomId, winner, uid }) {
   // XP 는 0038 적용 뒤에만 온다
   const mine = rows?.find((r) => r.uid === uid);
   const hasXp = mine?.xpGained != null;
+  // 이번 판 연승 보너스. 0062 적용 전이면 streak 가 오지 않아 0 이다
+  const bonus = streakBonus(mine?.streak ?? 0);
 
   return (
     <Stack spacing={2}>
@@ -55,6 +58,11 @@ export default function GameOver({ roomId, winner, uid }) {
               ? t('직업 행동 {xp} XP × 2 (승리)', { xp: mine.xpBase })
               : t(winner === 'DRAW' ? '직업 행동 {xp} XP (무승부)' : '직업 행동 {xp} XP (패배)', { xp: mine.xpBase })}
           </Typography>
+          {bonus > 0 && (
+            <Typography variant="body2" fontWeight={700} sx={{ mt: 0.5, color: '#ff6d00' }}>
+              🔥 {t('{n}연승 보너스 · XP와 재화 +{pct}%', { n: mine.streak, pct: bonus })}
+            </Typography>
+          )}
         </Paper>
       )}
 

@@ -48,6 +48,7 @@ export default function RoleInfoDialog({ role, onClose }) {
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
               {t('게임이 끝날 때 이기면 2배, 지면 그대로 받습니다.')}
+              {' '}{t('2연승부터 10%씩 더 받아 11연승부터는 2배(+100%)입니다.')}
             </Typography>
           </DialogContent>
           <DialogActions>
