@@ -9,6 +9,7 @@ import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
 import { TEAMS, roleInfo } from '../lib/roles';
+import { t } from '../lib/i18n';
 
 // 비공개 방에서 죽은 사람에게만 보여주는 참가자 직업 (0050 dead_roles)
 // rows = [{ uid, nickname, role, team, alive }]
@@ -18,7 +19,7 @@ export default function DeadRoles({ rows, uid }) {
   return (
     <Stack spacing={1}>
       <Typography variant="subtitle2" color="text.secondary">
-        참가자 직업 — 사망자에게만 보입니다
+        {t('참가자 직업 — 사망자에게만 보입니다')}
       </Typography>
       <Paper sx={{ overflow: 'hidden' }}>
         <List disablePadding>
@@ -36,12 +37,12 @@ export default function DeadRoles({ rows, uid }) {
                       <span style={{ textDecoration: r.alive ? 'none' : 'line-through' }}>
                         {r.nickname}
                       </span>
-                      {r.uid === uid && <Chip size="small" label="나" />}
+                      {r.uid === uid && <Chip size="small" label={t('나')} />}
                       <Chip size="small" color={team.color} label={info.name} />
                     </Stack>
                   }
                 />
-                {!r.alive && <Chip size="small" variant="outlined" label="사망" />}
+                {!r.alive && <Chip size="small" variant="outlined" label={t('사망')} />}
               </ListItem>
             );
           })}

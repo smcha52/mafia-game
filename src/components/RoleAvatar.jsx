@@ -1,3 +1,5 @@
+import { t } from '../lib/i18n';
+
 // 직업별 캐릭터. 64x64 기준으로 그리고 size 로 키운다.
 // 이모지 대신 쓰면 어느 기기에서나 같은 모양으로 보인다.
 
@@ -272,7 +274,7 @@ export default function RoleAvatar({ role, size = 48, hidden = false }) {
       height={size}
       viewBox="0 0 64 64"
       role="img"
-      aria-label={role ?? '알 수 없는 직업'}
+      aria-label={role ?? t('알 수 없는 직업')}
       style={{ display: 'block', borderRadius: '50%' }}
     >
       <circle cx="32" cy="32" r="32" fill={bg} />

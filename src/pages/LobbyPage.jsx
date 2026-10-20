@@ -19,6 +19,7 @@ import RoomSettings from '../components/RoomSettings';
 import { useChat } from '../lib/useChat';
 import { useRoom } from '../lib/useRoom';
 import { kickPlayer, leaveRoom, setReady, startGame } from '../lib/api';
+import { t } from '../lib/i18n';
 
 const MIN_PLAYERS = 5;
 const MAX_PLAYERS = 15;
@@ -100,9 +101,9 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
   if (error || !room) {
     return (
       <Stack spacing={2} sx={{ maxWidth: 420, mx: 'auto' }}>
-        <Alert severity="error">{error || '방을 찾을 수 없습니다. 방장이 나갔을 수 있습니다.'}</Alert>
+        <Alert severity="error">{t(error || '방을 찾을 수 없습니다. 방장이 나갔을 수 있습니다.')}</Alert>
         <Button variant="outlined" onClick={onLeave}>
-          첫 화면으로
+          {t('첫 화면으로')}
         </Button>
       </Stack>
     );
@@ -122,14 +123,14 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Box>
             <Typography variant="body2" color="text.secondary">
-              방 코드
+              {t('방 코드')}
             </Typography>
             <Typography variant="h5" sx={{ letterSpacing: '0.25em', fontFamily: 'monospace' }}>
               {room.code}
             </Typography>
           </Box>
-          <Tooltip title={copied ? '복사됨' : '코드 복사'}>
-            <IconButton onClick={handleCopy} aria-label="방 코드 복사">
+          <Tooltip title={t(copied ? '복사됨' : '코드 복사')}>
+            <IconButton onClick={handleCopy} aria-label={t('방 코드 복사')}>
               <ContentCopyIcon />
             </IconButton>
           </Tooltip>
@@ -146,11 +147,11 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
       />
 
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="h6">참가자</Typography>
+        <Typography variant="h6">{t('참가자')}</Typography>
         <Chip
           size="small"
           color={total >= MIN_PLAYERS ? 'success' : 'default'}
-          label={`${readyCount} / ${total}명 준비`}
+          label={t('{ready} / {total}명 준비', { ready: readyCount, total })}
         />
       </Stack>
 
@@ -165,7 +166,7 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
 
       {total < MIN_PLAYERS && (
         <Alert severity="info">
-          {MIN_PLAYERS - total}명이 더 필요합니다. (최소 {MIN_PLAYERS}명 · 최대 {MAX_PLAYERS}명)
+          {t('{n}명이 더 필요합니다. (최소 {min}명 · 최대 {max}명)', { n: MIN_PLAYERS - total, min: MIN_PLAYERS, max: MAX_PLAYERS })}
         </Alert>
       )}
 
@@ -174,16 +175,16 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
           severity="warning"
           action={
             <Button color="inherit" size="small" onClick={() => window.location.reload()}>
-              새로고침
+              {t('새로고침')}
             </Button>
           }
         >
-          이 브라우저의 로그인 정보가 참가자 목록과 맞지 않습니다.
-          새로고침해도 같으면 나갔다가 다시 입장해 주세요.
+          {t('이 브라우저의 로그인 정보가 참가자 목록과 맞지 않습니다.')}
+          {' '}{t('새로고침해도 같으면 나갔다가 다시 입장해 주세요.')}
         </Alert>
       )}
 
-      {actionError && <Alert severity="error">{actionError}</Alert>}
+      {actionError && <Alert severity="error">{t(actionError)}</Alert>}
 
       <Stack spacing={1.5}>
         {isHost ? (
@@ -194,7 +195,7 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
             loading={busy === 'start'}
             onClick={() => run('start', () => startGame(roomId))}
           >
-            게임 시작
+            {t('게임 시작')}
           </Button>
         ) : (
           <Button
@@ -204,7 +205,7 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
             loading={busy === 'ready'}
             onClick={() => run('ready', () => setReady(roomId, !me?.is_ready))}
           >
-            {me?.is_ready ? '준비 취소' : '준비 완료'}
+            {t(me?.is_ready ? '준비 취소' : '준비 완료')}
           </Button>
         )}
 
@@ -218,7 +219,7 @@ export default function LobbyPage({ roomId, uid, onLeave, onRemoved, onStarted }
             onLeave();
           })}
         >
-          나가기
+          {t('나가기')}
         </Button>
       </Stack>
     </Stack>

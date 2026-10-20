@@ -17,12 +17,13 @@ import StarIcon from '@mui/icons-material/Star';
 
 import { Wallet } from './AccountBar';
 import { exchangeCurrency } from '../lib/api';
+import { localized, t } from '../lib/i18n';
 
-const CURRENCY = {
+const CURRENCY = localized({
   STAR: { key: 'stars', label: '별', icon: <StarIcon fontSize="small" sx={{ color: '#f5b301' }} /> },
   GEM: { key: 'gems', label: '보석', icon: <DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} /> },
   COIN: { key: 'coins', label: '코인', icon: <MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} /> },
-};
+});
 
 // 교환 비율 (0048 exchange_currency)
 const RATES = [
@@ -66,7 +67,7 @@ function RateCard({ rate, times, wallet, busy, disabled, onExchange }) {
           onClick={() => onExchange(rate)}
           sx={{ flexShrink: 0 }}
         >
-          교환
+          {t('교환')}
         </Button>
       </Stack>
     </Paper>
@@ -102,14 +103,14 @@ export default function ExchangeDialog({ open, onClose, onExchanged, wallet }) {
     <Dialog open={open} onClose={onClose} fullScreen>
       <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', px: 2, py: 2 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-          <IconButton onClick={onClose} aria-label="뒤로">
+          <IconButton onClick={onClose} aria-label={t('뒤로')}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flex: 1 }}>재화 교환소</Typography>
+          <Typography variant="h6" sx={{ flex: 1 }}>{t('재화 교환소')}</Typography>
           <Wallet {...wallet} />
         </Stack>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{t(error)}</Alert>}
 
         <Stack spacing={1}>
           {RATES.map((rate) => (
@@ -131,11 +132,11 @@ export default function ExchangeDialog({ open, onClose, onExchanged, wallet }) {
           fullWidth
           color="primary"
           onChange={(_, v) => v && setTimes(v)}
-          aria-label="교환 배수"
+          aria-label={t('교환 배수')}
           sx={{ mt: 2 }}
         >
-          {TIMES.map((t) => (
-            <ToggleButton key={t} value={t}>x{t}</ToggleButton>
+          {TIMES.map((n) => (
+            <ToggleButton key={n} value={n}>x{n}</ToggleButton>
           ))}
         </ToggleButtonGroup>
       </Box>

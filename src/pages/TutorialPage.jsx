@@ -25,6 +25,7 @@ import {
   NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, SKIP_VOTE, SUBMIT_LABEL, TEAMS, TEAM_RESULT, WINNERS, didWin,
   roleInfo,
 } from '../lib/roles';
+import { t } from '../lib/i18n';
 
 // 로그인 직후 봇 4명과 하는 연습 게임. 서버 없이 이 화면 안에서만 진행된다.
 // 판마다 직업이 정해져 있고, 봇은 사람이 반드시 이기도록 움직인다.
@@ -70,7 +71,7 @@ function makePlayers(round, nickname) {
   const roles = SETUPS[round];
   return [ME, ...BOTS].map((uid, i) => ({
     uid,
-    nickname: uid === ME ? nickname : `봇${i}`,
+    nickname: uid === ME ? nickname : t('봇{n}', { n: i }),
     role: roles[uid],
     alive: true,
   }));
@@ -166,7 +167,7 @@ function tally(votes) {
 function TipBox({ round, children }) {
   return (
     <Alert severity="info" icon={<SchoolIcon />}>
-      <AlertTitle sx={{ mb: 0.5 }}>튜토리얼 {round} / {TOTAL_ROUNDS}판</AlertTitle>
+      <AlertTitle sx={{ mb: 0.5 }}>{t('튜토리얼 {round} / {total}판', { round, total: TOTAL_ROUNDS })}</AlertTitle>
       {children}
     </Alert>
   );
@@ -189,10 +190,10 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
   // 어느 화면에서든 튜토리얼을 끝내고 첫 화면으로 간다
   const skipButton = canSkip && (
     <Button color="inherit" startIcon={<SkipNextIcon />} onClick={onSkip}>
-      튜토리얼 건너뛰기
+      {t('튜토리얼 건너뛰기')}
     </Button>
   );
-  const nickOf = (id) => players.find((p) => p.uid === id)?.nickname ?? '알 수 없음';
+  const nickOf = (id) => players.find((p) => p.uid === id)?.nickname ?? t('알 수 없음');
 
   function startRound(n) {
     setRound(n);
@@ -253,27 +254,27 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
     return (
       <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
         <Alert severity="info" icon={<SchoolIcon />}>
-          <AlertTitle sx={{ mb: 0.5 }}>튜토리얼</AlertTitle>
-          가입을 축하합니다! 봇 4명과 함께 연습 게임을 {TOTAL_ROUNDS}판 해 봅니다.
-          봇들이 먼저 들어와 있고, 당신이 방장입니다.
+          <AlertTitle sx={{ mb: 0.5 }}>{t('튜토리얼')}</AlertTitle>
+          {t('가입을 축하합니다! 봇 4명과 함께 연습 게임을 {total}판 해 봅니다.', { total: TOTAL_ROUNDS })}
+          {' '}{t('봇들이 먼저 들어와 있고, 당신이 방장입니다.')}
         </Alert>
 
         <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Typography variant="h6">참가자</Typography>
-          <Chip size="small" color="success" label={`${lobby.length}명`} />
+          <Typography variant="h6">{t('참가자')}</Typography>
+          <Chip size="small" color="success" label={t('{n}명', { n: lobby.length })} />
         </Stack>
 
         <PlayerList players={lobby} uid={ME} />
 
         <Paper sx={{ p: 2.5, textAlign: 'center' }}>
-          <Typography variant="h6">게임을 시작 하세요</Typography>
+          <Typography variant="h6">{t('게임을 시작 하세요')}</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-            방장은 모두 준비되면 게임을 시작할 수 있습니다.
+            {t('방장은 모두 준비되면 게임을 시작할 수 있습니다.')}
           </Typography>
         </Paper>
 
         <Button variant="contained" size="large" onClick={() => startRound(1)}>
-          게임 시작
+          {t('게임 시작')}
         </Button>
 
         {skipButton}
@@ -295,8 +296,8 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             {last
-              ? '튜토리얼을 모두 마쳤습니다. 이제 다른 사람들과 게임해 보세요!'
-              : `튜토리얼 ${round} / ${TOTAL_ROUNDS}판 승리! 다음 판에서는 다른 직업을 맡습니다.`}
+              ? t('튜토리얼을 모두 마쳤습니다. 이제 다른 사람들과 게임해 보세요!')
+              : t('튜토리얼 {round} / {total}판 승리! 다음 판에서는 다른 직업을 맡습니다.', { round, total: TOTAL_ROUNDS })}
           </Typography>
         </Paper>
 
@@ -315,7 +316,7 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
                         <span style={{ textDecoration: p.alive ? 'none' : 'line-through' }}>
                           {p.nickname}
                         </span>
-                        {p.uid === ME && <Chip size="small" label="나" />}
+                        {p.uid === ME && <Chip size="small" label={t('나')} />}
                         <Chip size="small" color={team.color} label={roleInfo(p.role).name} />
                       </Stack>
                     }
@@ -332,7 +333,7 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
           size="large"
           onClick={() => (last ? onDone() : startRound(round + 1))}
         >
-          {last ? '튜토리얼 마치기' : `${round + 1}판 시작`}
+          {last ? t('튜토리얼 마치기') : t('{n}판 시작', { n: round + 1 })}
         </Button>
 
         {!last && skipButton}
@@ -354,20 +355,20 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
           <Stack direction="row" spacing={1} alignItems="center">
             <Box sx={{ fontSize: 26, lineHeight: 1 }}>{isNight ? '🌙' : isResult ? '⚖️' : '☀️'}</Box>
             <Box>
-              <Typography variant="h6">{isNight ? '밤' : isResult ? '투표 결과' : '낮'}</Typography>
+              <Typography variant="h6">{t(isNight ? '밤' : isResult ? '투표 결과' : '낮')}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {day}일차
+                {t('{day}일차', { day })}
               </Typography>
             </Box>
           </Stack>
           <Stack direction="row" spacing={0.75} alignItems="center">
-            <Chip size="small" color="primary" label={`튜토리얼 ${round}/${TOTAL_ROUNDS}`} />
-            <Chip size="small" label={`생존 ${aliveCount} / ${players.length}`} />
+            <Chip size="small" color="primary" label={t('튜토리얼 {round}/{total}', { round, total: TOTAL_ROUNDS })} />
+            <Chip size="small" label={t('생존 {alive} / {total}', { alive: aliveCount, total: players.length })} />
           </Stack>
         </Stack>
       </Paper>
 
-      <TipBox round={round}>{isResult ? RESULT_TIP : TIPS[round][stage]}</TipBox>
+      <TipBox round={round}>{t(isResult ? RESULT_TIP : TIPS[round][stage])}</TipBox>
 
       <RoleCard view={{ role: me.role, team: teamOf(me.role), alive: me.alive }} />
 
@@ -377,8 +378,8 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
       {stage === 'DAY' && (
         <Alert severity={deaths.length ? 'error' : 'success'}>
           {deaths.length
-            ? `간밤에 ${deaths.map(nickOf).join(', ')}님이 사망했습니다.`
-            : '간밤에 아무도 죽지 않았습니다.'}
+            ? t('간밤에 {names}님이 사망했습니다.', { names: deaths.map(nickOf).join(', ') })
+            : t('간밤에 아무도 죽지 않았습니다.')}
         </Alert>
       )}
 
@@ -389,27 +390,29 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
             {vote.executed ? (
               <Alert severity="error" icon={false}>
                 <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-                  <strong>{nickOf(vote.executed)}</strong>
-                  <span>님이</span>
-                  <Chip size="small" label={`${vote.rows[0].count}표`} />
-                  <span>로 처형되었습니다.</span>
+                  <span>
+                    {t('{name}님이 {votes}로 처형되었습니다.', {
+                      name: <strong>{nickOf(vote.executed)}</strong>,
+                      votes: <Chip size="small" label={t('{n}표', { n: vote.rows[0].count })} />,
+                    })}
+                  </span>
                   {(() => {
-                    const t = TEAM_RESULT[teamOf(players.find((p) => p.uid === vote.executed).role)];
-                    return <Chip size="small" color={t.color} label={t.label} />;
+                    const team = TEAM_RESULT[teamOf(players.find((p) => p.uid === vote.executed).role)];
+                    return <Chip size="small" color={team.color} label={team.label} />;
                   })()}
                 </Stack>
               </Alert>
             ) : (
               <Alert severity="info">
                 {vote.skipped
-                  ? `건너뛰기 ${vote.skipVotes}표로 아무도 처형되지 않았습니다.`
+                  ? t('건너뛰기 {n}표로 아무도 처형되지 않았습니다.', { n: vote.skipVotes })
                   : vote.tie
-                    ? '투표가 동점이라 아무도 처형되지 않았습니다.'
-                    : '아무도 처형되지 않았습니다.'}
+                    ? t('투표가 동점이라 아무도 처형되지 않았습니다.')
+                    : t('아무도 처형되지 않았습니다.')}
               </Alert>
             )}
 
-            <Typography variant="subtitle2" color="text.secondary">득표 수</Typography>
+            <Typography variant="subtitle2" color="text.secondary">{t('득표 수')}</Typography>
             <Stack spacing={0.75}>
               {vote.rows.map((v) => (
                 <Stack key={v.uid} direction="row" alignItems="center" justifyContent="space-between">
@@ -417,18 +420,18 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
                   <Chip
                     size="small"
                     color={v.uid === vote.executed ? 'error' : 'default'}
-                    label={`${v.count}표`}
+                    label={t('{n}표', { n: v.count })}
                     sx={{ fontVariantNumeric: 'tabular-nums' }}
                   />
                 </Stack>
               ))}
               {vote.skipVotes > 0 && (
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography color="text.secondary">건너뛰기</Typography>
+                  <Typography color="text.secondary">{t('건너뛰기')}</Typography>
                   <Chip
                     size="small"
                     color={vote.skipped ? 'info' : 'default'}
-                    label={`${vote.skipVotes}표`}
+                    label={t('{n}표', { n: vote.skipVotes })}
                     sx={{ fontVariantNumeric: 'tabular-nums' }}
                   />
                 </Stack>
@@ -436,7 +439,7 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
             </Stack>
 
             <Button variant="contained" size="large" onClick={afterResult}>
-              다음
+              {t('다음')}
             </Button>
           </Stack>
         </Paper>
@@ -451,20 +454,20 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
               <Stack alignItems="center">
                 <RoleAvatar role={me.role} size={52} />
               </Stack>
-              <Typography sx={{ mt: 1 }}>밤이 지나가길 기다리는 중…</Typography>
+              <Typography sx={{ mt: 1 }}>{t('밤이 지나가길 기다리는 중…')}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                오늘 밤 당신이 할 일은 없습니다.
+                {t('오늘 밤 당신이 할 일은 없습니다.')}
               </Typography>
               <Button variant="contained" size="large" sx={{ mt: 2 }} fullWidth onClick={endNight}>
-                아침 맞이하기
+                {t('아침 맞이하기')}
               </Button>
             </Paper>
           ) : (
             <>
               <Typography variant="subtitle1">
                 {isNight
-                  ? (NIGHT_PROMPT[me.role] ?? '대상을 고르세요')
-                  : '처형할 사람에게 투표하세요'}
+                  ? (NIGHT_PROMPT[me.role] ?? t('대상을 고르세요'))
+                  : t('처형할 사람에게 투표하세요')}
               </Typography>
 
               <PlayerPicker
@@ -473,7 +476,7 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
                 value={pick}
                 onChange={setPick}
                 excludeSelf={isNight && NO_SELF_TARGET.has(me.role)}
-                skip={isNight ? null : { value: SKIP_VOTE, label: '아무도 죽지 않음: 건너뛰기' }}
+                skip={isNight ? null : { value: SKIP_VOTE, label: t('아무도 죽지 않음: 건너뛰기') }}
               />
 
               <Button
@@ -482,7 +485,7 @@ export default function TutorialPage({ nickname, canSkip, onDone, onSkip }) {
                 disabled={!pick}
                 onClick={isNight ? endNight : endDay}
               >
-                {isNight ? (SUBMIT_LABEL[me.role] ?? '확정') : '투표 확정'}
+                {isNight ? (SUBMIT_LABEL[me.role] ?? t('확정')) : t('투표 확정')}
               </Button>
             </>
           )}

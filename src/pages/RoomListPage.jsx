@@ -12,6 +12,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 
 import { joinRoom, listRooms } from '../lib/api';
 import { ruleLabel } from '../lib/roomRules';
+import { t } from '../lib/i18n';
 
 const MAX_PLAYERS = 15;
 
@@ -22,7 +23,7 @@ function RuleChips({ room }) {
   if (!age && !level) return null;
   return (
     <Stack direction="row" spacing={0.5} sx={{ pt: 0.5 }}>
-      {age && <Chip size="small" variant="outlined" label={`나이 ${age}`} />}
+      {age && <Chip size="small" variant="outlined" label={t('나이 {rule}', { rule: age })} />}
       {level && <Chip size="small" variant="outlined" label={`Lv ${level}`} />}
     </Stack>
   );
@@ -78,7 +79,7 @@ export default function RoomListPage({ nickname, onEntered, onBack }) {
     <Stack spacing={2.5} sx={{ maxWidth: 420, mx: 'auto' }}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Button color="inherit" startIcon={<ArrowBackIcon />} onClick={onBack} disabled={busy !== ''}>
-          처음으로
+          {t('처음으로')}
         </Button>
         <Button
           variant="outlined"
@@ -86,18 +87,18 @@ export default function RoomListPage({ nickname, onEntered, onBack }) {
           onClick={() => load(false)}
           disabled={loading || busy !== ''}
         >
-          새로고침
+          {t('새로고침')}
         </Button>
       </Stack>
 
       <Stack spacing={0.5}>
-        <Typography variant="h6">방 찾기</Typography>
+        <Typography variant="h6">{t('방 찾기')}</Typography>
         <Typography variant="body2" color="text.secondary">
-          대기 중인 방을 누르면 <strong>{nickname}</strong> 닉네임으로 입장합니다.
+          {t('대기 중인 방을 누르면 {name} 닉네임으로 입장합니다.', { name: <strong>{nickname}</strong> })}
         </Typography>
       </Stack>
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <Alert severity="error">{t(error)}</Alert>}
 
       {loading ? (
         <Stack alignItems="center" sx={{ py: 6 }}>
@@ -105,7 +106,7 @@ export default function RoomListPage({ nickname, onEntered, onBack }) {
         </Stack>
       ) : rooms.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary">방이 없음</Typography>
+          <Typography color="text.secondary">{t('방이 없음')}</Typography>
         </Paper>
       ) : (
         <Stack spacing={1}>
@@ -119,7 +120,7 @@ export default function RoomListPage({ nickname, onEntered, onBack }) {
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
                   <Stack spacing={0.25} sx={{ minWidth: 0 }}>
                     <Typography noWrap>
-                      <strong>{r.host ?? '알 수 없음'}</strong>님의 방
+                      {t('{name}님의 방', { name: <strong>{r.host ?? t('알 수 없음')}</strong> })}
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ letterSpacing: '0.2em' }}>
                       {r.code}
@@ -131,7 +132,7 @@ export default function RoomListPage({ nickname, onEntered, onBack }) {
                   ) : (
                     <Chip
                       size="small"
-                      label={`${r.players} / ${MAX_PLAYERS}명`}
+                      label={t('{n} / {max}명', { n: r.players, max: MAX_PLAYERS })}
                       sx={{ fontVariantNumeric: 'tabular-nums' }}
                     />
                   )}

@@ -12,6 +12,7 @@ import RoomListPage from './RoomListPage';
 import CreateRoomDialog from '../components/CreateRoomDialog';
 import DailyRewards from '../components/DailyRewards';
 import { createRoom, joinRoom, quickJoin } from '../lib/api';
+import { t } from '../lib/i18n';
 
 // 로그인한 닉네임으로 방에 들어간다
 // hint 가 있으면 맨 아래에 안내 문구로 보여준다 (튜토리얼 뒤 안내)
@@ -77,15 +78,15 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
   return (
     <Stack alignItems="center" spacing={3} sx={{ maxWidth: 420, mx: 'auto' }}>
       <Stack alignItems="center" spacing={0.5}>
-        <Typography variant="h5">마피아 게임</Typography>
+        <Typography variant="h5">{t('마피아 게임')}</Typography>
         <Typography variant="body2" color="text.secondary">
-          5~15명이 함께하는 온라인 추리 게임
+          {t('5~15명이 함께하는 온라인 추리 게임')}
         </Typography>
       </Stack>
 
       {notice && (
         <Alert severity="warning" onClose={onCloseNotice} sx={{ width: '100%' }}>
-          {notice}
+          {t(notice)}
         </Alert>
       )}
 
@@ -99,7 +100,7 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
             loading={busy === 'quick'}
             onClick={() => run('quick', () => quickJoin(nickname))}
           >
-            빠른 시작
+            {t('빠른 시작')}
           </Button>
 
           <Button
@@ -112,7 +113,7 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
               setCreating(true);
             }}
           >
-            방 만들기
+            {t('방 만들기')}
           </Button>
 
           <Button
@@ -124,19 +125,19 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
               setFinding(true);
             }}
           >
-            방 찾기
+            {t('방 찾기')}
           </Button>
 
           <DailyRewards onRewarded={onRewarded} />
 
-          <Divider>또는</Divider>
+          <Divider>{t('또는')}</Divider>
 
           <TextField
-            label="방 코드"
+            label={t('방 코드')}
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             slotProps={{ htmlInput: { maxLength: 6, style: { letterSpacing: '0.3em' } } }}
-            helperText="6자리 코드"
+            helperText={t('6자리 코드')}
             fullWidth
             autoComplete="off"
           />
@@ -148,10 +149,10 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
             loading={busy === 'join'}
             onClick={() => run('join', () => joinRoom(code.trim(), nickname))}
           >
-            입장하기
+            {t('입장하기')}
           </Button>
 
-          {error && <Alert severity="error">{error}</Alert>}
+          {error && <Alert severity="error">{t(error)}</Alert>}
         </Stack>
       </Paper>
 
@@ -165,7 +166,7 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
 
       {hint && (
         <Alert severity="success" sx={{ width: '100%' }}>
-          {hint}
+          {t(hint)}
         </Alert>
       )}
 
@@ -177,10 +178,10 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
           loading={reloading}
           onClick={hardReload}
         >
-          새로고침
+          {t('새로고침')}
         </Button>
         <Typography variant="caption" color="text.secondary" textAlign="center">
-          눌러 보세요. 새로운 기능을 사용할 수 있을지도 모릅니다.
+          {t('눌러 보세요. 새로운 기능을 사용할 수 있을지도 모릅니다.')}
         </Typography>
       </Stack>
     </Stack>

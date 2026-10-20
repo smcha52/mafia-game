@@ -1,5 +1,6 @@
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
+import { t } from '../lib/i18n';
 
 // 승패 화면에서 한 사람의 생사와 승패. win 이 null 이면 무승부
 export default function ResultChips({ alive, win }) {
@@ -9,13 +10,13 @@ export default function ResultChips({ alive, win }) {
         size="small"
         variant="outlined"
         color={alive ? 'success' : 'default'}
-        label={alive ? '생존' : '사망'}
+        label={t(alive ? '생존' : '사망')}
       />
       <Chip
         size="small"
         color={win === null ? 'default' : win ? 'primary' : 'default'}
         variant={win ? 'filled' : 'outlined'}
-        label={win === null ? '무승부' : win ? '승리' : '패배'}
+        label={t(win === null ? '무승부' : win ? '승리' : '패배')}
       />
     </Stack>
   );

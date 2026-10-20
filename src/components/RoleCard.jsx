@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
 import { TEAMS, roleInfo } from '../lib/roles';
+import { t } from '../lib/i18n';
 
 export default function RoleCard({ view }) {
   if (!view) return null;
@@ -21,7 +22,7 @@ export default function RoleCard({ view }) {
           <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
             <Typography variant="h6">{info.name}</Typography>
             <Chip size="small" color={team.color} label={team.name} />
-            {!view.alive && <Chip size="small" label="사망" />}
+            {!view.alive && <Chip size="small" label={t('사망')} />}
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {info.desc}
@@ -30,7 +31,7 @@ export default function RoleCard({ view }) {
           {mates.length > 0 && (
             <Box sx={{ mt: 1.5 }}>
               <Typography variant="caption" color="text.secondary">
-                마피아 진영 — 당신에게만 보입니다
+                {t('마피아 진영 — 당신에게만 보입니다')}
               </Typography>
               <Stack direction="row" spacing={0.75} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
                 {mates.map((m) => (

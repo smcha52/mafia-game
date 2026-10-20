@@ -1,3 +1,5 @@
+import { t } from './i18n';
+
 // 방 설정(나이 · 레벨 제한)의 범위와 표시 문구. 서버 검사는 0044_room_options.sql
 export const AGE_MIN = 0;
 export const AGE_MAX = 25;
@@ -10,13 +12,13 @@ export const LEVEL_MAX = 50;
 export function ruleLabel(mode, a, b, unit) {
   switch (mode) {
     case 'ALL':
-      return '전체';
+      return t('전체');
     case 'PLUS':
-      return `${a}${unit} 이상`;
+      return t('{a}{unit} 이상', { a, unit: t(unit) });
     case 'MINUS':
-      return `${a}${unit} 미만`;
+      return t('{a}{unit} 미만', { a, unit: t(unit) });
     case 'RANGE':
-      return `${a}~${b}${unit}`;
+      return t('{a}~{b}{unit}', { a, b, unit: t(unit) });
     default:
       return '';
   }

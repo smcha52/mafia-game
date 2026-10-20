@@ -15,6 +15,7 @@ import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 
 import { AGE_MAX, AGE_MIN, AGE_RANGE_MAX, LEVEL_MAX, LEVEL_MIN, ruleLabel } from '../lib/roomRules';
+import { t } from '../lib/i18n';
 
 // 나이 바로가기. +N 은 N세 이상, -N 은 N세 미만
 const AGE_PRESETS = ['+7', '-7', '+13', '-13', '+16', '-16', '+19', '-19'];
@@ -32,18 +33,18 @@ function Stepper({ label, value, min, max, unit, onChange }) {
       )}
       <IconButton
         size="small"
-        aria-label={`${label ?? ''} 1 내리기`}
+        aria-label={t('{label} 1 내리기', { label: label ?? '' })}
         disabled={value <= min}
         onClick={() => onChange(value - 1)}
       >
         <KeyboardArrowLeftIcon />
       </IconButton>
       <Typography fontWeight={700} sx={{ minWidth: 56, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>
-        {value}{unit}
+        {value}{t(unit)}
       </Typography>
       <IconButton
         size="small"
-        aria-label={`${label ?? ''} 1 올리기`}
+        aria-label={t('{label} 1 올리기', { label: label ?? '' })}
         disabled={value >= max}
         onClick={() => onChange(value + 1)}
       >
@@ -67,8 +68,8 @@ function CustomRule({ choice, sign, onSign, value, onValue, range, onRange, min,
             value={sign}
             onChange={(_, v) => v && onSign(v)}
           >
-            <ToggleButton value="+" sx={{ px: 2 }}>+ 이상</ToggleButton>
-            <ToggleButton value="-" sx={{ px: 2 }}>- 미만</ToggleButton>
+            <ToggleButton value="+" sx={{ px: 2 }}>{t('+ 이상')}</ToggleButton>
+            <ToggleButton value="-" sx={{ px: 2 }}>{t('- 미만')}</ToggleButton>
           </ToggleButtonGroup>
           <Stepper
             value={Math.max(lo, value)}
@@ -96,7 +97,7 @@ function CustomRule({ choice, sign, onSign, value, onValue, range, onRange, min,
       <Stack spacing={1} sx={{ mt: 1.5 }}>
         <Stack direction="row" alignItems="center" flexWrap="wrap" useFlexGap columnGap={1}>
           <Stepper
-            label="시작"
+            label={t('시작')}
             value={range[0]}
             min={min}
             max={range[1]}
@@ -104,7 +105,7 @@ function CustomRule({ choice, sign, onSign, value, onValue, range, onRange, min,
             onChange={(v) => onRange([v, range[1]])}
           />
           <Stepper
-            label="끝"
+            label={t('끝')}
             value={range[1]}
             min={range[0]}
             max={rangeMax}
@@ -159,16 +160,16 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
   const age = toRule(ageChoice, ageSign, ageValue, ageRange, AGE_MIN);
   const level = toRule(levelChoice, levelSign, levelValue, levelRange, LEVEL_MIN);
 
-  const summary = (rule, unit) => ruleLabel(rule.mode, rule.a, rule.b, unit) || '설정 안 함';
+  const summary = (rule, unit) => ruleLabel(rule.mode, rule.a, rule.b, unit) || t('설정 안 함');
 
   return (
     <Dialog open={open} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
-      <DialogTitle>방 설정</DialogTitle>
+      <DialogTitle>{t('방 설정')}</DialogTitle>
       <DialogContent>
         <Stack spacing={3}>
           <div>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              나이 — {summary(age, '세')}
+              {t('나이')} — {summary(age, '세')}
             </Typography>
             <ToggleButtonGroup
               size="small"
@@ -177,13 +178,13 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
               onChange={(_, v) => v && setAgeChoice(v)}
               sx={toggleSx}
             >
-              <ToggleButton value="NONE">설정 안 하기</ToggleButton>
+              <ToggleButton value="NONE">{t('설정 안 하기')}</ToggleButton>
               <ToggleButton value="ALL">ALL</ToggleButton>
               {AGE_PRESETS.map((p) => (
                 <ToggleButton key={p} value={p}>{p}</ToggleButton>
               ))}
-              <ToggleButton value="CUSTOM">나이 조절</ToggleButton>
-              <ToggleButton value="RANGE">범위 설정</ToggleButton>
+              <ToggleButton value="CUSTOM">{t('나이 조절')}</ToggleButton>
+              <ToggleButton value="RANGE">{t('범위 설정')}</ToggleButton>
             </ToggleButtonGroup>
             <CustomRule
               choice={ageChoice}
@@ -202,7 +203,7 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
 
           <div>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              레벨 제한 — {summary(level, '레벨')}
+              {t('레벨 제한')} — {summary(level, '레벨')}
             </Typography>
             <ToggleButtonGroup
               size="small"
@@ -211,9 +212,9 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
               onChange={(_, v) => v && setLevelChoice(v)}
               sx={toggleSx}
             >
-              <ToggleButton value="NONE">설정 안 하기</ToggleButton>
-              <ToggleButton value="CUSTOM">레벨 조절</ToggleButton>
-              <ToggleButton value="RANGE">범위 설정</ToggleButton>
+              <ToggleButton value="NONE">{t('설정 안 하기')}</ToggleButton>
+              <ToggleButton value="CUSTOM">{t('레벨 조절')}</ToggleButton>
+              <ToggleButton value="RANGE">{t('범위 설정')}</ToggleButton>
             </ToggleButtonGroup>
             <CustomRule
               choice={levelChoice}
@@ -231,7 +232,7 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
 
           <div>
             <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1 }}>
-              공개 설정 (필수)
+              {t('공개 설정 (필수)')}
             </Typography>
             <ToggleButtonGroup
               exclusive
@@ -240,24 +241,24 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
               value={isPublic}
               onChange={(_, v) => v !== null && setIsPublic(v)}
             >
-              <ToggleButton value={true}>공개</ToggleButton>
-              <ToggleButton value={false}>비공개</ToggleButton>
+              <ToggleButton value={true}>{t('공개')}</ToggleButton>
+              <ToggleButton value={false}>{t('비공개')}</ToggleButton>
             </ToggleButtonGroup>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
               {isPublic === null
-                ? '공개 또는 비공개를 골라야 방을 만들 수 있습니다.'
+                ? t('공개 또는 비공개를 골라야 방을 만들 수 있습니다.')
                 : isPublic
-                  ? '빠른 시작과 방 찾기에 나옵니다.'
-                  : '방 코드로만 들어올 수 있습니다.'}
+                  ? t('빠른 시작과 방 찾기에 나옵니다.')
+                  : t('방 코드로만 들어올 수 있습니다.')}
             </Typography>
           </div>
 
-          {error && <Alert severity="error">{error}</Alert>}
+          {error && <Alert severity="error">{t(error)}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button color="inherit" onClick={onClose} disabled={busy}>
-          취소
+          {t('취소')}
         </Button>
         <Button
           variant="contained"
@@ -265,7 +266,7 @@ export default function CreateRoomDialog({ open, busy, error, onClose, onCreate 
           loading={busy}
           onClick={() => onCreate({ isPublic, age, level })}
         >
-          방 만들기
+          {t('방 만들기')}
         </Button>
       </DialogActions>
     </Dialog>

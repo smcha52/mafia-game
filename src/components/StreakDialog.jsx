@@ -16,6 +16,7 @@ import { DayCell } from './AttendanceDialog';
 import { OpenDialog } from './DailyRewards';
 import { untilText } from './QuestDialog';
 import { claimStreak, myStreak } from '../lib/api';
+import { t } from '../lib/i18n';
 
 // 출석 아래 연속 출석 버튼으로 여는 화면. 하루에 한 번 출석하고, 하루라도 빠지면 0일로 돌아간다
 // 보상은 출석과 같은 30일 표를 쓰고, 연속 일수만큼 칸이 채워진다
@@ -61,14 +62,14 @@ export default function StreakDialog({ open, onClose, onRewarded, wallet }) {
     <Dialog open={open} onClose={onClose} fullScreen>
       <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', px: 2, py: 2 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-          <IconButton onClick={onClose} aria-label="뒤로">
+          <IconButton onClick={onClose} aria-label={t('뒤로')}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flex: 1 }}>연속 출석</Typography>
+          <Typography variant="h6" sx={{ flex: 1 }}>{t('연속 출석')}</Typography>
           <Wallet {...wallet} />
         </Stack>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{t(error)}</Alert>}
 
         {!data ? (
           !error && (
@@ -84,18 +85,18 @@ export default function StreakDialog({ open, onClose, onRewarded, wallet }) {
                   sx={{ fontSize: 40, color: data.streak > 0 ? '#ff6d00' : 'text.disabled' }}
                 />
                 <Typography variant="h4" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {data.streak.toLocaleString()}일
+                  {t('{n}일', { n: data.streak.toLocaleString() })}
                 </Typography>
-                <Typography color="text.secondary">연속 출석</Typography>
+                <Typography color="text.secondary">{t('연속 출석')}</Typography>
               </Stack>
             </Paper>
             <Typography variant="caption" color="text.secondary">
               {data.checked
-                ? `다음 출석까지 ${untilText(data.next)} · 다음 날 안에 출석하지 않으면 0일로 돌아갑니다.`
+                ? t('다음 출석까지 {time} · 다음 날 안에 출석하지 않으면 0일로 돌아갑니다.', { time: untilText(data.next) })
                 : data.streak > 0
-                  ? `${untilText(data.next)} 안에 출석하지 않으면 0일로 돌아갑니다.`
-                  : '하루에 한 번 출석합니다. 하루라도 빠지면 0일로 돌아갑니다.'}
-              {' '}보상은 출석과 같고, 30일을 채우면 1일 보상부터 다시 받습니다.
+                  ? t('{time} 안에 출석하지 않으면 0일로 돌아갑니다.', { time: untilText(data.next) })
+                  : t('하루에 한 번 출석합니다. 하루라도 빠지면 0일로 돌아갑니다.')}
+              {' '}{t('보상은 출석과 같고, 30일을 채우면 1일 보상부터 다시 받습니다.')}
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
               {data.days.map((d) => (
@@ -109,7 +110,7 @@ export default function StreakDialog({ open, onClose, onRewarded, wallet }) {
               loading={busy}
               onClick={claim}
             >
-              {data.checked ? '오늘 출석 완료' : '출석하기'}
+              {t(data.checked ? '오늘 출석 완료' : '출석하기')}
             </Button>
           </Stack>
         )}

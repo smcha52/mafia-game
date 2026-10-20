@@ -1,5 +1,8 @@
+import { localized } from './i18n';
+
 // 직업 표시 정보. 서버의 role 코드와 1:1로 대응한다.
-export const ROLES = {
+// localized 로 감싼 표는 글자를 읽을 때 고른 언어로 바뀐다 (i18n.js)
+export const ROLES = localized({
   CITIZEN:   { name: '시민',   emoji: '🧑', desc: '특별한 능력이 없습니다. 토론과 투표로 마피아를 찾아내세요.' },
   MAFIA:     { name: '마피아', emoji: '🔪', desc: '밤마다 동료들과 함께 제거할 대상을 고릅니다.' },
   POLICE:    { name: '경찰',   emoji: '🔎', desc: '밤마다 한 명의 진영을 조사합니다.' },
@@ -16,22 +19,22 @@ export const ROLES = {
   FORGER:    { name: '위조범', emoji: '🖋️', desc: '마피아 진영입니다. 동료와 함께 제거 대상을 고르고, 밤에 한 명을 위조하면 그 사람을 조사한 직업이 반대 진영으로 봅니다.' },
   SURVIVOR:  { name: '생존자', emoji: '🛟', desc: '중립 진영입니다. 능력은 없습니다. 목표 날의 낮이 끝날 때까지 살아 있으면 당신 혼자 승리합니다.' },
   SHERIFF:   { name: '보안관', emoji: '🤠', desc: '시민 진영입니다. 밤마다 한 명을 제거할 수 있습니다. 마피아·중립이면 대상만 죽지만, 시민을 쏘면 당신도 함께 죽습니다.' },
-};
+});
 
-export const TEAMS = {
+export const TEAMS = localized({
   CITIZEN: { name: '시민 진영', color: 'info' },
   MAFIA:   { name: '마피아 진영', color: 'error' },
   NEUTRAL: { name: '중립 진영', color: 'warning' },
-};
+});
 
-export const WINNERS = {
+export const WINNERS = localized({
   CITIZEN: { title: '시민 진영 승리', emoji: '🎉', color: 'info.main' },
   MAFIA:   { title: '마피아 진영 승리', emoji: '🔪', color: 'error.main' },
   JESTER:  { title: '광대 단독 승리', emoji: '🤡', color: 'warning.main' },
   KILLER:  { title: '살인자 단독 승리', emoji: '🪓', color: 'warning.main' },
   SURVIVOR: { title: '생존자 단독 승리', emoji: '🛟', color: '#B388FF' },
   DRAW:    { title: '무승부', emoji: '🤝', color: 'text.secondary' },
-};
+});
 
 // 게임 결과에서 이 사람이 이겼는지. 무승부면 null
 // 시민·마피아 승리는 진영으로, 광대·살인자·생존자 단독 승리는 직업으로 판단한다
@@ -49,7 +52,7 @@ export function roleTeam(code) {
 }
 
 // 직업별 XP 얻는 법. 서버 base_xp() 와 일치해야 한다 (0038_levels.sql)
-export const XP_RULES = {
+export const XP_RULES = localized({
   CITIZEN:   ['낮 투표가 끝날 때 살아 있으면 하루당 2 XP'],
   SURVIVOR:  ['낮 투표가 끝날 때 살아 있으면 하루당 2 XP'],
   POLICE:    ['조사한 사람이 시민 진영이면 1 XP', '중립이면 3 XP', '마피아 진영이면 5 XP'],
@@ -66,7 +69,7 @@ export const XP_RULES = {
   FORGER:    ['다른 사람을 위조할 때마다 5 XP'],
   JESTER:    ['낮 투표에서 받은 1표당 2 XP'],
   KILLER:    ['쏜 대상이 그 밤에 죽으면 3 XP'],
-};
+});
 
 export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', desc: '' };
 
@@ -100,7 +103,7 @@ export const NIGHT_ACTION = {
 };
 
 // 밤 화면에서 보여줄 안내 문구
-export const NIGHT_PROMPT = {
+export const NIGHT_PROMPT = localized({
   MAFIA: '제거할 대상을 고르세요',
   SPY: '제거할 대상을 고르세요',
   ASSASSIN: '제거할 대상을 고르세요',
@@ -114,10 +117,10 @@ export const NIGHT_PROMPT = {
   KILLER: '제거할 대상을 고르세요',
   VIGILANTE: '제거할 대상을 고르세요 (게임 중 한 번)',
   SHERIFF: '제거할 대상을 고르세요 (시민을 쏘면 함께 죽습니다)',
-};
+});
 
 // 확정 버튼 문구
-export const SUBMIT_LABEL = {
+export const SUBMIT_LABEL = localized({
   MAFIA: '공격 확정',
   SPY: '공격 확정',
   ASSASSIN: '공격 확정',
@@ -131,24 +134,24 @@ export const SUBMIT_LABEL = {
   KILLER: '제거 확정',
   VIGILANTE: '제거 확정',
   SHERIFF: '제거 확정',
-};
+});
 
 // 제출 후 안내
-export const SUBMITTED_NOTE = {
-  MAFIA: ' 동료들을 기다리는 중입니다.',
-  SPY: ' 동료들을 기다리는 중입니다.',
-  ASSASSIN: ' 동료들을 기다리는 중입니다.',
-  FORGER: ' 동료들을 기다리는 중입니다.',
-  POLICE: ' 아침에 결과를 알려드립니다.',
-  DOCTOR: ' 오늘 밤 공격을 막을 수 있습니다.',
-  BODYGUARD: ' 공격받으면 당신이 대신 죽습니다.',
-  DETECTIVE: ' 아침에 직업 후보를 알려드립니다.',
-  REPORTER: ' 아침에 취재 결과가 나옵니다.',
-  MEDIUM: ' 아침에 직업을 알려드립니다.',
-  KILLER: ' 아침에 결과가 드러납니다.',
-  VIGILANTE: ' 아침에 결과가 드러납니다. 이제 제거는 다시 할 수 없습니다.',
-  SHERIFF: ' 아침에 결과가 드러납니다.',
-};
+export const SUBMITTED_NOTE = localized({
+  MAFIA: '동료들을 기다리는 중입니다.',
+  SPY: '동료들을 기다리는 중입니다.',
+  ASSASSIN: '동료들을 기다리는 중입니다.',
+  FORGER: '동료들을 기다리는 중입니다.',
+  POLICE: '아침에 결과를 알려드립니다.',
+  DOCTOR: '오늘 밤 공격을 막을 수 있습니다.',
+  BODYGUARD: '공격받으면 당신이 대신 죽습니다.',
+  DETECTIVE: '아침에 직업 후보를 알려드립니다.',
+  REPORTER: '아침에 취재 결과가 나옵니다.',
+  MEDIUM: '아침에 직업을 알려드립니다.',
+  KILLER: '아침에 결과가 드러납니다.',
+  VIGILANTE: '아침에 결과가 드러납니다. 이제 제거는 다시 할 수 없습니다.',
+  SHERIFF: '아침에 결과가 드러납니다.',
+});
 
 // 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
 // 시민은 랜덤 구성에서만 끌 수 있다 (0040). 고정 구성에서는 끈 직업을 대체하는 자리다.
@@ -179,22 +182,22 @@ export const SKIP_VOTE = '00000000-0000-0000-0000-000000000000';
 export const SKIPPABLE = new Set(['REPORTER', 'VIGILANTE', 'SHERIFF']);
 
 // 1회용 능력을 다 쓴 뒤 밤마다 보여줄 문구
-export const SPENT_NOTE = {
+export const SPENT_NOTE = localized({
   VIGILANTE: '당신은 제거를 이미 했습니다.',
-};
+});
 
 // 자신을 지목할 수 없는 직업
 export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF']);
 
 // 같은 사람을 연속으로 지목할 수 없는 직업 -> 화면에 표시할 사유
-export const REPEAT_BLOCKED = {
+export const REPEAT_BLOCKED = localized({
   DOCTOR: '어젯밤에 치료함',
   BODYGUARD: '어젯밤에 보호함',
-};
+});
 
 // 경찰 조사 결과 표시
-export const TEAM_RESULT = {
+export const TEAM_RESULT = localized({
   CITIZEN: { label: '시민 진영', color: 'info' },
   MAFIA: { label: '마피아 진영', color: 'error' },
   NEUTRAL: { label: '중립 진영', color: 'warning' },
-};
+});

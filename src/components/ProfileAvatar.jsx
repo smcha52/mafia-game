@@ -1,4 +1,5 @@
 import Avatar from '@mui/material/Avatar';
+import { localized } from '../lib/i18n';
 
 // 밤하늘과 성. 할로윈 프로필이 함께 쓴다
 function Castle() {
@@ -63,10 +64,10 @@ function Ghost() {
 }
 
 // 상점에서 파는 프로필. id 는 서버 shop_items 와 1:1로 대응한다 (0051)
-export const AVATARS = {
+export const AVATARS = localized({
   CASTLE_PUMPKIN: { name: '호박 성', art: <Pumpkin /> },
   CASTLE_GHOST: { name: '유령 성', art: <Ghost /> },
-};
+});
 
 // 프로필 그림. avatar 가 없거나 모르는 id 면 기본(닉네임 첫 글자)을 보여준다
 export default function ProfileAvatar({ avatar = null, nickname = '', size = 36 }) {

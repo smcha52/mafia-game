@@ -9,10 +9,13 @@ import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
+import { LANGS, setLang, t, useLang } from '../lib/i18n';
 import { signIn, signUp } from '../lib/supabase';
 import { halloween } from '../theme';
 
@@ -37,7 +40,7 @@ function PasswordField(props) {
           endAdornment: (
             <InputAdornment position="end">
               <IconButton
-                aria-label={show ? '비밀번호 숨기기' : '비밀번호 보기'}
+                aria-label={t(show ? '비밀번호 숨기기' : '비밀번호 보기')}
                 onClick={() => setShow((v) => !v)}
                 onMouseDown={(e) => e.preventDefault()}
                 edge="end"
@@ -53,7 +56,9 @@ function PasswordField(props) {
 }
 
 // 게임 시작 전 화면. 로그인하거나 닉네임·비밀번호·생년월일로 가입한다.
+// 맨 위에서 화면 언어를 고른다 (한국어 · English · 日本語 · 中文)
 export default function LoginPage({ onLoggedIn }) {
+  const lang = useLang();
   const [mode, setMode] = useState('login');
   const [nickname, setNickname] = useState('');
   const [password, setPassword] = useState('');
@@ -95,81 +100,93 @@ export default function LoginPage({ onLoggedIn }) {
 
   return (
     <Stack alignItems="center" spacing={3} sx={{ maxWidth: 420, mx: 'auto' }}>
+      <ToggleButtonGroup
+        value={lang}
+        exclusive
+        onChange={(_, v) => v && setLang(v)}
+        size="small"
+        aria-label={t('언어')}
+        disabled={busy}
+      >
+        {LANGS.map((l) => (
+          <ToggleButton key={l.code} value={l.code} lang={l.code} sx={{ px: 1.5 }}>
+            {l.label}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+
       <Stack alignItems="center" spacing={0.5}>
-        <Typography variant="h5">마피아 게임</Typography>
+        <Typography variant="h5">{t('마피아 게임')}</Typography>
         <Typography variant="body2" color="text.secondary">
-          5~15명이 함께하는 온라인 추리 게임
+          {t('5~15명이 함께하는 온라인 추리 게임')}
         </Typography>
       </Stack>
 
       <Stack spacing={0.5} alignItems="center" sx={{ textAlign: 'center' }}>
         <Typography variant="body2">
-          계정을 만들 때는 <strong>회원가입</strong>을 하고, 로그아웃을 하면 <strong>로그인</strong>을 해주세요.
+          {t('계정을 만들 때는 **회원가입**을 하고, 로그아웃을 하면 **로그인**을 해주세요.')}
         </Typography>
         <Typography variant="body2" color={halloween ? 'text.primary' : 'error'} fontWeight={700}>
-          &lt;주의&gt; 비밀번호를 잊어버리면 안 됩니다 &lt;주의&gt;
+          {t('<주의> 비밀번호를 잊어버리면 안 됩니다 <주의>')}
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          한 달 이상 접속이 없을 시 자동으로 로그아웃 됩니다.
+          {t('한 달 이상 접속이 없을 시 자동으로 로그아웃 됩니다.')}
         </Typography>
       </Stack>
 
       <Paper sx={{ width: '100%', overflow: 'hidden' }}>
         <Tabs value={mode} onChange={(_, v) => changeMode(v)} variant="fullWidth">
-          <Tab value="login" label="로그인" disabled={busy} />
-          <Tab value="signup" label="회원가입" disabled={busy} />
+          <Tab value="login" label={t('로그인')} disabled={busy} />
+          <Tab value="signup" label={t('회원가입')} disabled={busy} />
         </Tabs>
 
         <Stack component="form" onSubmit={submit} spacing={2.5} sx={{ p: 3 }}>
           {isSignUp && (
             <Alert severity="info">
-              <AlertTitle sx={{ mb: 0.5 }}>회원가입 방법</AlertTitle>
+              <AlertTitle sx={{ mb: 0.5 }}>{t('회원가입 방법')}</AlertTitle>
               <Stack component="ol" spacing={0.5} sx={{ m: 0, pl: 2.5 }}>
-                <li>닉네임을 정하세요. 게임에서 쓰는 이름이고, 로그인할 때도 씁니다.</li>
-                <li>
-                  비밀번호를 6자 이상 입력하세요.{' '}
-                  <strong>비밀번호는 다시 찾을 수 없으니 까먹지 마세요!</strong>
-                </li>
-                <li>비밀번호를 한 번 더 입력하고 생년월일을 고르세요.</li>
+                <li>{t('닉네임을 정하세요. 게임에서 쓰는 이름이고, 로그인할 때도 씁니다.')}</li>
+                <li>{t('비밀번호를 6자 이상 입력하세요. **비밀번호는 다시 찾을 수 없으니 까먹지 마세요!**')}</li>
+                <li>{t('비밀번호를 한 번 더 입력하고 생년월일을 고르세요.')}</li>
               </Stack>
               <Typography variant="body2" sx={{ mt: 1 }}>
-                가입하면 바로 튜토리얼 게임이 시작됩니다.
+                {t('가입하면 바로 튜토리얼 게임이 시작됩니다.')}
               </Typography>
             </Alert>
           )}
 
           <TextField
-            label="닉네임"
+            label={t('닉네임')}
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             slotProps={{ htmlInput: { maxLength: 12 } }}
-            helperText={isSignUp ? '12자 이내, 게임에서 이 닉네임을 씁니다' : ' '}
+            helperText={isSignUp ? t('12자 이내, 게임에서 이 닉네임을 씁니다') : ' '}
             fullWidth
             autoComplete="username"
           />
 
           <PasswordField
-            label="비밀번호"
+            label={t('비밀번호')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             error={shortPassword}
-            helperText={isSignUp ? '6자 이상 · 까먹지 마세요!' : ' '}
+            helperText={isSignUp ? t('6자 이상 · 까먹지 마세요!') : ' '}
             autoComplete={isSignUp ? 'new-password' : 'current-password'}
           />
 
           {isSignUp && (
             <>
               <PasswordField
-                label="비밀번호 확인"
+                label={t('비밀번호 확인')}
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 error={mismatch}
-                helperText={mismatch ? '비밀번호가 같지 않습니다' : ' '}
+                helperText={mismatch ? t('비밀번호가 같지 않습니다') : ' '}
                 autoComplete="new-password"
               />
 
               <TextField
-                label="생년월일"
+                label={t('생년월일')}
                 type="date"
                 value={birth}
                 onChange={(e) => setBirth(e.target.value)}
@@ -183,10 +200,10 @@ export default function LoginPage({ onLoggedIn }) {
             </>
           )}
 
-          {error && <Alert severity="error">{error}</Alert>}
+          {error && <Alert severity="error">{t(error)}</Alert>}
 
           <Button type="submit" variant="contained" size="large" disabled={!canSubmit} loading={busy}>
-            {isSignUp ? '가입하고 시작하기' : '로그인'}
+            {isSignUp ? t('가입하고 시작하기') : t('로그인')}
           </Button>
         </Stack>
       </Paper>

@@ -15,6 +15,7 @@ import { roleInfo, survivorTarget } from '../lib/roles';
 import {
   roleComposition, setDisabledRoles, setRandomRoles, setRoleMax, teamComposition,
 } from '../lib/api';
+import { localized, t } from '../lib/i18n';
 
 // 진영별 이름 색. 목록에 없는 직업(시민 진영)은 기본 흰색.
 const NAME_COLOR = {
@@ -31,11 +32,11 @@ const NAME_COLOR = {
 const CITIZEN_SPECIALS = ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'];
 
 // 직업 설정을 진영별로 묶어 보여준다. 시민은 랜덤 구성일 때만 목록에 나온다
-const GROUPS = [
+const GROUPS = localized([
   { title: '시민 진영', roles: ['CITIZEN', ...CITIZEN_SPECIALS] },
   { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'] },
   { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR'] },
-];
+]);
 
 // 대기실에서 직업을 켜고 끈다. 스위치를 누르면 켜고 끄고, 이름을 누르면 설명이 뜬다.
 // onBlockedChange: 지금 설정으로는 시작할 수 없는지(마피아 진영 0명, 시민 진영 직업 부족)를 알린다
@@ -109,7 +110,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
   const nameButton = (code, on) => (
     <ButtonBase
       onClick={() => setInfo(code)}
-      aria-label={`${roleInfo(code).name} 설명 보기`}
+      aria-label={t('{role} 설명 보기', { role: roleInfo(code).name })}
       sx={{ borderRadius: 1, px: 0.5, py: 0.25, justifyContent: 'flex-start' }}
     >
       <Stack direction="row" spacing={0.5} alignItems="center">
@@ -173,8 +174,8 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
     <Paper sx={{ p: 2 }}>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         {isHost
-          ? '직업 설정 — 끈 직업은 시민으로 대체됩니다'
-          : '직업 설정'}
+          ? t('직업 설정 — 끈 직업은 시민으로 대체됩니다')
+          : t('직업 설정')}
       </Typography>
 
       {/* 랜덤 구성: 진영별 인원만 정하고 진영 안에서 직업을 무작위로 뽑는다 */}
@@ -189,26 +190,26 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
               onChange={(e) => toggleRandom(e.target.checked)}
             />
           }
-          label={<Typography variant="body2">랜덤 구성</Typography>}
+          label={<Typography variant="body2">{t('랜덤 구성')}</Typography>}
         />
       ) : (
         <Chip
           size="small"
           sx={{ mb: 1 }}
-          label={random ? '랜덤 구성' : '고정 구성'}
+          label={t(random ? '랜덤 구성' : '고정 구성')}
         />
       )}
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-        랜덤 구성을 키면 마음대로 키고 끄실 수 있습니다.
+        {t('랜덤 구성을 키면 마음대로 키고 끄실 수 있습니다.')}
         <br />
         {random && (
           <>
-            직업 옆 ×1을 누르면 그 직업을 최대 3명까지 넣을 수 있습니다.
+            {t('직업 옆 ×1을 누르면 그 직업을 최대 3명까지 넣을 수 있습니다.')}
             <br />
           </>
         )}
-        직업 이름을 누르면 능력과 XP 얻는 법을 볼 수 있습니다.
+        {t('직업 이름을 누르면 능력과 XP 얻는 법을 볼 수 있습니다.')}
       </Typography>
 
       <Stack spacing={1.5}>
@@ -237,7 +238,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
                         checked={on}
                         disabled={busy || locked}
                         onChange={(e) => toggle(code, e.target.checked)}
-                        slotProps={{ input: { 'aria-label': `${roleInfo(code).name} 켜기/끄기` } }}
+                        slotProps={{ input: { 'aria-label': t('{role} 켜기/끄기', { role: roleInfo(code).name }) } }}
                       />
                       {nameButton(code, on)}
                       {/* 랜덤 구성에서 켜진 특수 직업은 최대 인원을 정한다 */}
@@ -245,7 +246,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
                         <ButtonBase
                           onClick={() => cycleMax(code)}
                           disabled={busy}
-                          aria-label={`${roleInfo(code).name} 최대 ${maxOf(code)}명, 눌러서 바꾸기`}
+                          aria-label={t('{role} 최대 {n}명, 눌러서 바꾸기', { role: roleInfo(code).name, n: maxOf(code) })}
                           sx={{
                             ml: 'auto',
                             px: 0.75,
@@ -291,13 +292,13 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
       {preview && random && !Array.isArray(preview) && (
         <Box sx={{ mt: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
-            {playerCount}명 구성 — 진영 안의 직업은 시작할 때 무작위로 정해집니다
+            {t('{n}명 구성 — 진영 안의 직업은 시작할 때 무작위로 정해집니다', { n: playerCount })}
           </Typography>
           <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
-            <Chip size="small" label={`시민 진영 ${preview.citizen}`} />
-            <Chip size="small" label={`마피아 진영 ${preview.mafia}`} sx={{ color: 'error.main' }} />
+            <Chip size="small" label={t('시민 진영 {n}', { n: preview.citizen })} />
+            <Chip size="small" label={t('마피아 진영 {n}', { n: preview.mafia })} sx={{ color: 'error.main' }} />
             {preview.neutral > 0 && (
-              <Chip size="small" label={`중립 ${preview.neutral}`} />
+              <Chip size="small" label={t('중립 {n}', { n: preview.neutral })} />
             )}
           </Stack>
         </Box>
@@ -307,7 +308,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
       {preview && !random && Array.isArray(preview) && (
         <Box sx={{ mt: 1.5 }}>
           <Typography variant="caption" color="text.secondary">
-            {playerCount}명 구성
+            {t('{n}명 구성', { n: playerCount })}
           </Typography>
           <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }} flexWrap="wrap" useFlexGap>
             {Object.entries(counts)
@@ -321,33 +322,34 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
 
       {!preview && playerCount > 0 && playerCount < 5 && (
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-          5명부터 구성을 볼 수 있습니다.
+          {t('5명부터 구성을 볼 수 있습니다.')}
         </Typography>
       )}
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
         {random
-          ? '시민을 끄면 시민 진영 자리를 켜진 시민 진영 직업으로만 채웁니다.'
-          : '고정 구성에서는 시민을 끌 수 없습니다.'}
+          ? t('시민을 끄면 시민 진영 자리를 켜진 시민 진영 직업으로만 채웁니다.')
+          : t('고정 구성에서는 시민을 끌 수 없습니다.')}
+        {' '}
         {survivorBlocked
-          ? ' 최대 일수가 2일 이하라 생존자는 넣을 수 없습니다.'
-          : ` 생존자는 ${target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.`}
+          ? t('최대 일수가 2일 이하라 생존자는 넣을 수 없습니다.')
+          : t('생존자는 {target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.', { target })}
       </Typography>
 
       {noMafiaTeam && (
         <Alert severity="warning" sx={{ mt: 1 }}>
-          마피아 진영 직업이 하나도 없어 게임을 시작할 수 없습니다.
+          {t('마피아 진영 직업이 하나도 없어 게임을 시작할 수 없습니다.')}
         </Alert>
       )}
 
       {citizenShort && (
         <Alert severity="warning" sx={{ mt: 1 }}>
-          시민 진영 직업이 부족해 게임을 시작할 수 없습니다.
-          (시민 진영 {preview.citizen}자리, 켜진 직업 {citizenOpen}개)
+          {t('시민 진영 직업이 부족해 게임을 시작할 수 없습니다.')}
+          {' '}{t('(시민 진영 {seats}자리, 켜진 직업 {open}개)', { seats: preview.citizen, open: citizenOpen })}
         </Alert>
       )}
 
-      {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mt: 1 }}>{t(error)}</Alert>}
 
       <RoleInfoDialog role={info} onClose={() => setInfo(null)} />
     </Paper>

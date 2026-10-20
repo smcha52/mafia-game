@@ -8,6 +8,7 @@ import Paper from '@mui/material/Paper';
 import Radio from '@mui/material/Radio';
 import Stack from '@mui/material/Stack';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
+import { t } from '../lib/i18n';
 
 // 살아 있는 참가자 중에서 대상을 고른다.
 // locked 이면 이미 제출한 상태라 바꿀 수 없다.
@@ -45,7 +46,7 @@ export default function PlayerPicker({
                   <Stack direction="row" spacing={0.75} alignItems="center">
                     <span>{p.nickname}</span>
                     {p.level != null && <Chip size="small" variant="outlined" label={`Lv.${p.level}`} />}
-                    {p.uid === uid && <Chip size="small" label="나" />}
+                    {p.uid === uid && <Chip size="small" label={t('나')} />}
                     {blocked && blockedNote && <Chip size="small" label={blockedNote} />}
                   </Stack>
                 }

@@ -32,6 +32,7 @@ import {
 } from '../lib/api';
 import { useChat } from '../lib/useChat';
 import { useGame } from '../lib/useGame';
+import { t } from '../lib/i18n';
 
 // endHint 가 있으면 승패 화면에 안내 문구로 보여준다 (튜토리얼 뒤 첫 게임)
 export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHint = '' }) {
@@ -138,13 +139,13 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
   if (error || !room) {
     return (
       <Stack spacing={2} sx={{ maxWidth: 480, mx: 'auto' }}>
-        <Alert severity="error">{error || '방을 찾을 수 없습니다.'}</Alert>
-        <Button variant="outlined" onClick={onLeave}>첫 화면으로</Button>
+        <Alert severity="error">{t(error || '방을 찾을 수 없습니다.')}</Alert>
+        <Button variant="outlined" onClick={onLeave}>{t('첫 화면으로')}</Button>
       </Stack>
     );
   }
 
-  const nickOf = (id) => players.find((p) => p.uid === id)?.nickname ?? '알 수 없음';
+  const nickOf = (id) => players.find((p) => p.uid === id)?.nickname ?? t('알 수 없음');
   const lastNight = results.find((r) => r.kind === 'NIGHT' && r.day_number === day);
   const deaths = (phase === 'DAY' ? lastNight?.payload?.nightDeaths : null) ?? [];
   const reveals = (phase === 'DAY' ? lastNight?.payload?.reporterReveal : null) ?? [];
@@ -168,7 +169,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         onLeave();
       })}
     >
-      나가기
+      {t('나가기')}
     </Button>
   );
 
@@ -177,9 +178,9 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
       <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
         <GameOver roomId={roomId} winner={room.winner} uid={uid} />
 
-        {endHint && <Alert severity="info">{endHint}</Alert>}
+        {endHint && <Alert severity="info">{t(endHint)}</Alert>}
 
-        {actionError && <Alert severity="error">{actionError}</Alert>}
+        {actionError && <Alert severity="error">{t(actionError)}</Alert>}
 
         {room.host_uid === uid ? (
           <Button
@@ -190,10 +191,10 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
             loading={busy === 'restart'}
             onClick={() => run('restart', () => restartGame(roomId))}
           >
-            다시하기
+            {t('다시하기')}
           </Button>
         ) : (
-          <Alert severity="info">방장이 다시 시작하면 대기실로 돌아갑니다.</Alert>
+          <Alert severity="info">{t('방장이 다시 시작하면 대기실로 돌아갑니다.')}</Alert>
         )}
 
       <ChatPanel
@@ -235,9 +236,9 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
           <Stack direction="row" spacing={1} alignItems="center">
             <Box sx={{ fontSize: 26, lineHeight: 1 }}>{isNight ? '🌙' : isResult ? '⚖️' : '☀️'}</Box>
             <Box>
-              <Typography variant="h6">{isNight ? '밤' : isResult ? '투표 결과' : '낮'}</Typography>
+              <Typography variant="h6">{t(isNight ? '밤' : isResult ? '투표 결과' : '낮')}</Typography>
               <Typography variant="caption" color="text.secondary">
-                {day}일차
+                {t('{day}일차', { day })}
               </Typography>
             </Box>
           </Stack>
@@ -252,7 +253,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
             )}
             <Chip
               size="small"
-              label={`생존 ${players.filter((p) => p.alive).length} / ${players.length}`}
+              label={t('생존 {alive} / {total}', { alive: players.filter((p) => p.alive).length, total: players.length })}
             />
           </Stack>
         </Stack>
@@ -263,13 +264,13 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
           severity="warning"
           action={
             <Button color="inherit" size="small" onClick={() => window.location.reload()}>
-              새로고침
+              {t('새로고침')}
             </Button>
           }
         >
-          내 직업 정보를 불러오지 못했습니다.
-          {viewError ? ` (${viewError})` : ''}
-          {' '}새로고침해도 같으면 나갔다가 다시 입장해 주세요.
+          {t('내 직업 정보를 불러오지 못했습니다.')}
+          {viewError ? ` (${t(viewError)})` : ''}
+          {' '}{t('새로고침해도 같으면 나갔다가 다시 입장해 주세요.')}
         </Alert>
       )}
 
@@ -280,8 +281,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
       {/* 생존자: 목표 날 안내 */}
       {role === 'SURVIVOR' && survivorTarget(room.max_days) && (
         <Alert severity="info" icon={false} sx={{ color: '#B388FF' }}>
-          🛟 {survivorTarget(room.max_days)}일째 낮이 끝날 때까지 살아 있으면 승리합니다.
-          (지금 {day}일차)
+          🛟 {t('{target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.', { target: survivorTarget(room.max_days) })}
+          {' '}{t('(지금 {day}일차)', { day })}
         </Alert>
       )}
 
@@ -289,8 +290,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
       {phase === 'DAY' && (
         <Alert severity={deaths.length ? 'error' : 'success'}>
           {deaths.length
-            ? `간밤에 ${deaths.map(nickOf).join(', ')}님이 사망했습니다.`
-            : '간밤에 아무도 죽지 않았습니다.'}
+            ? t('간밤에 {names}님이 사망했습니다.', { names: deaths.map(nickOf).join(', ') })
+            : t('간밤에 아무도 죽지 않았습니다.')}
         </Alert>
       )}
 
@@ -299,9 +300,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         lastDay.payload?.executed ? (
           <Alert severity="error" icon={false}>
             <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-              <span>⚖️ 투표로</span>
-              <strong>{nickOf(lastDay.payload.executed)}</strong>
-              <span>님이 처형되었습니다.</span>
+              <span>⚖️ {t('투표로 {name}님이 처형되었습니다.', { name: <strong>{nickOf(lastDay.payload.executed)}</strong> })}</span>
               {lastDay.payload.executedRole ? (
                 <Chip size="small" color="warning" label={roleInfo(lastDay.payload.executedRole).name} />
               ) : TEAM_RESULT[lastDay.payload.executedTeam] && (
@@ -316,25 +315,26 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         ) : (
           <Alert severity="info">
             {lastDay.payload?.skipped
-              ? '⚖️ 건너뛰기로 아무도 처형되지 않았습니다.'
+              ? `⚖️ ${t('건너뛰기로 아무도 처형되지 않았습니다.')}`
               : lastDay.payload?.tie
-                ? '⚖️ 투표가 동점이라 아무도 처형되지 않았습니다.'
-                : '⚖️ 오늘 낮에는 아무도 처형되지 않았습니다.'}
+                ? `⚖️ ${t('투표가 동점이라 아무도 처형되지 않았습니다.')}`
+                : `⚖️ ${t('오늘 낮에는 아무도 처형되지 않았습니다.')}`}
           </Alert>
         )
       )}
 
       {/* 기자 보도 — 모든 생존자가 본다 (§2.7) */}
       {phase === 'DAY' && reveals.map((r) => {
-        const t = TEAM_RESULT[r.team] ?? null;
+        const team = TEAM_RESULT[r.team] ?? null;
         return (
           <Alert key={r.targetUid} severity="warning" icon={false}>
             <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-              <span>📰 오늘의 보도 —</span>
-              <strong>{r.targetNickname}</strong>
-              <span>님은</span>
-              {t && <Chip size="small" color={t.color} label={t.label} />}
-              <span>입니다.</span>
+              <span>
+                📰 {t('오늘의 보도 — {name}님은 {team}입니다.', {
+                  name: <strong>{r.targetNickname}</strong>,
+                  team: team ? <Chip size="small" color={team.color} label={team.label} /> : '',
+                })}
+              </span>
             </Stack>
           </Alert>
         );
@@ -347,10 +347,12 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
             {dayResult?.payload?.executed ? (
               <Alert severity="error" icon={false}>
                 <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
-                  <strong>{nickOf(dayResult.payload.executed)}</strong>
-                  <span>님이</span>
-                  <Chip size="small" label={`${dayResult.payload.executedVotes}표`} />
-                  <span>로 처형되었습니다.</span>
+                  <span>
+                    {t('{name}님이 {votes}로 처형되었습니다.', {
+                      name: <strong>{nickOf(dayResult.payload.executed)}</strong>,
+                      votes: <Chip size="small" label={t('{n}표', { n: dayResult.payload.executedVotes })} />,
+                    })}
+                  </span>
                   {dayResult.payload.executedRole ? (
                     <Chip size="small" color="warning" label={roleInfo(dayResult.payload.executedRole).name} />
                   ) : TEAM_RESULT[dayResult.payload.executedTeam] && (
@@ -365,14 +367,14 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
             ) : (
               <Alert severity="info">
                 {dayResult?.payload?.skipped
-                  ? `건너뛰기 ${dayResult.payload.skipVotes}표로 아무도 처형되지 않았습니다.`
+                  ? t('건너뛰기 {n}표로 아무도 처형되지 않았습니다.', { n: dayResult.payload.skipVotes })
                   : dayResult?.payload?.tie
-                    ? '투표가 동점이라 아무도 처형되지 않았습니다.'
-                    : '아무도 처형되지 않았습니다.'}
+                    ? t('투표가 동점이라 아무도 처형되지 않았습니다.')
+                    : t('아무도 처형되지 않았습니다.')}
               </Alert>
             )}
 
-            <Typography variant="subtitle2" color="text.secondary">득표 수</Typography>
+            <Typography variant="subtitle2" color="text.secondary">{t('득표 수')}</Typography>
             {(dayResult?.payload?.votes ?? []).length || dayResult?.payload?.skipVotes ? (
               <Stack spacing={0.75}>
                 {dayResult.payload.votes.map((v) => (
@@ -381,29 +383,29 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                     <Chip
                       size="small"
                       color={v.uid === dayResult.payload.executed ? 'error' : 'default'}
-                      label={`${v.count}표`}
+                      label={t('{n}표', { n: v.count })}
                       sx={{ fontVariantNumeric: 'tabular-nums' }}
                     />
                   </Stack>
                 ))}
                 {dayResult.payload.skipVotes > 0 && (
                   <Stack direction="row" alignItems="center" justifyContent="space-between">
-                    <Typography color="text.secondary">건너뛰기</Typography>
+                    <Typography color="text.secondary">{t('건너뛰기')}</Typography>
                     <Chip
                       size="small"
                       color={dayResult.payload.skipped ? 'info' : 'default'}
-                      label={`${dayResult.payload.skipVotes}표`}
+                      label={t('{n}표', { n: dayResult.payload.skipVotes })}
                       sx={{ fontVariantNumeric: 'tabular-nums' }}
                     />
                   </Stack>
                 )}
               </Stack>
             ) : (
-              <Typography variant="body2" color="text.secondary">투표한 사람이 없습니다.</Typography>
+              <Typography variant="body2" color="text.secondary">{t('투표한 사람이 없습니다.')}</Typography>
             )}
 
             <Typography variant="caption" color="text.secondary">
-              잠시 후 밤이 됩니다.
+              {t('잠시 후 밤이 됩니다.')}
             </Typography>
           </Stack>
         </Paper>
@@ -411,7 +413,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
 
       {!alive && (
         <Alert severity="info">
-          사망하여 관전 중입니다. 능력과 투표를 사용할 수 없습니다.
+          {t('사망하여 관전 중입니다. 능력과 투표를 사용할 수 없습니다.')}
         </Alert>
       )}
 
@@ -431,15 +433,15 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
               state={view?.assassin}
               isNight={isNight}
               onCancel={() => setAiming(false)}
-              onSubmit={(t, g) => run('assassin', () => submitAssassination(roomId, t, g))}
+              onSubmit={(target, guess) => run('assassin', () => submitAssassination(roomId, target, guess))}
             />
           ) : canAct ? (
             <>
               <Stack direction="row" alignItems="center" justifyContent="space-between">
                 <Typography variant="subtitle1">
                   {isNight
-                    ? (NIGHT_PROMPT[role] ?? '대상을 고르세요')
-                    : '처형할 사람에게 투표하세요'}
+                    ? (NIGHT_PROMPT[role] ?? t('대상을 고르세요'))
+                    : t('처형할 사람에게 투표하세요')}
                 </Typography>
                 {progress && (
                   <Chip
@@ -452,23 +454,24 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
 
               {skipped && (
                 <Alert severity="info">
-                  오늘 밤은 능력을 사용하지 않기로 했습니다.
-                  {ONE_SHOT.has(role) && ' 아직 한 번 남아 있습니다.'}
+                  {t('오늘 밤은 능력을 사용하지 않기로 했습니다.')}
+                  {ONE_SHOT.has(role) && ` ${t('아직 한 번 남아 있습니다.')}`}
                 </Alert>
               )}
 
               {submitted && submitted === SKIP_VOTE && (
                 <Alert severity="success">
-                  <strong>아무도 죽지 않음: 건너뛰기</strong>를 선택했습니다. 투표는 변경할 수 없습니다.
+                  {t('**아무도 죽지 않음: 건너뛰기**를 선택했습니다. 투표는 변경할 수 없습니다.')}
                 </Alert>
               )}
 
               {submitted && submitted !== SKIP_VOTE && (
                 <Alert severity="success">
-                  <strong>{nickOf(submitted)}</strong>님을 선택했습니다.
+                  {t('{name}님을 선택했습니다.', { name: <strong>{nickOf(submitted)}</strong> })}
+                  {' '}
                   {!isNight
-                    ? ' 투표는 변경할 수 없습니다.'
-                    : (SUBMITTED_NOTE[role] ?? ' 밤이 끝나기를 기다리는 중입니다.')}
+                    ? t('투표는 변경할 수 없습니다.')
+                    : (SUBMITTED_NOTE[role] ?? t('밤이 끝나기를 기다리는 중입니다.'))}
                 </Alert>
               )}
 
@@ -482,10 +485,10 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                 excludeSelf={isNight && NO_SELF_TARGET.has(role)}
                 blockedUid={isNight && REPEAT_BLOCKED[role] ? view?.lastTargetId : null}
                 blockedNote={REPEAT_BLOCKED[role] ?? ''}
-                skip={isNight ? null : { value: SKIP_VOTE, label: '아무도 죽지 않음: 건너뛰기' }}
+                skip={isNight ? null : { value: SKIP_VOTE, label: t('아무도 죽지 않음: 건너뛰기') }}
               />
 
-              {actionError && <Alert severity="error">{actionError}</Alert>}
+              {actionError && <Alert severity="error">{t(actionError)}</Alert>}
 
               {submitted && role === 'ASSASSIN' && (
                 <Button
@@ -495,7 +498,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                     || (view?.canAssassinate === false && !view?.assassin?.done)}
                   onClick={() => setAiming(true)}
                 >
-                  {view?.assassin?.done ? '🎯 저격 결과 보기' : '🎯 저격'}
+                  🎯 {t(view?.assassin?.done ? '저격 결과 보기' : '저격')}
                 </Button>
               )}
 
@@ -511,7 +514,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                         ? submitNightAction(roomId, nightAction, pick)
                         : submitDayVote(roomId, pick))}
                   >
-                    {!isNight ? '투표 확정' : (SUBMIT_LABEL[role] ?? '확정')}
+                    {!isNight ? t('투표 확정') : (SUBMIT_LABEL[role] ?? t('확정'))}
                   </Button>
 
                   {isNight && SKIPPABLE.has(role) && !skipped && (
@@ -521,7 +524,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                       loading={busy === 'skip'}
                       onClick={() => run('skip', () => skipNightAction(roomId, nightAction))}
                     >
-                      오늘은 사용하지 않기
+                      {t('오늘은 사용하지 않기')}
                     </Button>
                   )}
 
@@ -533,14 +536,14 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                         || (view?.canAssassinate === false && !view?.assassin?.done)}
                       onClick={() => setAiming(true)}
                     >
-                      {view?.assassin?.done ? '🎯 저격 결과 보기' : '🎯 저격'}
+                      🎯 {t(view?.assassin?.done ? '저격 결과 보기' : '저격')}
                     </Button>
                   )}
 
                   {role === 'ASSASSIN' && view?.canAssassinate === false
                     && !view?.assassin?.done && (
                     <Typography variant="caption" color="text.secondary">
-                      같은 편을 뺀 상대가 모두 시민이면 저격할 수 없습니다.
+                      {t('같은 편을 뺀 상대가 모두 시민이면 저격할 수 없습니다.')}
                     </Typography>
                   )}
                 </Stack>
@@ -551,15 +554,15 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
               <Stack alignItems="center">
                 <RoleAvatar role={role} size={52} />
               </Stack>
-              <Typography sx={{ mt: 1 }}>밤이 지나가길 기다리는 중…</Typography>
+              <Typography sx={{ mt: 1 }}>{t('밤이 지나가길 기다리는 중…')}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {noTargets
-                  ? '아직 사망자가 없어 능력을 쓸 수 없습니다.'
+                  ? t('아직 사망자가 없어 능력을 쓸 수 없습니다.')
                   : spentOneShot
-                    ? (SPENT_NOTE[role] ?? '능력을 이미 사용했습니다.')
+                    ? (SPENT_NOTE[role] ?? t('능력을 이미 사용했습니다.'))
                     : ABILITY_READY.has(role)
-                      ? '오늘 밤 당신이 할 일은 없습니다.'
-                      : `${roleInfo(role).name}의 능력은 아직 준비 중입니다.`}
+                      ? t('오늘 밤 당신이 할 일은 없습니다.')
+                      : t('{role}의 능력은 아직 준비 중입니다.', { role: roleInfo(role).name })}
               </Typography>
               <LinearProgress
                 sx={{ mt: 2 }}
@@ -579,7 +582,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
           uid={uid}
           state={view?.forger}
           busy={busy}
-          onSubmit={(t) => run('forge', () => submitNightAction(roomId, 'FORGE', t))}
+          onSubmit={(target) => run('forge', () => submitNightAction(roomId, 'FORGE', target))}
         />
       )}
 

@@ -14,6 +14,7 @@ import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
 import { ALL_ROLES, roleInfo } from '../lib/roles';
+import { t } from '../lib/i18n';
 
 // 저격 화면. 대상을 고르고 그 사람의 직업을 맞힌다.
 // 맞히면 대상이 죽고, 틀리면 저격수가 죽는다.
@@ -27,7 +28,7 @@ export default function AssassinPanel({
   const [pick, setPick] = useState(guess ?? null);
 
   const candidates = players.filter((p) => p.alive && p.uid !== uid);
-  const nickOf = (id) => players.find((p) => p.uid === id)?.nickname ?? '알 수 없음';
+  const nickOf = (id) => players.find((p) => p.uid === id)?.nickname ?? t('알 수 없음');
 
   if (locked) {
     const done = state?.resolved === true;
@@ -35,31 +36,37 @@ export default function AssassinPanel({
       <Paper sx={{ p: 2 }}>
         <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
           <Typography variant="subtitle1">
-            🎯 {done ? '저격 완료' : '저격 예약됨'}
+            🎯 {t(done ? '저격 완료' : '저격 예약됨')}
           </Typography>
         </Stack>
         {done ? (
           <Alert severity={state.success ? 'success' : 'error'}>
             {state.success ? (
               <>
-                <strong>{nickOf(submitted)}</strong>님은 정말{' '}
-                <strong>{roleInfo(guess).name}</strong>였습니다. 저격 성공.
+                {t('{name}님은 정말 {role}였습니다. 저격 성공.', {
+                  name: <strong>{nickOf(submitted)}</strong>,
+                  role: <strong>{roleInfo(guess).name}</strong>,
+                })}
               </>
             ) : (
               <>
-                <strong>{nickOf(submitted)}</strong>님은{' '}
-                <strong>{roleInfo(state.actualRole).name}</strong>였습니다. 당신이 죽었습니다.
+                {t('{name}님은 {role}였습니다. 당신이 죽었습니다.', {
+                  name: <strong>{nickOf(submitted)}</strong>,
+                  role: <strong>{roleInfo(state.actualRole).name}</strong>,
+                })}
               </>
             )}
           </Alert>
         ) : (
           <Alert severity="warning">
-            <strong>{nickOf(submitted)}</strong>님을 <strong>{roleInfo(guess).name}</strong>로
-            찍었습니다. 아침에 결과가 나옵니다. 맞으면 상대가 죽고, 틀리면 당신이 죽습니다.
+            {t('{name}님을 {role}로 찍었습니다. 아침에 결과가 나옵니다. 맞으면 상대가 죽고, 틀리면 당신이 죽습니다.', {
+              name: <strong>{nickOf(submitted)}</strong>,
+              role: <strong>{roleInfo(guess).name}</strong>,
+            })}
           </Alert>
         )}
         <Button color="inherit" sx={{ mt: 1 }} onClick={onCancel}>
-          돌아가기
+          {t('돌아가기')}
         </Button>
       </Paper>
     );
@@ -68,13 +75,13 @@ export default function AssassinPanel({
   return (
     <Paper sx={{ p: 2 }}>
       <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-        <Typography variant="subtitle1">🎯 저격</Typography>
-        <Chip size="small" color="error" label="틀리면 내가 죽습니다" />
-        <Chip size="small" variant="outlined" label={isNight ? '아침에 결과' : '즉시 처리'} />
+        <Typography variant="subtitle1">🎯 {t('저격')}</Typography>
+        <Chip size="small" color="error" label={t('틀리면 내가 죽습니다')} />
+        <Chip size="small" variant="outlined" label={t(isNight ? '아침에 결과' : '즉시 처리')} />
       </Stack>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        1. 대상을 고르세요
+        1. {t('대상을 고르세요')}
       </Typography>
 
       <Paper variant="outlined" sx={{ overflow: 'hidden', mb: 2 }}>
@@ -98,7 +105,7 @@ export default function AssassinPanel({
       </Paper>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        2. {target ? `${nickOf(target)}님의 직업을 찍으세요` : '직업을 찍으세요'}
+        2. {target ? t('{name}님의 직업을 찍으세요', { name: nickOf(target) }) : t('직업을 찍으세요')}
       </Typography>
 
       <Box
@@ -129,7 +136,7 @@ export default function AssassinPanel({
         })}
       </Box>
 
-      {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 1 }}>{t(error)}</Alert>}
 
       <Stack spacing={1}>
         <Button
@@ -140,10 +147,10 @@ export default function AssassinPanel({
           loading={busy === 'assassin'}
           onClick={() => onSubmit(target, pick)}
         >
-          저격 확정
+          {t('저격 확정')}
         </Button>
         <Button color="inherit" disabled={busy !== ''} onClick={onCancel}>
-          돌아가기
+          {t('돌아가기')}
         </Button>
       </Stack>
     </Paper>

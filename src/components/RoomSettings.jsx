@@ -7,6 +7,7 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 
 import { setTimers } from '../lib/api';
+import { t } from '../lib/i18n';
 
 // 서버 제약과 같은 범위 (0012 마이그레이션)
 const SEC_MIN = 10;
@@ -16,10 +17,10 @@ const DAYS_MIN = 1;
 const DAYS_MAX = 50;
 
 const fmt = (sec) => {
-  if (sec < 60) return `${sec}초`;
+  if (sec < 60) return t('{s}초', { s: sec });
   const m = Math.floor(sec / 60);
   const s = sec % 60;
-  return s ? `${m}분 ${s}초` : `${m}분`;
+  return s ? t('{m}분 {s}초', { m, s }) : t('{m}분', { m });
 };
 
 // 5초 단위로 맞추고 범위 안으로 가둔다
@@ -78,12 +79,12 @@ export default function RoomSettings({ room, isHost }) {
     return (
       <Paper sx={{ p: 2 }}>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          진행 설정
+          {t('진행 설정')}
         </Typography>
         <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
           <Chip size="small" label={`🌙 ${fmt(night)}`} />
           <Chip size="small" label={`☀️ ${fmt(day)}`} />
-          <Chip size="small" label={`최대 ${maxDays}일`} />
+          <Chip size="small" label={t('최대 {n}일', { n: maxDays })} />
         </Stack>
       </Paper>
     );
@@ -109,16 +110,16 @@ export default function RoomSettings({ room, isHost }) {
   return (
     <Paper sx={{ p: 2 }}>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-        진행 설정 — 방장만 바꿀 수 있습니다 (5초 단위)
+        {t('진행 설정 — 방장만 바꿀 수 있습니다 (5초 단위)')}
       </Typography>
 
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-        {secField('night', '밤(초)')}
-        {secField('day', '낮(초)')}
+        {secField('night', t('밤(초)'))}
+        {secField('day', t('낮(초)'))}
         <TextField
           type="number"
           size="small"
-          label="최대 일수"
+          label={t('최대 일수')}
           value={draft.maxDays}
           disabled={busy}
           onChange={(e) => setDraft((d) => ({ ...d, maxDays: e.target.value }))}
@@ -126,17 +127,17 @@ export default function RoomSettings({ room, isHost }) {
           slotProps={{
             htmlInput: { min: DAYS_MIN, max: DAYS_MAX, step: 1, inputMode: 'numeric' },
           }}
-          helperText={`${clampDays(draft.maxDays)}일차까지`}
+          helperText={t('{n}일차까지', { n: clampDays(draft.maxDays) })}
           sx={{ minWidth: 96, flex: 1 }}
         />
       </Stack>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-        {SEC_MIN}~{SEC_MAX}초 범위이며 {SEC_STEP}초 단위로 맞춰집니다.
-        시간이 지나면 미제출자는 기권 처리되고, 최대 일수까지 승부가 안 나면 무승부입니다.
+        {t('{min}~{max}초 범위이며 {step}초 단위로 맞춰집니다.', { min: SEC_MIN, max: SEC_MAX, step: SEC_STEP })}
+        {' '}{t('시간이 지나면 미제출자는 기권 처리되고, 최대 일수까지 승부가 안 나면 무승부입니다.')}
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mt: 1 }}>{t(error)}</Alert>}
     </Paper>
   );
 }

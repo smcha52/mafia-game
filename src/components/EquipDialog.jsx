@@ -13,6 +13,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 import ProfileAvatar, { AVATARS } from './ProfileAvatar';
 import { equipAvatar, myShop } from '../lib/api';
+import { t } from '../lib/i18n';
 
 // 상점 아래 장착 버튼으로 여는 화면. 산 프로필 중 하나를 고른다
 // 바꾸면 onEquipped 로 프로필을 다시 읽게 한다
@@ -51,7 +52,7 @@ export default function EquipDialog({ open, onClose, onEquipped, nickname }) {
 
   // 맨 위는 기본 프로필(id null), 그 아래에 산 프로필
   const rows = data
-    ? [{ id: null, name: '기본 프로필' },
+    ? [{ id: null, name: t('기본 프로필') },
       ...data.owned
         .filter((o) => o.kind === 'AVATAR')
         .map((o) => ({ id: o.id, name: AVATARS[o.id]?.name ?? o.id }))]
@@ -61,13 +62,13 @@ export default function EquipDialog({ open, onClose, onEquipped, nickname }) {
     <Dialog open={open} onClose={onClose} fullScreen>
       <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', px: 2, py: 2 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-          <IconButton onClick={onClose} aria-label="뒤로">
+          <IconButton onClick={onClose} aria-label={t('뒤로')}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flex: 1 }}>장착</Typography>
+          <Typography variant="h6" sx={{ flex: 1 }}>{t('장착')}</Typography>
         </Stack>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{t(error)}</Alert>}
 
         {!data ? (
           !error && (
@@ -78,7 +79,7 @@ export default function EquipDialog({ open, onClose, onEquipped, nickname }) {
         ) : (
           <Stack spacing={1}>
             <Typography variant="caption" color="text.secondary">
-              프로필 · 상점에서 산 프로필이 여기에 모입니다.
+              {t('프로필 · 상점에서 산 프로필이 여기에 모입니다.')}
             </Typography>
             {rows.map((row) => {
               const equipped = (data.avatar ?? null) === row.id;
@@ -89,7 +90,7 @@ export default function EquipDialog({ open, onClose, onEquipped, nickname }) {
                     <ProfileAvatar avatar={row.id} nickname={nickname} size={56} />
                     <Typography fontWeight={700} sx={{ minWidth: 0, flex: 1 }}>{row.name}</Typography>
                     {equipped ? (
-                      <Chip label="장착 중" color="primary" size="small" />
+                      <Chip label={t('장착 중')} color="primary" size="small" />
                     ) : (
                       <Button
                         variant="contained"
@@ -99,7 +100,7 @@ export default function EquipDialog({ open, onClose, onEquipped, nickname }) {
                         onClick={() => equip(row.id)}
                         sx={{ flexShrink: 0 }}
                       >
-                        장착
+                        {t('장착')}
                       </Button>
                     )}
                   </Stack>

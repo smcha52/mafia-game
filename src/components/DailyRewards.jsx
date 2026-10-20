@@ -20,13 +20,14 @@ import ProfileAvatar, { AVATARS } from './ProfileAvatar';
 import { REWARD, untilText } from './QuestDialog';
 import { myDailyRewards, openDailyBox } from '../lib/api';
 import { halloween } from '../theme';
+import { localized, t } from '../lib/i18n';
 
 // 등급 이름과 색
-export const TIER = {
+export const TIER = localized({
   NORMAL: { label: '일반', color: 'text.secondary' },
   LUCKY: { label: '럭키', color: '#2e7d32' },
   SUPER_LUCKY: { label: '슈퍼 럭키', color: '#d500f9' },
-};
+});
 
 // 나올 수 있는 보상과 확률. 서버 roll_daily_reward · roll_box 와 같게 맞춘다 (0058)
 const DAILY_TABLE = [
@@ -77,7 +78,7 @@ function TableRow({ row, box }) {
         ) : row.item ? (
           <>
             <ProfileAvatar avatar={row.item} size={24} />
-            <Typography variant="body2" fontWeight={700}>{AVATARS[row.item].name} 프로필</Typography>
+            <Typography variant="body2" fontWeight={700}>{t('{name} 프로필', { name: AVATARS[row.item].name })}</Typography>
           </>
         ) : (
           <>
@@ -100,10 +101,10 @@ function TableRow({ row, box }) {
 function TableDialog({ open, onClose, limit }) {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
-      <DialogTitle>일일보상</DialogTitle>
+      <DialogTitle>{t('일일보상')}</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          하루 {limit}칸은 아래 확률로 미리 정해지고, 승리할 때마다 앞 칸부터 받습니다.
+          {t('하루 {limit}칸은 아래 확률로 미리 정해지고, 승리할 때마다 앞 칸부터 받습니다.', { limit })}
         </Typography>
         {DAILY_TABLE.map((row, i) => (
           <TableRow key={i} row={row} box={CURRENT_BOX} />
@@ -111,19 +112,19 @@ function TableDialog({ open, onClose, limit }) {
         <Divider sx={{ my: 1.5 }} />
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
           <BoxArt box={CURRENT_BOX} size={28} />
-          <Typography variant="subtitle2" fontWeight={700}>{BOXES[CURRENT_BOX].name}에서 나오는 것</Typography>
+          <Typography variant="subtitle2" fontWeight={700}>{t('{box}에서 나오는 것', { box: BOXES[CURRENT_BOX].name })}</Typography>
         </Stack>
         {BOX_TABLE[CURRENT_BOX].map((row, i) => (
           <TableRow key={i} row={row} />
         ))}
         <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 1 }}>
           {halloween
-            ? '할로윈 기간에는 호박상자만 나옵니다. 이미 가진 프로필이 나오면 별 25개를 드립니다.'
-            : '할로윈 기간(10월 5일 ~ 11월 1일)에는 호박상자가 나옵니다.'}
+            ? t('할로윈 기간에는 호박상자만 나옵니다. 이미 가진 프로필이 나오면 별 25개를 드립니다.')
+            : t('할로윈 기간(10월 5일 ~ 11월 1일)에는 호박상자가 나옵니다.')}
         </Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>닫기</Button>
+        <Button onClick={onClose}>{t('닫기')}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -137,7 +138,7 @@ function Amount({ type, amount, variant = 'body2' }) {
       alignItems="center"
       justifyContent="center"
       spacing={0.25}
-      aria-label={`${REWARD[type].label} ${amount}개`}
+      aria-label={t('{label} {n}개', { label: REWARD[type].label, n: amount })}
     >
       {REWARD[type].icon}
       <Typography variant={variant} fontWeight={700}>{amount}</Typography>
@@ -148,7 +149,7 @@ function Amount({ type, amount, variant = 'body2' }) {
 // 칸 안의 보상. 상자는 그대로 보여주고, 열었으면 나온 것을 작게 덧붙인다
 function CellBody({ item }) {
   if (!item) {
-    return <EmojiEventsIcon fontSize="small" sx={{ mt: 0.5, color: 'text.disabled' }} aria-label="승리하면 받음" />;
+    return <EmojiEventsIcon fontSize="small" sx={{ mt: 0.5, color: 'text.disabled' }} aria-label={t('승리하면 받음')} />;
   }
   if (item.type !== 'BOX') {
     return <Box sx={{ mt: 0.5 }}><Amount type={item.type} amount={item.amount} /></Box>;
@@ -163,7 +164,7 @@ function CellBody({ item }) {
           <Amount type={item.open.type} amount={item.open.amount} variant="caption" />
         )
       ) : (
-        <Typography variant="caption" color="primary" fontWeight={700}>열기</Typography>
+        <Typography variant="caption" color="primary" fontWeight={700}>{t('열기')}</Typography>
       )}
     </Stack>
   );
@@ -206,7 +207,7 @@ function RewardCell({ item, next = false, onOpen }) {
         <ButtonBase
           onClick={() => onOpen(item)}
           sx={{ display: 'block', width: '100%', height: '100%', p: 0.75 }}
-          aria-label={`${BOXES[item.box].name} 열기`}
+          aria-label={t('{box} 열기', { box: BOXES[item.box].name })}
         >
           {body}
         </ButtonBase>
@@ -228,19 +229,19 @@ export function OpenDialog({ opening, onClose }) {
       <DialogContent>
         <Stack alignItems="center" spacing={1.5} sx={{ py: 1 }}>
           <BoxArt box={box} open={!!result} size={88} />
-          {error && <Alert severity="error">{error}</Alert>}
-          {!result && !error && <Typography color="text.secondary">여는 중…</Typography>}
+          {error && <Alert severity="error">{t(error)}</Alert>}
+          {!result && !error && <Typography color="text.secondary">{t('여는 중…')}</Typography>}
           {result && (result.item && !result.dup ? (
             <Stack alignItems="center" spacing={1}>
               <ProfileAvatar avatar={result.item} size={56} />
-              <Typography fontWeight={700}>{AVATARS[result.item].name} 프로필을 얻었습니다!</Typography>
-              <Typography variant="caption" color="text.secondary">장착 화면에서 바꿀 수 있습니다.</Typography>
+              <Typography fontWeight={700}>{t('{name} 프로필을 얻었습니다!', { name: AVATARS[result.item].name })}</Typography>
+              <Typography variant="caption" color="text.secondary">{t('장착 화면에서 바꿀 수 있습니다.')}</Typography>
             </Stack>
           ) : (
             <Stack alignItems="center" spacing={0.5}>
               {result.dup && (
                 <Typography variant="body2" color="text.secondary" textAlign="center">
-                  {AVATARS[result.item].name} 프로필은 이미 있어서 바꿔 드렸습니다.
+                  {t('{name} 프로필은 이미 있어서 바꿔 드렸습니다.', { name: AVATARS[result.item].name })}
                 </Typography>
               )}
               <Amount type={result.type} amount={result.amount} variant="h5" />
@@ -249,7 +250,7 @@ export function OpenDialog({ opening, onClose }) {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={!result && !error}>확인</Button>
+        <Button onClick={onClose} disabled={!result && !error}>{t('확인')}</Button>
       </DialogActions>
     </Dialog>
   );
@@ -293,14 +294,14 @@ export default function DailyRewards({ onRewarded }) {
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 0.5 }}>
         <Stack direction="row" alignItems="center" spacing={0.25}>
           <Typography variant="subtitle2" fontWeight={700}>
-            일일보상 {won}/{data.limit}
+            {t('일일보상 {won}/{limit}', { won, limit: data.limit })}
           </Typography>
-          <IconButton size="small" onClick={() => setShowTable(true)} aria-label="나올 수 있는 보상 보기">
+          <IconButton size="small" onClick={() => setShowTable(true)} aria-label={t('나올 수 있는 보상 보기')}>
             <InfoOutlinedIcon fontSize="small" />
           </IconButton>
         </Stack>
         <Typography variant="caption" color="text.secondary">
-          {done ? `${untilText(data.next)} 뒤 다시 받을 수 있어요` : '승리하면 앞 칸부터 받아요'}
+          {done ? t('{time} 뒤 다시 받을 수 있어요', { time: untilText(data.next) }) : t('승리하면 앞 칸부터 받아요')}
         </Typography>
       </Stack>
       <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${data.limit}, 1fr)`, gap: 0.75 }}>
@@ -311,7 +312,7 @@ export default function DailyRewards({ onRewarded }) {
 
       {data.boxes.length > 0 && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" color="text.secondary">지난날 열지 않은 상자</Typography>
+          <Typography variant="caption" color="text.secondary">{t('지난날 열지 않은 상자')}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${data.limit}, 1fr)`, gap: 0.75, mt: 0.5 }}>
             {data.boxes.map((b) => (
               <RewardCell key={`${b.day}-${b.idx}`} item={b} onOpen={open} />

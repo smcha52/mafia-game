@@ -17,23 +17,24 @@ import StarIcon from '@mui/icons-material/Star';
 import { Wallet } from './AccountBar';
 import ProfileAvatar, { AVATARS } from './ProfileAvatar';
 import { buyItem, myShop } from '../lib/api';
+import { localized, t } from '../lib/i18n';
 
-const PRICE = {
+const PRICE = localized({
   STAR: { key: 'stars', label: '별', icon: <StarIcon fontSize="small" sx={{ color: '#f5b301' }} /> },
   GEM: { key: 'gems', label: '보석', icon: <DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} /> },
   COIN: { key: 'coins', label: '코인', icon: <MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} /> },
-};
+});
 
 // 파는 기간이 끝날 때까지 남은 시간
 function untilText(iso) {
   const ms = new Date(iso).getTime() - Date.now();
-  if (!(ms > 0)) return '곧 종료';
+  if (!(ms > 0)) return t('곧 종료');
   const min = Math.ceil(ms / 60000);
   const d = Math.floor(min / 1440);
   const h = Math.floor((min % 1440) / 60);
-  if (d) return `${d}일 ${h}시간 남음`;
-  if (h) return `${h}시간 ${min % 60}분 남음`;
-  return `${min}분 남음`;
+  if (d) return t('{d}일 {h}시간 남음', { d, h });
+  if (h) return t('{h}시간 {m}분 남음', { h, m: min % 60 });
+  return t('{m}분 남음', { m: min });
 }
 
 function ItemCard({ item, wallet, busy, disabled, onBuy }) {
@@ -58,7 +59,7 @@ function ItemCard({ item, wallet, busy, disabled, onBuy }) {
           )}
         </Stack>
         {item.owned ? (
-          <Chip label="보유 중" size="small" />
+          <Chip label={t('보유 중')} size="small" />
         ) : (
           <Button
             variant="contained"
@@ -68,7 +69,7 @@ function ItemCard({ item, wallet, busy, disabled, onBuy }) {
             onClick={() => onBuy(item)}
             sx={{ flexShrink: 0 }}
           >
-            구매
+            {t('구매')}
           </Button>
         )}
       </Stack>
@@ -114,14 +115,14 @@ export default function ShopDialog({ open, onClose, onBought, wallet }) {
     <Dialog open={open} onClose={onClose} fullScreen>
       <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', px: 2, py: 2 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-          <IconButton onClick={onClose} aria-label="뒤로">
+          <IconButton onClick={onClose} aria-label={t('뒤로')}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flex: 1 }}>상점</Typography>
+          <Typography variant="h6" sx={{ flex: 1 }}>{t('상점')}</Typography>
           <Wallet {...wallet} />
         </Stack>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{t(error)}</Alert>}
 
         {!data ? (
           !error && (
@@ -131,12 +132,12 @@ export default function ShopDialog({ open, onClose, onBought, wallet }) {
           )
         ) : data.items.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Typography color="text.secondary">지금 파는 물건이 없습니다.</Typography>
+            <Typography color="text.secondary">{t('지금 파는 물건이 없습니다.')}</Typography>
           </Paper>
         ) : (
           <Stack spacing={1}>
             <Typography variant="caption" color="text.secondary">
-              🎃 할로윈 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.
+              🎃 {t('할로윈 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.')}
             </Typography>
             {data.items.map((item) => (
               <ItemCard

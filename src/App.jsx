@@ -24,8 +24,11 @@ import {
   heartbeat, myActiveRoom, startAttendance, takeKickNotice,
 } from './lib/api';
 import { halloween } from './theme';
+import { t, useLang } from './lib/i18n';
 
 export default function App() {
+  // 언어를 바꾸면 화면 전체를 다시 그린다
+  useLang();
   const [booting, setBooting] = useState(true);
   const [bootError, setBootError] = useState('');
   const [uid, setUid] = useState(null);
@@ -203,7 +206,7 @@ export default function App() {
     return (
       <Stack sx={{ minHeight: '100dvh' }} alignItems="center" justifyContent="center" spacing={2}>
         <CircularProgress />
-        <Typography color="text.secondary">접속 중…</Typography>
+        <Typography color="text.secondary">{t('접속 중…')}</Typography>
       </Stack>
     );
   }
@@ -211,9 +214,9 @@ export default function App() {
   if (bootError) {
     return (
       <Stack sx={{ minHeight: '100dvh', p: 3 }} alignItems="center" justifyContent="center" spacing={1}>
-        <Typography color={halloween ? 'text.primary' : 'error'}>접속에 실패했습니다.</Typography>
+        <Typography color={halloween ? 'text.primary' : 'error'}>{t('접속에 실패했습니다.')}</Typography>
         <Typography color="text.secondary" variant="body2" textAlign="center">
-          {bootError}
+          {t(bootError)}
         </Typography>
       </Stack>
     );

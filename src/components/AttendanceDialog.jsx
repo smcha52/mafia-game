@@ -16,6 +16,7 @@ import BoxArt from './BoxArt';
 import { OpenDialog } from './DailyRewards';
 import { REWARD, untilText } from './QuestDialog';
 import { claimAttendance, myAttendance } from '../lib/api';
+import { t } from '../lib/i18n';
 
 // 하루 칸 — 날짜, 보상, 받았으면 체크. 오늘은 테두리로, 지나간 날은 흐리게 보여준다
 // 상자는 상자 그림으로 보여준다 (0059)
@@ -35,13 +36,13 @@ export function DayCell({ d, today }) {
       aria-current={isToday ? 'date' : undefined}
     >
       <Typography variant="caption" color={isToday ? 'primary' : 'text.secondary'} fontWeight={700}>
-        {d.day}일
+        {t('{n}일', { n: d.day })}
       </Typography>
       <Stack alignItems="center" spacing={0.25} sx={{ mt: 0.5 }}>
         {d.claimed ? (
-          <CheckCircleIcon color="success" aria-label="받음" />
+          <CheckCircleIcon color="success" aria-label={t('받음')} />
         ) : d.rewards.length === 0 ? (
-          <Typography variant="caption" color="text.secondary">준비 중</Typography>
+          <Typography variant="caption" color="text.secondary">{t('준비 중')}</Typography>
         ) : (
           d.rewards.map((r) => r.type === 'BOX' ? (
             <BoxArt key={r.type} box={r.box} size={28} />
@@ -51,7 +52,7 @@ export function DayCell({ d, today }) {
               direction="row"
               alignItems="center"
               spacing={0.25}
-              aria-label={`${REWARD[r.type].label} ${r.amount}개`}
+              aria-label={t('{label} {n}개', { label: REWARD[r.type].label, n: r.amount })}
             >
               {REWARD[r.type].icon}
               <Typography variant="body2" fontWeight={700}>{r.amount}</Typography>
@@ -107,14 +108,14 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
     <Dialog open={open} onClose={onClose} fullScreen>
       <Box sx={{ maxWidth: 480, width: '100%', mx: 'auto', px: 2, py: 2 }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-          <IconButton onClick={onClose} aria-label="뒤로">
+          <IconButton onClick={onClose} aria-label={t('뒤로')}>
             <ArrowBackIcon />
           </IconButton>
-          <Typography variant="h6" sx={{ flex: 1 }}>출석</Typography>
+          <Typography variant="h6" sx={{ flex: 1 }}>{t('출석')}</Typography>
           <Wallet {...wallet} />
         </Stack>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{t(error)}</Alert>}
 
         {!data ? (
           !error && (
@@ -125,8 +126,8 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
         ) : (
           <Stack spacing={1.5}>
             <Typography variant="caption" color="text.secondary">
-              {data.checked ? `다음 출석까지 ${untilText(data.next)}` : `오늘은 ${data.day}일차`}
-              {' '}· 하루에 한 번 출석할 때마다 다음 날 보상을 받습니다. 빠진 날이 있어도 이어서 받고, 30일을 다 받으면 1일부터 다시 시작합니다.
+              {data.checked ? t('다음 출석까지 {time}', { time: untilText(data.next) }) : t('오늘은 {n}일차', { n: data.day })}
+              {' '}· {t('하루에 한 번 출석할 때마다 다음 날 보상을 받습니다. 빠진 날이 있어도 이어서 받고, 30일을 다 받으면 1일부터 다시 시작합니다.')}
             </Typography>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
               {data.days.map((d) => (
@@ -141,10 +142,10 @@ export default function AttendanceDialog({ open, onClose, onRewarded, wallet }) 
               onClick={claim}
             >
               {data.checked
-                ? '오늘 출석 완료'
+                ? t('오늘 출석 완료')
                 : todayCell.rewards.length === 0
-                  ? `${data.day}일차 출석하기 (보상 없음)`
-                  : `${data.day}일차 보상 받기`}
+                  ? t('{n}일차 출석하기 (보상 없음)', { n: data.day })
+                  : t('{n}일차 보상 받기', { n: data.day })}
             </Button>
           </Stack>
         )}

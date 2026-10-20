@@ -1,3 +1,5 @@
+import { localized } from '../lib/i18n';
+
 // 일일보상 상자 그림. box = TREASURE(보물상자) · PUMPKIN(호박상자, 할로윈) (0058)
 // open 이면 뚜껑이 열린 모습
 
@@ -55,10 +57,10 @@ function PumpkinBox({ open }) {
   );
 }
 
-export const BOXES = {
+export const BOXES = localized({
   TREASURE: { name: '보물상자', Art: Treasure },
   PUMPKIN: { name: '호박상자', Art: PumpkinBox },
-};
+});
 
 export default function BoxArt({ box, open = false, size = 32 }) {
   const item = BOXES[box] ?? BOXES.TREASURE;

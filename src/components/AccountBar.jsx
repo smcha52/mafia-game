@@ -19,11 +19,12 @@ import ProfileAvatar from './ProfileAvatar';
 import { levelInfo } from '../lib/level';
 import { signOut } from '../lib/supabase';
 import { halloween } from '../theme';
+import { t } from '../lib/i18n';
 
 // 재화 하나 — 아이콘과 개수
 function Currency({ icon, label, value, color }) {
   return (
-    <Stack direction="row" alignItems="center" spacing={0.25} aria-label={`${label} ${value}개`}>
+    <Stack direction="row" alignItems="center" spacing={0.25} aria-label={t('{label} {n}개', { label, n: value })}>
       {icon}
       <Typography variant="body2" fontWeight={700} sx={{ fontVariantNumeric: 'tabular-nums', color }}>
         {value.toLocaleString()}
@@ -42,9 +43,9 @@ export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
       spacing={1.25}
       sx={halloween ? { bgcolor: 'background.paper', borderRadius: 4, px: 1.25, py: 0.5 } : undefined}
     >
-      <Currency label="별" value={stars} icon={<StarIcon fontSize="small" sx={{ color: '#f5b301' }} />} />
-      <Currency label="보석" value={gems} icon={<DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} />} />
-      <Currency label="코인" value={coins} icon={<MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} />} />
+      <Currency label={t('별')} value={stars} icon={<StarIcon fontSize="small" sx={{ color: '#f5b301' }} />} />
+      <Currency label={t('보석')} value={gems} icon={<DiamondIcon fontSize="small" sx={{ color: '#29b6f6' }} />} />
+      <Currency label={t('코인')} value={coins} icon={<MonetizationOnIcon fontSize="small" sx={{ color: '#ffa000' }} />} />
     </Stack>
   );
 }
@@ -92,7 +93,7 @@ export default function AccountBar({
             variant="determinate"
             value={lv.max ? 100 : (lv.current / lv.need) * 100}
             sx={{ width: 120, height: 6, borderRadius: 3 }}
-            aria-label="다음 레벨까지 진행"
+            aria-label={t('다음 레벨까지 진행')}
           />
           <Typography variant="caption" color="text.secondary" noWrap>
             {lv.max ? 'MAX' : `${lv.current} / ${lv.need} XP`}
@@ -110,7 +111,7 @@ export default function AccountBar({
           onClick={logout}
           loading={busy}
         >
-          로그아웃
+          {t('로그아웃')}
         </Button>
         <Button
           variant="outlined"
@@ -118,7 +119,7 @@ export default function AccountBar({
           startIcon={<AssignmentIcon />}
           onClick={onQuest}
         >
-          퀘스트
+          {t('퀘스트')}
         </Button>
         <Button
           variant="outlined"
@@ -126,7 +127,7 @@ export default function AccountBar({
           startIcon={<CurrencyExchangeIcon />}
           onClick={onExchange}
         >
-          재화 교환소
+          {t('재화 교환소')}
         </Button>
         <Button
           variant="outlined"
@@ -134,7 +135,7 @@ export default function AccountBar({
           startIcon={<StorefrontIcon />}
           onClick={onShop}
         >
-          상점
+          {t('상점')}
         </Button>
         <Button
           variant="outlined"
@@ -142,7 +143,7 @@ export default function AccountBar({
           startIcon={<CheckroomIcon />}
           onClick={onEquip}
         >
-          장착
+          {t('장착')}
         </Button>
         <Button
           variant="outlined"
@@ -150,7 +151,7 @@ export default function AccountBar({
           startIcon={<EventAvailableIcon />}
           onClick={onAttendance}
         >
-          출석
+          {t('출석')}
         </Button>
         <Button
           variant="outlined"
@@ -158,7 +159,7 @@ export default function AccountBar({
           startIcon={<LocalFireDepartmentIcon />}
           onClick={onStreak}
         >
-          연속 출석
+          {t('연속 출석')}
         </Button>
       </Stack>
     </Stack>

@@ -14,6 +14,7 @@ import ResultChips from './ResultChips';
 import RoleAvatar from './RoleAvatar';
 import { TEAMS, WINNERS, didWin, roleInfo } from '../lib/roles';
 import { finalRoles } from '../lib/api';
+import { t } from '../lib/i18n';
 
 // uid 를 넘기면 내가 이번 판에 얻은 XP 를 따로 보여준다
 export default function GameOver({ roomId, winner, uid }) {
@@ -24,7 +25,7 @@ export default function GameOver({ roomId, winner, uid }) {
     finalRoles(roomId).then(setRows).catch((e) => setError(e.message));
   }, [roomId]);
 
-  const w = WINNERS[winner] ?? { title: '게임 종료', emoji: '🏁', color: 'text.primary' };
+  const w = WINNERS[winner] ?? { title: t('게임 종료'), emoji: '🏁', color: 'text.primary' };
   // XP 는 0038 적용 뒤에만 온다
   const mine = rows?.find((r) => r.uid === uid);
   const hasXp = mine?.xpGained != null;
@@ -38,7 +39,7 @@ export default function GameOver({ roomId, winner, uid }) {
         </Typography>
         {winner === 'DRAW' && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            마지막 날까지 승부가 나지 않았습니다.
+            {t('마지막 날까지 승부가 나지 않았습니다.')}
           </Typography>
         )}
       </Paper>
@@ -46,18 +47,18 @@ export default function GameOver({ roomId, winner, uid }) {
       {hasXp && (
         <Paper sx={{ p: 2 }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between">
-            <Typography fontWeight={700}>이번 판 XP</Typography>
+            <Typography fontWeight={700}>{t('이번 판 XP')}</Typography>
             <Typography variant="h6" color="primary.main">+{mine.xpGained} XP</Typography>
           </Stack>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {(mine.won ?? didWin(winner, mine.role, mine.team))
-              ? `직업 행동 ${mine.xpBase} XP × 2 (승리)`
-              : `직업 행동 ${mine.xpBase} XP${winner === 'DRAW' ? ' (무승부)' : ' (패배)'}`}
+              ? t('직업 행동 {xp} XP × 2 (승리)', { xp: mine.xpBase })
+              : t(winner === 'DRAW' ? '직업 행동 {xp} XP (무승부)' : '직업 행동 {xp} XP (패배)', { xp: mine.xpBase })}
           </Typography>
         </Paper>
       )}
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <Alert severity="error">{t(error)}</Alert>}
 
       {rows && (
         <Paper sx={{ overflow: 'hidden' }}>
