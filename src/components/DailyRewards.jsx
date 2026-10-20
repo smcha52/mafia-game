@@ -105,7 +105,7 @@ function TableDialog({ open, onClose, limit }) {
       <DialogContent>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {t('하루 {limit}칸은 아래 확률로 미리 정해지고, 승리할 때마다 앞 칸부터 받습니다.', { limit })}
-          {' '}{t('2연승부터 받는 코인·별·보석이 늘어납니다 (상자 제외).')}
+          {' '}{t('2연승부터 받는 코인·별·보석이 늘어나고, 상자는 열 때 나온 재화가 늘어납니다.')}
         </Typography>
         {DAILY_TABLE.map((row, i) => (
           <TableRow key={i} row={row} box={CURRENT_BOX} />
@@ -256,6 +256,12 @@ export function OpenDialog({ opening, onClose }) {
                 </Typography>
               )}
               <Amount type={result.type} amount={result.amount} variant="h5" />
+              {/* 일일보상 상자는 이긴 판의 연승 보너스가 붙는다 (0063) */}
+              {result.bonus > 0 && (
+                <Typography variant="body2" fontWeight={700} sx={{ color: '#ff6d00' }}>
+                  🔥 {t('연승 보너스 +{pct}%', { pct: result.bonus })}
+                </Typography>
+              )}
             </Stack>
           ))}
         </Stack>

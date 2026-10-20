@@ -558,8 +558,9 @@ export default {
     '상자가 없습니다.': "There's no box.",
     '이미 연 상자입니다.': 'This box is already open.',
     '{n}연승 보너스 · XP와 재화 +{pct}%': '{n}-win streak bonus · XP and currency +{pct}%',
-    '2연승부터 받는 코인·별·보석이 늘어납니다 (상자 제외).': 'From a 2-win streak, the coins, stars and gems you receive increase (except boxes).',
+    '2연승부터 받는 코인·별·보석이 늘어나고, 상자는 열 때 나온 재화가 늘어납니다.': 'From a 2-win streak, the coins, stars and gems you receive increase, and for boxes the currency inside increases when opened.',
     '2연승부터 10%씩 더 받아 11연승부터는 2배(+100%)입니다.': 'From a 2-win streak you get 10% more per win, up to double (+100%) from 11 wins in a row.',
+    '연승 보너스 +{pct}%': 'Streak bonus +{pct}%',
   },
   // 서버가 숫자·이름을 넣어 보내는 오류 문구
   patterns: [
