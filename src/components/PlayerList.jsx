@@ -12,6 +12,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import StarIcon from '@mui/icons-material/Star';
 
 import FootIcon from './FootIcon';
+import ProfileAvatar from './ProfileAvatar';
 import { t } from '../lib/i18n';
 
 // onKick 을 넘기면(방장·대기실) 다른 참가자 옆에 추방 버튼을 보여준다
@@ -24,9 +25,13 @@ export default function PlayerList({ players, uid, onKick, kickingUid = null }) 
           return (
             <ListItem key={p.id} divider>
               <ListItemAvatar>
-                <Avatar sx={{ bgcolor: p.is_host ? 'primary.main' : 'secondary.main' }}>
-                  {p.nickname.slice(0, 1)}
-                </Avatar>
+                {p.avatar ? (
+                  <ProfileAvatar avatar={p.avatar} size={40} />
+                ) : (
+                  <Avatar sx={{ bgcolor: p.is_host ? 'primary.main' : 'secondary.main' }}>
+                    {p.nickname.slice(0, 1)}
+                  </Avatar>
+                )}
               </ListItemAvatar>
               <ListItemText
                 primary={

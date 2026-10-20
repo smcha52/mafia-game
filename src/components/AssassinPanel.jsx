@@ -13,6 +13,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
+import ProfileAvatar from './ProfileAvatar';
 import { ALL_ROLES, roleInfo } from '../lib/roles';
 import { t } from '../lib/i18n';
 
@@ -94,9 +95,13 @@ export default function AssassinPanel({
               onClick={() => setTarget(p.uid)}
             >
               <ListItemAvatar>
-                <Avatar sx={{ bgcolor: target === p.uid ? 'error.main' : 'secondary.main' }}>
-                  {p.nickname.slice(0, 1)}
-                </Avatar>
+                {p.avatar ? (
+                  <ProfileAvatar avatar={p.avatar} size={40} />
+                ) : (
+                  <Avatar sx={{ bgcolor: target === p.uid ? 'error.main' : 'secondary.main' }}>
+                    {p.nickname.slice(0, 1)}
+                  </Avatar>
+                )}
               </ListItemAvatar>
               <ListItemText primary={p.nickname} />
             </ListItemButton>

@@ -8,6 +8,8 @@ import Paper from '@mui/material/Paper';
 import Radio from '@mui/material/Radio';
 import Stack from '@mui/material/Stack';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
+
+import ProfileAvatar from './ProfileAvatar';
 import { t } from '../lib/i18n';
 
 // 살아 있는 참가자 중에서 대상을 고른다.
@@ -37,9 +39,13 @@ export default function PlayerPicker({
               onClick={() => !locked && !blocked && onChange(p.uid)}
             >
               <ListItemAvatar>
-                <Avatar sx={{ bgcolor: selected ? 'primary.main' : 'secondary.main' }}>
-                  {p.nickname.slice(0, 1)}
-                </Avatar>
+                {p.avatar ? (
+                  <ProfileAvatar avatar={p.avatar} size={40} />
+                ) : (
+                  <Avatar sx={{ bgcolor: selected ? 'primary.main' : 'secondary.main' }}>
+                    {p.nickname.slice(0, 1)}
+                  </Avatar>
+                )}
               </ListItemAvatar>
               <ListItemText
                 primary={
