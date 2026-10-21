@@ -561,6 +561,7 @@ export default {
     '2연승부터 받는 코인·별·보석이 늘어나고, 상자는 열 때 나온 재화가 늘어납니다.': 'From a 2-win streak, the coins, stars and gems you receive increase, and for boxes the currency inside increases when opened.',
     '2연승부터 10%씩 더 받아 11연승부터는 2배(+100%)입니다.': 'From a 2-win streak you get 10% more per win, up to double (+100%) from 11 wins in a row.',
     '연승 보너스 +{pct}%': 'Streak bonus +{pct}%',
+    '상자는 사면 바로 열리고, 몇 번이든 다시 살 수 있습니다. 나오는 것은 일일보상 상자와 같습니다.': 'Boxes open as soon as you buy them, and you can buy them again any number of times. They contain the same things as daily reward boxes.',
   },
   // 서버가 숫자·이름을 넣어 보내는 오류 문구
   patterns: [

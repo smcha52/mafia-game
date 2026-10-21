@@ -15,6 +15,8 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import StarIcon from '@mui/icons-material/Star';
 
 import { Wallet } from './AccountBar';
+import BoxArt, { BOXES } from './BoxArt';
+import { OpenDialog } from './DailyRewards';
 import ProfileAvatar, { AVATARS } from './ProfileAvatar';
 import { buyItem, myShop } from '../lib/api';
 import { localized, t } from '../lib/i18n';
@@ -40,12 +42,16 @@ function untilText(iso) {
 function ItemCard({ item, wallet, busy, disabled, onBuy }) {
   const price = PRICE[item.priceType];
   const enough = (wallet?.[price.key] ?? 0) >= item.price;
+  // 상자는 몇 번이든 사고, 사면 바로 열린다 (0064)
+  const isBox = item.kind === 'BOX';
   return (
     <Paper sx={{ p: 2 }}>
       <Stack direction="row" alignItems="center" spacing={1.5}>
-        <ProfileAvatar avatar={item.id} size={64} />
+        {isBox ? <BoxArt box={item.box} size={64} /> : <ProfileAvatar avatar={item.id} size={64} />}
         <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
-          <Typography fontWeight={700}>{AVATARS[item.id]?.name ?? item.id}</Typography>
+          <Typography fontWeight={700}>
+            {isBox ? BOXES[item.box]?.name ?? item.id : AVATARS[item.id]?.name ?? item.id}
+          </Typography>
           <Stack direction="row" alignItems="center" spacing={0.5}>
             {price.icon}
             <Typography variant="body2">
@@ -83,6 +89,8 @@ export default function ShopDialog({ open, onClose, onBought, wallet }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null);
+  // 사서 연 상자 { box, result }
+  const [opening, setOpening] = useState(null);
 
   const load = useCallback(async () => {
     setError('');
@@ -101,7 +109,8 @@ export default function ShopDialog({ open, onClose, onBought, wallet }) {
     setBusy(item.id);
     setError('');
     try {
-      await buyItem(item.id);
+      const res = await buyItem(item.id);
+      if (res?.open) setOpening({ box: res.open.box, result: res.open });
       await load();
       await onBought?.();
     } catch (e) {
@@ -136,9 +145,16 @@ export default function ShopDialog({ open, onClose, onBought, wallet }) {
           </Paper>
         ) : (
           <Stack spacing={1}>
-            <Typography variant="caption" color="text.secondary">
-              🎃 {t('할로윈 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.')}
-            </Typography>
+            {data.items.some((item) => item.kind === 'AVATAR') && (
+              <Typography variant="caption" color="text.secondary">
+                🎃 {t('할로윈 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.')}
+              </Typography>
+            )}
+            {data.items.some((item) => item.kind === 'BOX') && (
+              <Typography variant="caption" color="text.secondary">
+                🎁 {t('상자는 사면 바로 열리고, 몇 번이든 다시 살 수 있습니다. 나오는 것은 일일보상 상자와 같습니다.')}
+              </Typography>
+            )}
             {data.items.map((item) => (
               <ItemCard
                 key={item.id}
@@ -152,6 +168,7 @@ export default function ShopDialog({ open, onClose, onBought, wallet }) {
           </Stack>
         )}
       </Box>
+      <OpenDialog opening={opening} onClose={() => setOpening(null)} />
     </Dialog>
   );
 }
