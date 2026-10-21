@@ -8,6 +8,7 @@ import AccountBar from './components/AccountBar';
 import AttendanceDialog from './components/AttendanceDialog';
 import EquipDialog from './components/EquipDialog';
 import ExchangeDialog from './components/ExchangeDialog';
+import FriendDialog from './components/FriendDialog';
 import QuestDialog from './components/QuestDialog';
 import ShopDialog from './components/ShopDialog';
 import StreakDialog from './components/StreakDialog';
@@ -21,7 +22,7 @@ import {
   expireIfIdle, isConfigured, markTutorialDone, myProfile, supabase, touchActive,
 } from './lib/supabase';
 import {
-  heartbeat, myActiveRoom, startAttendance, takeKickNotice,
+  heartbeat, myActiveRoom, startAttendance, takeKickNotice, touchOnline,
 } from './lib/api';
 import { halloween } from './theme';
 import { t, useLang } from './lib/i18n';
@@ -57,6 +58,8 @@ export default function App() {
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   // 연속 출석 화면이 열려 있는지
   const [streakOpen, setStreakOpen] = useState(false);
+  // 친구 화면에서 열어 둔 탭 (ADD · FRIENDS). null 이면 닫힘
+  const [friendTab, setFriendTab] = useState(null);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -111,6 +114,23 @@ export default function App() {
       if (document.visibilityState === 'visible') touchActive();
     };
     const timer = setInterval(touchActive, 10 * 60 * 1000);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [loggedIn]);
+
+  // 친구에게 접속 중으로 보이도록 1분마다 접속 시각을 남긴다 (0065)
+  // 실패해도(0065 적용 전 등) 게임에는 영향이 없다
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    const ping = () => touchOnline().catch(() => {});
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') ping();
+    };
+    ping();
+    const timer = setInterval(ping, 60 * 1000);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       clearInterval(timer);
@@ -245,6 +265,13 @@ export default function App() {
         onEquip={() => setEquipOpen(true)}
         onAttendance={() => setAttendanceOpen(true)}
         onStreak={() => setStreakOpen(true)}
+        onFriendAdd={() => setFriendTab('ADD')}
+        onFriends={() => setFriendTab('FRIENDS')}
+      />
+      <FriendDialog
+        open={friendTab !== null}
+        tab={friendTab ?? 'ADD'}
+        onClose={() => setFriendTab(null)}
       />
       <StreakDialog
         open={streakOpen}

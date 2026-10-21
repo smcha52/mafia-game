@@ -12,6 +12,8 @@ import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import PeopleIcon from '@mui/icons-material/People';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import StarIcon from '@mui/icons-material/Star';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 
@@ -52,10 +54,10 @@ export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
 
 // 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(장착한 그림, 없으면 닉네임 첫 글자)과 닉네임·레벨,
 // 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트, 그 아래 재화 교환소, 그 아래 상점, 그 아래 장착,
-// 그 아래 출석, 그 아래 연속 출석
+// 그 아래 출석, 그 아래 연속 출석, 그 아래 친구 추가, 그 아래 친구
 export default function AccountBar({
   nickname, avatar = null, xp = 0, stars = 0, gems = 0, coins = 0,
-  onQuest, onExchange, onShop, onEquip, onAttendance, onStreak,
+  onQuest, onExchange, onShop, onEquip, onAttendance, onStreak, onFriendAdd, onFriends,
 }) {
   const lv = levelInfo(xp);
 
@@ -160,6 +162,22 @@ export default function AccountBar({
           onClick={onStreak}
         >
           {t('연속 출석')}
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<PersonAddIcon />}
+          onClick={onFriendAdd}
+        >
+          {t('친구 추가')}
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<PeopleIcon />}
+          onClick={onFriends}
+        >
+          {t('친구')}
         </Button>
       </Stack>
     </Stack>

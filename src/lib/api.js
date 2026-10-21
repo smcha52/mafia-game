@@ -306,3 +306,40 @@ export async function myDailyRewards() {
 export async function openDailyBox(day, idx) {
   return unwrap(await supabase.rpc('open_daily_box', { p_day: day, p_idx: idx }));
 }
+
+// --- 친구 ---
+
+// 로그인해 있는 동안 1분마다 접속 시각을 남긴다. 친구에게 접속 중으로 보인다 (0065)
+export async function touchOnline() {
+  unwrap(await supabase.rpc('touch_online'));
+}
+
+// 닉네임이 같은 플레이어 { uid, nickname, avatar, level, status }. 없으면 null
+// status = ME · NONE · SENT(내가 요청함) · RECEIVED(요청받음) · FRIEND
+export async function searchPlayer(nickname) {
+  return unwrap(await supabase.rpc('search_player', { p_nickname: nickname }));
+}
+
+// 친구 추가를 요청한다. 상대가 먼저 요청했으면 바로 친구가 된다. 'SENT' · 'FRIEND'
+export async function sendFriendRequest(uid) {
+  return unwrap(await supabase.rpc('send_friend_request', { p_uid: uid }));
+}
+
+export async function acceptFriendRequest(uid) {
+  unwrap(await supabase.rpc('accept_friend_request', { p_uid: uid }));
+}
+
+export async function declineFriendRequest(uid) {
+  unwrap(await supabase.rpc('decline_friend_request', { p_uid: uid }));
+}
+
+// 친구를 삭제한다. 상대 목록에서도 사라진다
+export async function removeFriend(uid) {
+  unwrap(await supabase.rpc('remove_friend', { p_uid: uid }));
+}
+
+// 받은 요청(requests), 보낸 요청(sent), 친구(friends — online, room { code, phase, private })
+// 비공개 방은 code 가 null 이다
+export async function myFriends() {
+  return unwrap(await supabase.rpc('my_friends'));
+}
