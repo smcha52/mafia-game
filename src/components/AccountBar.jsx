@@ -8,6 +8,7 @@ import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckroomIcon from '@mui/icons-material/Checkroom';
 import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import DiamondIcon from '@mui/icons-material/Diamond';
+import Diversity3Icon from '@mui/icons-material/Diversity3';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import LocalFireDepartmentIcon from '@mui/icons-material/LocalFireDepartment';
 import LogoutIcon from '@mui/icons-material/Logout';
@@ -53,10 +54,10 @@ export function Wallet({ stars = 0, gems = 0, coins = 0 }) {
 
 // 로그인한 뒤 화면 맨 위. 왼쪽에 프로필(장착한 그림, 없으면 닉네임 첫 글자)과 닉네임·레벨,
 // 오른쪽 위에 재화(별·보석·코인), 그 아래 로그아웃, 그 아래 퀘스트, 그 아래 재화 교환소, 그 아래 상점, 그 아래 장착,
-// 그 아래 출석, 그 아래 연속 출석, 그 아래 친구
+// 그 아래 출석, 그 아래 연속 출석, 그 아래 친구, 그 아래 클럽
 export default function AccountBar({
   nickname, avatar = null, xp = 0, stars = 0, gems = 0, coins = 0,
-  onQuest, onExchange, onShop, onEquip, onAttendance, onStreak, onFriends,
+  onQuest, onExchange, onShop, onEquip, onAttendance, onStreak, onFriends, onClub,
 }) {
   const lv = levelInfo(xp);
 
@@ -169,6 +170,14 @@ export default function AccountBar({
           onClick={onFriends}
         >
           {t('친구')}
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          startIcon={<Diversity3Icon />}
+          onClick={onClub}
+        >
+          {t('클럽')}
         </Button>
       </Stack>
     </Stack>

@@ -8,6 +8,7 @@ import AccountBar from './components/AccountBar';
 import AttendanceDialog from './components/AttendanceDialog';
 import EquipDialog from './components/EquipDialog';
 import ExchangeDialog from './components/ExchangeDialog';
+import ClubDialog from './components/ClubDialog';
 import FriendDialog from './components/FriendDialog';
 import QuestDialog from './components/QuestDialog';
 import ShopDialog from './components/ShopDialog';
@@ -60,6 +61,8 @@ export default function App() {
   const [streakOpen, setStreakOpen] = useState(false);
   // 친구 화면이 열려 있는지
   const [friendsOpen, setFriendsOpen] = useState(false);
+  // 클럽 화면이 열려 있는지
+  const [clubOpen, setClubOpen] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -208,7 +211,7 @@ export default function App() {
   }, [roomId, handleRemoved]);
 
   const handleStarted = useCallback(() => setPhase('NIGHT'), []);
-  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착·출석·연속 출석·일일보상 상자로 XP·재화·프로필이 바뀌면 다시 읽는다
+  // 게임이 끝나거나 퀘스트 보상·교환·구매·장착·출석·연속 출석·일일보상 상자·클럽 만들기로 XP·재화·프로필이 바뀌면 다시 읽는다
   const handleEnded = useCallback(async () => {
     try {
       const me = await myProfile();
@@ -266,10 +269,18 @@ export default function App() {
         onAttendance={() => setAttendanceOpen(true)}
         onStreak={() => setStreakOpen(true)}
         onFriends={() => setFriendsOpen(true)}
+        onClub={() => setClubOpen(true)}
       />
       <FriendDialog
         open={friendsOpen}
         onClose={() => setFriendsOpen(false)}
+      />
+      <ClubDialog
+        open={clubOpen}
+        uid={uid}
+        stars={profile.stars}
+        onClose={() => setClubOpen(false)}
+        onChanged={handleEnded}
       />
       <StreakDialog
         open={streakOpen}

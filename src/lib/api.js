@@ -343,3 +343,44 @@ export async function removeFriend(uid) {
 export async function myFriends() {
   return unwrap(await supabase.rpc('my_friends'));
 }
+
+// --- 클럽 ---
+
+// 별 100 개로 클럽을 만든다. levelMode = GTE(이상) · LTE(이하), level = 1~50. { id, stars }
+export async function createClub(name, levelMode, level) {
+  return unwrap(await supabase.rpc('create_club', {
+    p_name: name, p_level_mode: levelMode, p_level: level,
+  }));
+}
+
+// 모든 클럽 [{ id, name, levelMode, level, members, mine, canJoin }]
+export async function listClubs() {
+  return unwrap(await supabase.rpc('list_clubs'));
+}
+
+// 클럽에 들어간다. 다른 클럽에 들어가 있었으면 옮겨 간다
+export async function joinClub(clubId) {
+  unwrap(await supabase.rpc('join_club', { p_club_id: clubId }));
+}
+
+// 내 클럽 { id, name, levelMode, level, members }. 없으면 null
+export async function myClub() {
+  return unwrap(await supabase.rpc('my_club'));
+}
+
+export async function sendClubChat(body) {
+  unwrap(await supabase.rpc('send_club_chat', { p_body: body }));
+}
+
+// RLS 가 걸러 준다. 내 클럽 채팅만 내려온다
+export async function fetchClubChat(clubId) {
+  const rows = unwrap(
+    await supabase
+      .from('club_messages')
+      .select('*')
+      .eq('club_id', clubId)
+      .order('id', { ascending: false })
+      .limit(200),
+  );
+  return rows.reverse();
+}
