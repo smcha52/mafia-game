@@ -58,8 +58,8 @@ export default function App() {
   const [attendanceOpen, setAttendanceOpen] = useState(false);
   // 연속 출석 화면이 열려 있는지
   const [streakOpen, setStreakOpen] = useState(false);
-  // 친구 화면에서 열어 둔 탭 (ADD · FRIENDS). null 이면 닫힘
-  const [friendTab, setFriendTab] = useState(null);
+  // 친구 화면이 열려 있는지
+  const [friendsOpen, setFriendsOpen] = useState(false);
 
   // 로그인한 사람의 프로필을 읽고, 참가 중이던 방이 있으면 대기실로 복원한다 (§8.1-5)
   // fromLogin 이면 방금 로그인한 것이라 튜토리얼을 시작한다.
@@ -265,13 +265,11 @@ export default function App() {
         onEquip={() => setEquipOpen(true)}
         onAttendance={() => setAttendanceOpen(true)}
         onStreak={() => setStreakOpen(true)}
-        onFriendAdd={() => setFriendTab('ADD')}
-        onFriends={() => setFriendTab('FRIENDS')}
+        onFriends={() => setFriendsOpen(true)}
       />
       <FriendDialog
-        open={friendTab !== null}
-        tab={friendTab ?? 'ADD'}
-        onClose={() => setFriendTab(null)}
+        open={friendsOpen}
+        onClose={() => setFriendsOpen(false)}
       />
       <StreakDialog
         open={streakOpen}

@@ -241,9 +241,9 @@ function FriendsTab({ data, busy, onAccept, onDecline, onRemove }) {
   );
 }
 
-// 연속 출석 아래 친구 추가 · 친구 버튼으로 여는 화면. tab = 'ADD' · 'FRIENDS'
-export default function FriendDialog({ open, tab: initialTab = 'ADD', onClose }) {
-  const [tab, setTab] = useState(initialTab);
+// 연속 출석 아래 친구 버튼으로 여는 화면. 친구 목록으로 열리고, 탭으로 친구 추가와 오간다
+export default function FriendDialog({ open, onClose }) {
+  const [tab, setTab] = useState('FRIENDS');
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -251,8 +251,8 @@ export default function FriendDialog({ open, tab: initialTab = 'ADD', onClose })
   const [removing, setRemoving] = useState(null);
 
   useEffect(() => {
-    if (open) setTab(initialTab);
-  }, [open, initialTab]);
+    if (open) setTab('FRIENDS');
+  }, [open]);
 
   const load = useCallback(async () => {
     try {
@@ -297,8 +297,8 @@ export default function FriendDialog({ open, tab: initialTab = 'ADD', onClose })
         </Stack>
 
         <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="fullWidth" sx={{ mb: 2 }}>
-          <Tab value="ADD" label={t('친구 추가')} />
           <Tab value="FRIENDS" label={requests > 0 ? `${t('친구')} (${requests})` : t('친구')} />
+          <Tab value="ADD" label={t('친구 추가')} />
         </Tabs>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{t(error)}</Alert>}
