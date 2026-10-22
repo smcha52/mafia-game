@@ -353,7 +353,8 @@ export async function createClub(name, levelMode, level) {
   }));
 }
 
-// 모든 클럽 [{ id, name, levelMode, level, members, mine, canJoin }]
+// 모든 클럽 [{ id, name, levelMode, level, members, mine, canJoin, bannedUntil }]
+// bannedUntil = 추방당해 다시 들어갈 수 없는 때까지 (없으면 null)
 export async function listClubs() {
   return unwrap(await supabase.rpc('list_clubs'));
 }
@@ -363,7 +364,9 @@ export async function joinClub(clubId) {
   unwrap(await supabase.rpc('join_club', { p_club_id: clubId }));
 }
 
-// 내 클럽 { id, name, levelMode, level, members }. 없으면 null
+// 내 클럽 { id, name, levelMode, level, members, maxMembers, myRank, isOwner,
+//   people: [{ uid, nickname, avatar, level, rank, owner }] }. 없으면 null
+// rank = LEADER(대장) · VICE(부대장) · MEMBER(멤버), owner = 처음 만든 사람 (0067)
 export async function myClub() {
   return unwrap(await supabase.rpc('my_club'));
 }
@@ -383,4 +386,22 @@ export async function fetchClubChat(clubId) {
       .limit(200),
   );
   return rows.reverse();
+}
+
+export async function leaveClub() {
+  unwrap(await supabase.rpc('leave_club'));
+}
+
+// 승급 · 강등 (대장만). 멤버 ↔ 부대장 ↔ 대장
+export async function promoteClubMember(uid) {
+  unwrap(await supabase.rpc('promote_club_member', { p_uid: uid }));
+}
+
+export async function demoteClubMember(uid) {
+  unwrap(await supabase.rpc('demote_club_member', { p_uid: uid }));
+}
+
+// 멤버 추방 (대장 · 부대장). 7일 동안 다시 못 들어온다
+export async function kickClubMember(uid) {
+  unwrap(await supabase.rpc('kick_club_member', { p_uid: uid }));
 }
