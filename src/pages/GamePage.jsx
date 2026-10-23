@@ -36,7 +36,9 @@ import { t } from '../lib/i18n';
 
 // endHint 가 있으면 승패 화면에 안내 문구로 보여준다 (튜토리얼 뒤 첫 게임)
 export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHint = '' }) {
-  const { room, players, results, view, viewError, roles, loading, error, reload } = useGame(roomId);
+  const {
+    room, players, results, view, viewError, roles, spectating, loading, error, reload,
+  } = useGame(roomId, uid);
   const { messages } = useChat(roomId);
   const [pick, setPick] = useState(null);
   const [busy, setBusy] = useState('');
@@ -178,6 +180,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
       <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
         <GameOver roomId={roomId} winner={room.winner} uid={uid} />
 
+        {spectating && <Alert severity="info">{t('이미 게임이 시작되어서 관전 중 입니다')}</Alert>}
+
         {endHint && <Alert severity="info">{t(endHint)}</Alert>}
 
         {actionError && <Alert severity="error">{t(actionError)}</Alert>}
@@ -259,7 +263,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         </Stack>
       </Paper>
 
-      {!view && (
+      {!view && !spectating && (
         <Alert
           severity="warning"
           action={
@@ -411,13 +415,15 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         </Paper>
       )}
 
-      {!alive && (
+      {spectating ? (
+        <Alert severity="info">{t('이미 게임이 시작되어서 관전 중 입니다')}</Alert>
+      ) : !alive && (
         <Alert severity="info">
           {t('사망하여 관전 중입니다. 능력과 투표를 사용할 수 없습니다.')}
         </Alert>
       )}
 
-      {/* 비공개 방의 사망자는 모든 참가자의 직업을 본다 */}
+      {/* 비공개 방의 사망자·관전자는 모든 참가자의 직업을 본다 */}
       {!alive && <DeadRoles rows={roles} uid={uid} />}
 
       {/* 행동 영역 */}

@@ -5,7 +5,8 @@ import { deadRoles, fetchPlayers, fetchResults, fetchRoom, myGameView } from './
 // 진행 중인 게임의 상태를 모은다.
 // 공개 정보(방·참가자·결과)와 비공개 정보(내 직업·내 제출)를 함께 읽되,
 // 비공개 쪽은 서버가 본인 몫만 골라 준다.
-export function useGame(roomId) {
+// uid 가 참가자 목록에 없으면 게임 중간에 들어온 관전자다 (0068)
+export function useGame(roomId, uid) {
   const [room, setRoom] = useState(null);
   const [players, setPlayers] = useState([]);
   const [results, setResults] = useState([]);
@@ -13,6 +14,7 @@ export function useGame(roomId) {
   const [viewError, setViewError] = useState('');
   // 비공개 방에서 내가 죽었을 때만 받는 전체 직업
   const [roles, setRoles] = useState(null);
+  const [spectating, setSpectating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -29,7 +31,22 @@ export function useGame(roomId) {
       setResults(res ?? []);
 
       // 대기실에서는 아직 직업이 없다
-      if (r && r.phase !== 'LOBBY') {
+      const watching = Boolean(r) && !(p ?? []).some((x) => x.uid === uid);
+      setSpectating(watching);
+      if (r && r.phase !== 'LOBBY' && watching) {
+        // 관전자는 직업이 없다. 비공개 방이면 사망자처럼 다른 사람의 직업을 본다
+        setView(null);
+        setViewError('');
+        if (r.is_public === false && r.phase !== 'ENDED') {
+          try {
+            setRoles(await deadRoles(roomId));
+          } catch {
+            setRoles(null);
+          }
+        } else {
+          setRoles(null);
+        }
+      } else if (r && r.phase !== 'LOBBY') {
         let v = null;
         try {
           v = await myGameView(roomId);
@@ -60,7 +77,7 @@ export function useGame(roomId) {
     } finally {
       setLoading(false);
     }
-  }, [roomId]);
+  }, [roomId, uid]);
 
   useEffect(() => {
     if (!roomId) return undefined;
@@ -90,5 +107,5 @@ export function useGame(roomId) {
     };
   }, [roomId, reload]);
 
-  return { room, players, results, view, viewError, roles, loading, error, reload };
+  return { room, players, results, view, viewError, roles, spectating, loading, error, reload };
 }

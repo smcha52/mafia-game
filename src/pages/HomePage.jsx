@@ -57,7 +57,7 @@ export default function HomePage({ nickname, onEntered, notice = '', onCloseNoti
     setError('');
     try {
       const result = await fn();
-      onEntered(result.room_id);
+      onEntered(result.room_id, result.spectating ? result.phase : null);
     } catch (e) {
       setError(e.message);
     } finally {

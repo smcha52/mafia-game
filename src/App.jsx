@@ -159,11 +159,13 @@ export default function App() {
     if (kicked) setNotice('당신은 방장에 의해 추방당했습니다');
   }, [roomId, handleLeave]);
 
-  const handleEntered = useCallback((id) => {
+  // phase 는 시작된 방에 관전자로 들어왔을 때만 넘어온다
+  const handleEntered = useCallback((id, enteredPhase = null) => {
     setNotice('');
     // "자유롭게 하세요" 는 다음 방에 들어가면 더 보여주지 않는다
     setGuide((g) => (g === 'FREE' ? null : g));
     setRoomId(id);
+    if (enteredPhase && enteredPhase !== 'LOBBY') setPhase(enteredPhase);
   }, []);
 
   // 게임 화면에서 나가 첫 화면으로 돌아오면 마지막 안내를 보여준다

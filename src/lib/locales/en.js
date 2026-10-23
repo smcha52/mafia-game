@@ -383,6 +383,7 @@ export default {
     '건너뛰기': 'Skip',
     '투표한 사람이 없습니다.': 'Nobody voted.',
     '잠시 후 밤이 됩니다.': 'Night falls shortly.',
+    '이미 게임이 시작되어서 관전 중 입니다': 'The game has already started, so you are spectating.',
     '사망하여 관전 중입니다. 능력과 투표를 사용할 수 없습니다.': "You are dead and spectating. You can't use abilities or vote.",
     '처형할 사람에게 투표하세요': 'Vote for someone to execute',
     '오늘 밤은 능력을 사용하지 않기로 했습니다.': 'You chose not to use your ability tonight.',
