@@ -1,4 +1,5 @@
 import Avatar from '@mui/material/Avatar';
+import { MAPLE_LEAF } from './AutumnLeaves';
 import { localized } from '../lib/i18n';
 
 // 밤하늘과 성. 할로윈 프로필이 함께 쓴다
@@ -63,10 +64,38 @@ function Ghost() {
   );
 }
 
-// 상점에서 파는 프로필. id 는 서버 shop_items 와 1:1로 대응한다 (0051)
+// 단풍잎 한 장 (가을 프로필, 0070)
+function Maple() {
+  return (
+    <g transform="translate(10.4 20.6) scale(0.8)">
+      <path d={MAPLE_LEAF} fill="#e53935" stroke="#7f1010" strokeWidth="0.6" strokeLinejoin="round" />
+    </g>
+  );
+}
+
+// 부채꼴 은행잎 한 장 (가을 프로필, 0070)
+function Ginkgo() {
+  return (
+    <>
+      <path d="M20 31 L20 38" stroke="#8d6e00" strokeWidth="1.3" strokeLinecap="round" />
+      <path
+        d="M20 31.5 L11 23.5 Q12.5 19.6 17.4 19 L20 22.4 L22.6 19 Q27.5 19.6 29 23.5 Z"
+        fill="#fdd835"
+        stroke="#9e7b00"
+        strokeWidth="0.6"
+        strokeLinejoin="round"
+      />
+      <path d="M20 31 L15 22.5 M20 31 L20 23 M20 31 L25 22.5" stroke="#c9a400" strokeWidth="0.4" />
+    </>
+  );
+}
+
+// 상점에서 파는 프로필. id 는 서버 shop_items 와 1:1로 대응한다 (0051, 0070)
 export const AVATARS = localized({
   CASTLE_PUMPKIN: { name: '호박 성', art: <Pumpkin /> },
   CASTLE_GHOST: { name: '유령 성', art: <Ghost /> },
+  CASTLE_MAPLE: { name: '단풍잎 성', art: <Maple /> },
+  CASTLE_GINKGO: { name: '은행잎 성', art: <Ginkgo /> },
 });
 
 // 프로필 그림. avatar 가 없거나 모르는 id 면 기본(닉네임 첫 글자)을 보여준다

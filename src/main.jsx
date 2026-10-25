@@ -4,8 +4,9 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider } from '@mui/material/styles';
 
 import App from './App';
+import AutumnLeaves from './components/AutumnLeaves';
 import HalloweenSpiders from './components/HalloweenSpiders';
-import theme, { halloween } from './theme';
+import theme, { autumn, halloween } from './theme';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
@@ -14,6 +15,7 @@ createRoot(document.getElementById('root')).render(
       <CssBaseline />
       <App />
       {halloween && <HalloweenSpiders />}
+      {autumn && <AutumnLeaves />}
     </ThemeProvider>
   </StrictMode>,
 );

@@ -157,6 +157,8 @@ export default {
     '{name}님은 {team}입니다.': '{name} is {team}.',
     '호박 성': 'Pumpkin castle',
     '유령 성': 'Ghost castle',
+    '단풍잎 성': 'Maple leaf castle',
+    '은행잎 성': 'Ginkgo leaf castle',
     '메인': 'Main',
     '일간': 'Daily',
     '주간': 'Weekly',
