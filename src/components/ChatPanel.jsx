@@ -14,8 +14,10 @@ import { t } from '../lib/i18n';
 
 // 페이즈별로 쓸 수 있는 조건이 다르다. 서버가 최종 판정하고
 // 여기서는 왜 못 쓰는지 미리 알려준다.
-function writeState({ phase, alive, team }) {
+function writeState({ phase, alive, team, spectating }) {
   if (phase === 'LOBBY') return { can: true, note: '' };
+  // 게임 중간에 들어온 관전자는 끝난 뒤에도 쓸 수 없다 (0068 send_chat 은 참가자만 받는다)
+  if (spectating) return { can: false, note: t('관전 중에는 대화할 수 없습니다. 읽기만 가능합니다.') };
   if (phase === 'ENDED') return { can: true, note: '' };
   if (phase === 'DAY' || phase === 'DAY_RESULT') {
     return alive
@@ -33,14 +35,16 @@ function writeState({ phase, alive, team }) {
   return { can: false, note: '' };
 }
 
-export default function ChatPanel({ roomId, phase, uid, alive = true, team = null, messages }) {
+export default function ChatPanel({
+  roomId, phase, uid, alive = true, team = null, spectating = false, messages,
+}) {
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const endRef = useRef(null);
 
   const isMafiaChannel = phase === 'NIGHT';
-  const { can, note } = writeState({ phase, alive, team });
+  const { can, note } = writeState({ phase, alive, team, spectating });
 
   // 새 메시지가 오면 아래로 붙인다
   useEffect(() => {

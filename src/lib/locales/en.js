@@ -46,6 +46,7 @@ export default {
     '{n}일차 보상 받기': 'Claim day {n} reward',
     '보물상자': 'Treasure chest',
     '호박상자': 'Pumpkin box',
+    '관전 중에는 대화할 수 없습니다. 읽기만 가능합니다.': 'You are spectating and cannot chat. You can only read.',
     '사망하여 대화할 수 없습니다. 읽기만 가능합니다.': 'You are dead and cannot chat. You can only read.',
     '밤에는 마피아 진영만 대화할 수 있습니다.': 'Only the Mafia team can chat at night.',
     '사망하여 대화할 수 없습니다.': 'You are dead and cannot chat.',

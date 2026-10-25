@@ -207,6 +207,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         uid={uid}
         alive={view?.alive ?? false}
         team={view?.team ?? null}
+        spectating={spectating}
         messages={messages}
       />
 
@@ -598,6 +599,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         uid={uid}
         alive={view?.alive ?? false}
         team={view?.team ?? null}
+        spectating={spectating}
         messages={messages}
       />
 
