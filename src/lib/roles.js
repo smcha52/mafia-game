@@ -161,12 +161,16 @@ export const TOGGLEABLE = [
   'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR', 'CITIZEN',
 ];
 
-// 생존자의 목표 날. 서버 survivor_target() 과 일치해야 한다.
-// 최대 일수가 2일 이하이면 null — 생존자를 넣을 수 없다.
-export function survivorTarget(maxDays) {
-  if (maxDays == null || maxDays < 3) return null;
-  if (maxDays <= 4) return 2;
-  return 4 + 2 * Math.floor((maxDays - 5) / 3);
+// 생존자의 목표 날. 서버 survivor_target() 과 일치해야 한다 (0069).
+// 최대 일수 1~3일 1일 · 4~8일 2일 · 9~12일 3일 · 13~20일 4일 · 21~50일 5일
+// 인원 5~7명 +0일 · 8~11명 +1일 · 12~15명 +2일
+// 목표 날이 최대 일수를 넘으면 null — 생존자를 넣을 수 없다.
+export function survivorTarget(maxDays, players = 5) {
+  if (maxDays == null) return null;
+  const base = maxDays <= 3 ? 1 : maxDays <= 8 ? 2 : maxDays <= 12 ? 3 : maxDays <= 20 ? 4 : 5;
+  const extra = players >= 12 ? 2 : players >= 8 ? 1 : 0;
+  const target = base + extra;
+  return target > maxDays ? null : target;
 }
 
 // 살아 있는 사람이 아니라 사망자를 지목하는 직업

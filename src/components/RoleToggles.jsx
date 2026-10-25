@@ -47,8 +47,8 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
   // 랜덤 구성에서 특수 직업마다 넣을 최대 인원 (1~3, 기본 1). 고정 구성은 구성표 그대로다 (0041)
   const roleMax = room?.role_max ?? {};
   const maxOf = (code) => Math.min(3, Math.max(1, Number(roleMax[code]) || 1));
-  // 최대 일수가 2일 이하이면 생존자는 이길 날이 없어 넣을 수 없다 (서버도 뺀다)
-  const target = survivorTarget(room?.max_days ?? 15);
+  // 목표 날이 최대 일수를 넘으면 생존자는 이길 날이 없어 넣을 수 없다 (서버도 뺀다, 0069)
+  const target = survivorTarget(room?.max_days ?? 15, playerCount);
   const survivorBlocked = target === null;
   const effectiveOff = survivorBlocked ? [...disabled, 'SURVIVOR'] : disabled;
   const [busy, setBusy] = useState(false);
@@ -332,7 +332,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
           : t('고정 구성에서는 시민을 끌 수 없습니다.')}
         {' '}
         {survivorBlocked
-          ? t('최대 일수가 2일 이하라 생존자는 넣을 수 없습니다.')
+          ? t('최대 일수가 짧아 생존자는 넣을 수 없습니다.')
           : t('생존자는 {target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.', { target })}
       </Typography>
 

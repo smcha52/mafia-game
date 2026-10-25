@@ -284,9 +284,9 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
       <PrivateResults results={view?.privateResults} />
 
       {/* 생존자: 목표 날 안내 */}
-      {role === 'SURVIVOR' && survivorTarget(room.max_days) && (
+      {role === 'SURVIVOR' && survivorTarget(room.max_days, players.length) && (
         <Alert severity="info" icon={false} sx={{ color: '#B388FF' }}>
-          🛟 {t('{target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.', { target: survivorTarget(room.max_days) })}
+          🛟 {t('{target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.', { target: survivorTarget(room.max_days, players.length) })}
           {' '}{t('(지금 {day}일차)', { day })}
         </Alert>
       )}

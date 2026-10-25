@@ -228,7 +228,7 @@ export default {
     '5명부터 구성을 볼 수 있습니다.': 'The setup is shown from 5 players.',
     '시민을 끄면 시민 진영 자리를 켜진 시민 진영 직업으로만 채웁니다.': 'If Citizen is off, Citizen team slots are filled only with enabled Citizen-team roles.',
     '고정 구성에서는 시민을 끌 수 없습니다.': 'Citizen cannot be turned off in a fixed setup.',
-    '최대 일수가 2일 이하라 생존자는 넣을 수 없습니다.': "The Survivor can't be included because the max days is 2 or fewer.",
+    '최대 일수가 짧아 생존자는 넣을 수 없습니다.': "The Survivor can't be included because the max days is too short.",
     '생존자는 {target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.': 'The Survivor wins by staying alive until the end of day {target}.',
     '마피아 진영 직업이 하나도 없어 게임을 시작할 수 없습니다.': "The game can't start because there are no Mafia-team roles.",
     '시민 진영 직업이 부족해 게임을 시작할 수 없습니다.': "The game can't start because there are not enough Citizen-team roles.",
