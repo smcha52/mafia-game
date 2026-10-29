@@ -8,7 +8,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
-import { TEAMS, XP_RULES, roleInfo, roleTeam } from '../lib/roles';
+import { NO_XP, TEAMS, XP_RULES, roleInfo, roleTeam } from '../lib/roles';
 import { t } from '../lib/i18n';
 
 // 직업 이름을 누르면 뜨는 설명 — 능력과 XP 얻는 법
@@ -46,10 +46,12 @@ export default function RoleInfoDialog({ role, onClose }) {
                 </Typography>
               ))}
             </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              {t('게임이 끝날 때 이기면 2배, 지면 그대로 받습니다.')}
-              {' '}{t('2연승부터 10%씩 더 받아 11연승부터는 2배(+100%)입니다.')}
-            </Typography>
+            {!NO_XP.has(role) && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                {t('게임이 끝날 때 이기면 2배, 지면 그대로 받습니다.')}
+                {' '}{t('2연승부터 10%씩 더 받아 11연승부터는 2배(+100%)입니다.')}
+              </Typography>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={onClose}>{t('닫기')}</Button>

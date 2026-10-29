@@ -24,7 +24,7 @@ import RoleCard from '../components/RoleCard';
 import {
   ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
   REPEAT_BLOCKED, SKIP_VOTE, SKIPPABLE, SPENT_NOTE, survivorTarget, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
-  roleInfo,
+  WITCH_QUEST, roleInfo,
 } from '../lib/roles';
 import {
   leaveRoom, restartGame, skipNightAction, submitAssassination, submitDayVote,
@@ -288,6 +288,19 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         <Alert severity="info" icon={false} sx={{ color: '#B388FF' }}>
           🛟 {t('{target}일째 낮이 끝날 때까지 살아 있으면 승리합니다.', { target: survivorTarget(room.max_days, players.length) })}
           {' '}{t('(지금 {day}일차)', { day })}
+        </Alert>
+      )}
+
+      {/* 마녀: 이번 판 퀘스트와 진행도. 깨면 즉시 승리 */}
+      {role === 'WITCH' && view?.witch && (
+        <Alert severity="info" icon={false} sx={{ color: '#69F0AE' }}>
+          🧙 {t('마녀 퀘스트')} — {t(WITCH_QUEST[view.witch.quest], { n: view.witch.goal })}
+          {' '}
+          {view.witch.quest === 'SURVIVE'
+            ? t('(지금 {day}일차)', { day })
+            : `(${view.witch.progress} / ${view.witch.goal})`}
+          <br />
+          {t('퀘스트를 깨면 즉시 승리합니다.')}
         </Alert>
       )}
 

@@ -14,6 +14,7 @@ const BG = {
   VIGILANTE: '#2E3440', SHERIFF: '#6B4A2E',
   FORGER: '#4A2A3A',
   SURVIVOR: '#5B3A8C',
+  WITCH: '#2E5A3A',
 };
 
 function Head({ y = 30 }) {
@@ -208,6 +209,22 @@ const PARTS = {
       <circle cx="32" cy="54" r="8.5" fill="none" stroke="#F2F0E8" strokeWidth="4.5" />
       <path d="M26 48 l2.4 2.4 M38 48 l-2.4 2.4 M26 60 l2.4 -2.4 M38 60 l-2.4 -2.4"
         stroke="#D94A4A" strokeWidth="4.5" />
+    </>
+  ),
+
+  WITCH: (
+    <>
+      <Head />
+      {EYES}
+      {/* 긴 머리 */}
+      <path d="M20 26 q-2 14 2 22 l4 -6 q-3 -8 -2 -16z M44 26 q2 14 -2 22 l-4 -6 q3 -8 2 -16z" fill="#4A2A5A" />
+      {/* 뾰족 모자 */}
+      <path d="M12 22 q20 6 40 0 q-4 4 -20 4 q-16 0 -20 -4z" fill="#1C1C22" />
+      <path d="M21 22 l13 -19 q2 -1 2 2 l8 17 q-12 3 -23 0z" fill="#26262E" />
+      <rect x="21.5" y="18.5" width="21.5" height="3" fill="#8E44AD" />
+      {/* 빗자루 */}
+      <path d="M50 58 l-6 -18" stroke="#6B4A2E" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M46.5 56 l7.5 -2.4 l2.6 7.6 q-5 2.6 -8.4 1.4z" fill="#C9A15A" />
     </>
   ),
 

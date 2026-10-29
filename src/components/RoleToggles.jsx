@@ -11,7 +11,8 @@ import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
 import RoleInfoDialog from './RoleInfoDialog';
-import { roleInfo, survivorTarget } from '../lib/roles';
+import { HALLOWEEN_ROLES, roleInfo, survivorTarget } from '../lib/roles';
+import { halloween } from '../theme';
 import {
   roleComposition, setDisabledRoles, setRandomRoles, setRoleMax, teamComposition,
 } from '../lib/api';
@@ -26,16 +27,18 @@ const NAME_COLOR = {
   SURVIVOR: '#B388FF',
   JESTER: '#FFD54F',
   KILLER: '#42A5F5',
+  WITCH: '#69F0AE',
 };
 
 // 시민 진영 특수 직업. 시민을 끄면 시민 진영 자리를 이 직업들로만 채운다
 const CITIZEN_SPECIALS = ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'];
 
 // 직업 설정을 진영별로 묶어 보여준다. 시민은 랜덤 구성일 때만 목록에 나온다
+// 마녀는 할로윈 기간에만 목록에 나온다 (그 밖에는 서버가 끈 것으로 본다, 0071)
 const GROUPS = localized([
   { title: '시민 진영', roles: ['CITIZEN', ...CITIZEN_SPECIALS] },
   { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'] },
-  { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR'] },
+  { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR', ...(halloween ? ['WITCH'] : [])] },
 ]);
 
 // 대기실에서 직업을 켜고 끈다. 스위치를 누르면 켜고 끄고, 이름을 누르면 설명이 뜬다.
@@ -50,7 +53,11 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
   // 목표 날이 최대 일수를 넘으면 생존자는 이길 날이 없어 넣을 수 없다 (서버도 뺀다, 0069)
   const target = survivorTarget(room?.max_days ?? 15, playerCount);
   const survivorBlocked = target === null;
-  const effectiveOff = survivorBlocked ? [...disabled, 'SURVIVOR'] : disabled;
+  const effectiveOff = [
+    ...disabled,
+    ...(survivorBlocked ? ['SURVIVOR'] : []),
+    ...(halloween ? [] : HALLOWEEN_ROLES),
+  ];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);

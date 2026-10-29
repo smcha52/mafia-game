@@ -1,4 +1,5 @@
 import { localized } from './i18n';
+import { halloween } from '../theme';
 
 // 직업 표시 정보. 서버의 role 코드와 1:1로 대응한다.
 // localized 로 감싼 표는 글자를 읽을 때 고른 언어로 바뀐다 (i18n.js)
@@ -18,6 +19,7 @@ export const ROLES = localized({
   VIGILANTE: { name: '자경단', emoji: '🏏', desc: '시민 진영입니다. 게임 중 단 한 번, 밤에 한 명을 제거할 수 있습니다.' },
   FORGER:    { name: '위조범', emoji: '🖋️', desc: '마피아 진영입니다. 동료와 함께 제거 대상을 고르고, 밤에 한 명을 위조하면 그 사람을 조사한 직업이 반대 진영으로 봅니다.' },
   SURVIVOR:  { name: '생존자', emoji: '🛟', desc: '중립 진영입니다. 능력은 없습니다. 목표 날의 낮이 끝날 때까지 살아 있으면 당신 혼자 승리합니다.' },
+  WITCH:     { name: '마녀',   emoji: '🧙', desc: '할로윈 한정 중립 직업입니다. 게임이 시작되면 퀘스트 하나(시민 제거·마피아 제거·중립 제거·목표 날 생존)를 받습니다. 밤마다 한 명을 제거할 수 있고, 퀘스트를 깨면 즉시 당신 혼자 승리합니다.' },
   SHERIFF:   { name: '보안관', emoji: '🤠', desc: '시민 진영입니다. 밤마다 한 명을 제거할 수 있습니다. 마피아·중립이면 대상만 죽지만, 시민을 쏘면 당신도 함께 죽습니다.' },
 });
 
@@ -33,11 +35,12 @@ export const WINNERS = localized({
   JESTER:  { title: '광대 단독 승리', emoji: '🤡', color: 'warning.main' },
   KILLER:  { title: '살인자 단독 승리', emoji: '🪓', color: 'warning.main' },
   SURVIVOR: { title: '생존자 단독 승리', emoji: '🛟', color: '#B388FF' },
+  WITCH:   { title: '마녀 단독 승리', emoji: '🧙', color: '#69F0AE' },
   DRAW:    { title: '무승부', emoji: '🤝', color: 'text.secondary' },
 });
 
 // 게임 결과에서 이 사람이 이겼는지. 무승부면 null
-// 시민·마피아 승리는 진영으로, 광대·살인자·생존자 단독 승리는 직업으로 판단한다
+// 시민·마피아 승리는 진영으로, 광대·살인자·생존자·마녀 단독 승리는 직업으로 판단한다
 export function didWin(winner, role, team) {
   if (winner === 'DRAW') return null;
   if (winner === 'CITIZEN' || winner === 'MAFIA') return team === winner;
@@ -47,7 +50,7 @@ export function didWin(winner, role, team) {
 // 직업의 진영
 export function roleTeam(code) {
   if (['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'].includes(code)) return 'MAFIA';
-  if (['JESTER', 'KILLER', 'SURVIVOR'].includes(code)) return 'NEUTRAL';
+  if (['JESTER', 'KILLER', 'SURVIVOR', 'WITCH'].includes(code)) return 'NEUTRAL';
   return 'CITIZEN';
 }
 
@@ -69,20 +72,25 @@ export const XP_RULES = localized({
   FORGER:    ['다른 사람을 위조할 때마다 5 XP'],
   JESTER:    ['낮 투표에서 받은 1표당 2 XP'],
   KILLER:    ['쏜 대상이 그 밤에 죽으면 3 XP'],
+  WITCH:     ['마녀는 한정직업이라 XP를 안 받습니다'],
 });
+
+// XP 를 받지 않는 직업 (서버 base_xp 가 0, 0071)
+export const NO_XP = new Set(['WITCH']);
 
 export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', desc: '' };
 
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
 export const ABILITY_READY = new Set([
   'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'POLICE', 'DOCTOR', 'BODYGUARD',
-  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE', 'SHERIFF',
+  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE', 'SHERIFF', 'WITCH',
 ]);
 
-// 저격수가 찍을 수 있는 직업 (전부)
+// 저격수가 찍을 수 있는 직업 (전부). 마녀는 할로윈 기간에만 나오므로 그때만 보여준다
 export const ALL_ROLES = [
   'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'POLICE', 'DOCTOR', 'BODYGUARD',
-  'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'SURVIVOR', 'VIGILANTE', 'SHERIFF', 'CITIZEN',
+  'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'SURVIVOR', ...(halloween ? ['WITCH'] : []),
+  'VIGILANTE', 'SHERIFF', 'CITIZEN',
 ];
 
 // 밤에 행동하는 직업 -> 서버가 받는 action 코드
@@ -100,6 +108,7 @@ export const NIGHT_ACTION = {
   KILLER: 'KILLER',
   VIGILANTE: 'VIGILANTE',
   SHERIFF: 'SHERIFF',
+  WITCH: 'WITCH',
 };
 
 // 밤 화면에서 보여줄 안내 문구
@@ -117,6 +126,7 @@ export const NIGHT_PROMPT = localized({
   KILLER: '제거할 대상을 고르세요',
   VIGILANTE: '제거할 대상을 고르세요 (게임 중 한 번)',
   SHERIFF: '제거할 대상을 고르세요 (시민을 쏘면 함께 죽습니다)',
+  WITCH: '제거할 대상을 고르세요',
 });
 
 // 확정 버튼 문구
@@ -134,6 +144,7 @@ export const SUBMIT_LABEL = localized({
   KILLER: '제거 확정',
   VIGILANTE: '제거 확정',
   SHERIFF: '제거 확정',
+  WITCH: '제거 확정',
 });
 
 // 제출 후 안내
@@ -151,6 +162,7 @@ export const SUBMITTED_NOTE = localized({
   KILLER: '아침에 결과가 드러납니다.',
   VIGILANTE: '아침에 결과가 드러납니다. 이제 제거는 다시 할 수 없습니다.',
   SHERIFF: '아침에 결과가 드러납니다.',
+  WITCH: '아침에 결과가 드러납니다.',
 });
 
 // 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
@@ -158,8 +170,11 @@ export const SUBMITTED_NOTE = localized({
 // 마피아는 끌 수 있다. 마피아 진영(마피아·스파이·저격수)이 0명이면 시작할 수 없다.
 export const TOGGLEABLE = [
   'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
-  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR', 'CITIZEN',
+  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR', 'WITCH', 'CITIZEN',
 ];
+
+// 할로윈 기간에만 켜고 끌 수 있는 직업. 기간이 아니면 서버가 끈 것으로 본다 (0071)
+export const HALLOWEEN_ROLES = ['WITCH'];
 
 // 생존자의 목표 날. 서버 survivor_target() 과 일치해야 한다 (0069).
 // 최대 일수 1~3일 1일 · 4~8일 2일 · 9~12일 3일 · 13~20일 4일 · 21~50일 5일
@@ -183,7 +198,7 @@ export const ONE_SHOT = new Set(['REPORTER', 'VIGILANTE']);
 export const SKIP_VOTE = '00000000-0000-0000-0000-000000000000';
 
 // 대상 없이 "오늘은 사용하지 않기" 로 넘길 수 있는 직업
-export const SKIPPABLE = new Set(['REPORTER', 'VIGILANTE', 'SHERIFF']);
+export const SKIPPABLE = new Set(['REPORTER', 'VIGILANTE', 'SHERIFF', 'WITCH']);
 
 // 1회용 능력을 다 쓴 뒤 밤마다 보여줄 문구
 export const SPENT_NOTE = localized({
@@ -191,7 +206,7 @@ export const SPENT_NOTE = localized({
 });
 
 // 자신을 지목할 수 없는 직업
-export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF']);
+export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF', 'WITCH']);
 
 // 같은 사람을 연속으로 지목할 수 없는 직업 -> 화면에 표시할 사유
 export const REPEAT_BLOCKED = localized({
@@ -205,3 +220,11 @@ export const TEAM_RESULT = localized({
   MAFIA: { label: '마피아 진영', color: 'error' },
   NEUTRAL: { label: '중립 진영', color: 'warning' },
 });
+
+// 마녀 퀘스트 문구 (0071 witch_goal). t(문구, { n }) 로 쓴다. n = 목표 (생존이면 목표 날)
+export const WITCH_QUEST = {
+  CITIZEN: '시민 진영 {n}명 제거',
+  MAFIA: '마피아 진영 {n}명 제거',
+  NEUTRAL: '중립 {n}명 제거',
+  SURVIVE: '{n}일째 낮이 끝날 때까지 생존',
+};
