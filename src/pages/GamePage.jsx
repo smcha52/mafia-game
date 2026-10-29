@@ -293,7 +293,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
 
       {/* 마녀: 이번 판 퀘스트와 진행도. 깨면 즉시 승리 */}
       {role === 'WITCH' && view?.witch && (
-        <Alert severity="info" icon={false} sx={{ color: '#69F0AE' }}>
+        <Alert severity="info" icon={false} sx={{ color: '#FF6D00' }}>
           🧙 {t('마녀 퀘스트')} — {t(WITCH_QUEST[view.witch.quest], { n: view.witch.goal })}
           {' '}
           {view.witch.quest === 'SURVIVE'
