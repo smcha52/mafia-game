@@ -35,7 +35,7 @@ export const WINNERS = localized({
   JESTER:  { title: '광대 단독 승리', emoji: '🤡', color: 'warning.main' },
   KILLER:  { title: '살인자 단독 승리', emoji: '🪓', color: 'warning.main' },
   SURVIVOR: { title: '생존자 단독 승리', emoji: '🛟', color: '#B388FF' },
-  WITCH:   { title: '마녀 단독 승리', emoji: '🧙', color: '#FF6D00' },
+  WITCH:   { title: '마녀 단독 승리', emoji: '🧙', color: '#C68B59' },
   DRAW:    { title: '무승부', emoji: '🤝', color: 'text.secondary' },
 });
 

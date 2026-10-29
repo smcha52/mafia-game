@@ -27,7 +27,7 @@ const NAME_COLOR = {
   SURVIVOR: '#B388FF',
   JESTER: '#FFD54F',
   KILLER: '#42A5F5',
-  WITCH: '#FF6D00',
+  WITCH: '#C68B59',
 };
 
 // 시민 진영 특수 직업. 시민을 끄면 시민 진영 자리를 이 직업들로만 채운다
