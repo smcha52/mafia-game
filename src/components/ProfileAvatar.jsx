@@ -2,17 +2,27 @@ import Avatar from '@mui/material/Avatar';
 import { MAPLE_LEAF } from './AutumnLeaves';
 import { localized } from '../lib/i18n';
 
-// 밤하늘과 성. 할로윈 프로필이 함께 쓴다
-function Castle() {
+// 프로필마다 다른 하늘색 [위, 아래]
+const SKIES = {
+  CASTLE_PUMPKIN: ['#bf360c', '#ff9800'],
+  CASTLE_GHOST: ['#5c6bc0', '#b0b0b8'],
+  CASTLE_MAPLE: ['#b71c1c', '#ef5350'],
+  CASTLE_GINKGO: ['#f9a825', '#fff176'],
+};
+
+// 하늘과 성. 할로윈·가을 프로필이 함께 쓴다
+function Castle({ id }) {
+  const [top, bottom] = SKIES[id];
+  const gradient = `castle-sky-${id}`;
   return (
     <>
       <defs>
-        <linearGradient id="castle-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#2a1b54" />
-          <stop offset="1" stopColor="#7a3f93" />
+        <linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={top} />
+          <stop offset="1" stopColor={bottom} />
         </linearGradient>
       </defs>
-      <rect width="40" height="40" fill="url(#castle-sky)" />
+      <rect width="40" height="40" fill={`url(#${gradient})`} />
       <circle cx="30" cy="9" r="4.5" fill="#fff3b0" />
       <g fill="#150d2b">
         {/* 지붕 */}
@@ -48,9 +58,16 @@ function Pumpkin() {
   );
 }
 
+// 글자 없는 묘비 두 개를 성 양옆에 세운다
 function Ghost() {
   return (
     <>
+      <path
+        d="M1 40 V34 a2.75 2.75 0 0 1 5.5 0 V40 Z M33.5 40 V35 a2.75 2.75 0 0 1 5.5 0 V40 Z"
+        fill="#8a8a8a"
+        stroke="#4a4a4a"
+        strokeWidth="0.6"
+      />
       <path
         d="M12.5 38 V28 a7.5 7.5 0 0 1 15 0 V38 l-2.5 -2.2 l-2.5 2.2 l-2.5 -2.2 l-2.5 2.2 l-2.5 -2.2 Z"
         fill="#f5f5f5"
@@ -111,7 +128,7 @@ export default function ProfileAvatar({ avatar = null, nickname = '', size = 36 
   return (
     <Avatar sx={{ width: size, height: size }} aria-label={item.name}>
       <svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true">
-        <Castle />
+        <Castle id={avatar} />
         {item.art}
       </svg>
     </Avatar>
