@@ -10,8 +10,12 @@ const SKIES = {
   CASTLE_GINKGO: ['#f9a825', '#fff176'],
 };
 
+// 하늘 대신 흰 바탕만 까는 프로필
+const PLAIN = ['SNOWMAN'];
+
 // 하늘과 달. 할로윈·가을 프로필이 함께 쓴다
 function Sky({ id }) {
+  if (PLAIN.includes(id)) return <rect width="40" height="40" fill="#fff" />;
   const [top, bottom] = SKIES[id];
   const gradient = `castle-sky-${id}`;
   return (
@@ -91,12 +95,39 @@ function Ginkgo() {
   );
 }
 
-// 상점에서 파는 프로필. id 는 서버 shop_items 와 1:1로 대응한다 (0051, 0070)
+// 작은 눈사람 (겨울 프로필, 0072). 흰 배경에서도 보이도록 눈덩이에 테두리를 두른다
+function Snowman() {
+  return (
+    <>
+      <path
+        d="M14.8 18.5 L9.5 14.5 M11.2 15.8 L10.2 17.8 M25.2 18.5 L30.5 14.5 M28.8 15.8 L29.8 17.8"
+        stroke="#6d4c41"
+        strokeWidth="0.8"
+        strokeLinecap="round"
+      />
+      <g fill="#fff" stroke="#b0bec5" strokeWidth="0.6">
+        <circle cx="20" cy="31" r="7.5" />
+        <circle cx="20" cy="19.5" r="5.5" />
+        <circle cx="20" cy="10" r="4" />
+      </g>
+      <g fill="#000">
+        <circle cx="20" cy="31" r="0.9" />
+        <circle cx="20" cy="19.5" r="0.8" />
+        <circle cx="18.5" cy="9" r="0.6" />
+        <circle cx="21.5" cy="9" r="0.6" />
+      </g>
+      <path d="M20 10.1 L24.6 10.9 L20 11.7 Z" fill="#ff8f00" />
+    </>
+  );
+}
+
+// 상점에서 파는 프로필. id 는 서버 shop_items 와 1:1로 대응한다 (0051, 0070, 0072)
 export const AVATARS = localized({
   CASTLE_PUMPKIN: { name: '호박 성', art: <Pumpkin /> },
   CASTLE_GHOST: { name: '유령 성', art: <Ghost /> },
   CASTLE_MAPLE: { name: '단풍잎 성', art: <Maple /> },
   CASTLE_GINKGO: { name: '은행잎 성', art: <Ginkgo /> },
+  SNOWMAN: { name: '눈사람', art: <Snowman /> },
 });
 
 // 프로필 그림. avatar 가 없거나 모르는 id 면 기본(닉네임 첫 글자)을 보여준다

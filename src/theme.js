@@ -14,6 +14,10 @@ export const halloween = (month === 10 && day >= 5) || (month === 11 && day === 
 const autumnSeason = (month === 9 && day >= 15) || month === 10 || (month === 11 && day <= 15);
 export const autumn = autumnSeason && !halloween;
 
+// 겨울 배경 — 해마다 12월 1일부터 2월 15일이 끝날 때까지 (한국 시간)
+// 상점의 눈사람 프로필과 같은 기간이다 (0072)
+export const winter = month === 12 || month === 1 || (month === 2 && day <= 15);
+
 // 왼쪽 위 구석의 거미줄. flip 으로 뒤집어 나머지 구석에 쓴다
 function cobweb(flip) {
   const angles = [0, 22.5, 45, 67.5, 90].map((d) => (d * Math.PI) / 180);
@@ -80,6 +84,32 @@ const MAPLES = {
   backgroundAttachment: 'fixed',
 };
 
+// 오른쪽 아래의 눈사람. 아래부터 작아지는 눈덩이 세 개에 단추·가지 팔·눈·당근 코를 붙인다
+function snowman() {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="200" viewBox="0 0 120 200">'
+    + '<g fill="none" stroke="#6d4c41" stroke-width="3" stroke-linecap="round">'
+    + '<path d="M36 98 L10 80 M18 86 L12 95 M84 98 L110 80 M102 86 L108 95"/>'
+    + '</g>'
+    + '<g fill="#fff" stroke="#cfd8dc" stroke-width="1.5">'
+    + '<circle cx="60" cy="160" r="36"/><circle cx="60" cy="100" r="26"/><circle cx="60" cy="56" r="19"/>'
+    + '</g>'
+    + '<g fill="#000">'
+    + '<circle cx="60" cy="160" r="4"/><circle cx="60" cy="100" r="3.5"/>'
+    + '<circle cx="53" cy="51" r="2.6"/><circle cx="67" cy="51" r="2.6"/>'
+    + '</g>'
+    + '<path d="M60 55 L82 58.5 L60 62 Z" fill="#ff8f00"/>'
+    + '</svg>';
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+// 오른쪽 아래에 눈사람을 세우는 겨울 배경
+const SNOWMAN = {
+  backgroundImage: snowman(),
+  backgroundPosition: 'right 10px bottom 4px',
+  backgroundRepeat: 'no-repeat',
+  backgroundAttachment: 'fixed',
+};
+
 // 네 구석에 거미줄을, 아래 좌우에 호박을 붙이는 배경
 const COBWEBS = {
   backgroundImage: [
@@ -125,7 +155,12 @@ const theme = createTheme({
         MuiCssBaseline: { styleOverrides: { body: MAPLES } },
         MuiDialog: { styleOverrides: { paperFullScreen: { backgroundColor: '#3B2416', ...MAPLES } } },
       }
-      : {},
+      : winter
+        ? {
+          MuiCssBaseline: { styleOverrides: { body: SNOWMAN } },
+          MuiDialog: { styleOverrides: { paperFullScreen: SNOWMAN } },
+        }
+        : {},
 });
 
 export default theme;

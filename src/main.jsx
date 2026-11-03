@@ -6,7 +6,8 @@ import { ThemeProvider } from '@mui/material/styles';
 import App from './App';
 import AutumnLeaves from './components/AutumnLeaves';
 import HalloweenSpiders from './components/HalloweenSpiders';
-import theme, { autumn, halloween } from './theme';
+import WinterSnow from './components/WinterSnow';
+import theme, { autumn, halloween, winter } from './theme';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
@@ -16,6 +17,7 @@ createRoot(document.getElementById('root')).render(
       <App />
       {halloween && <HalloweenSpiders />}
       {autumn && <AutumnLeaves />}
+      {winter && <WinterSnow />}
     </ThemeProvider>
   </StrictMode>,
 );
