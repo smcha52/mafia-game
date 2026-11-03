@@ -47,9 +47,9 @@ function Ghost() {
   return (
     <>
       <path
-        d="M1 40 V34 a2.75 2.75 0 0 1 5.5 0 V40 Z M33.5 40 V35 a2.75 2.75 0 0 1 5.5 0 V40 Z"
-        fill="#8a8a8a"
-        stroke="#4a4a4a"
+        d="M7 38 V33 a2.5 2.5 0 0 1 5 0 V38 Z M28 38 V33 a2.5 2.5 0 0 1 5 0 V38 Z"
+        fill="#6e6e6e"
+        stroke="#3a3a3a"
         strokeWidth="0.6"
       />
       <path
