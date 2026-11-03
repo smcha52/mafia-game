@@ -10,8 +10,8 @@ const SKIES = {
   CASTLE_GINKGO: ['#f9a825', '#fff176'],
 };
 
-// 하늘과 성. 할로윈·가을 프로필이 함께 쓴다
-function Castle({ id }) {
+// 하늘과 달. 할로윈·가을 프로필이 함께 쓴다
+function Sky({ id }) {
   const [top, bottom] = SKIES[id];
   const gradient = `castle-sky-${id}`;
   return (
@@ -24,22 +24,6 @@ function Castle({ id }) {
       </defs>
       <rect width="40" height="40" fill={`url(#${gradient})`} />
       <circle cx="30" cy="9" r="4.5" fill="#fff3b0" />
-      <g fill="#150d2b">
-        {/* 지붕 */}
-        <path d="M6 14 L10 6 L14 14 Z M16 10 L20 2 L24 10 Z M26 14 L30 6 L34 14 Z" />
-        {/* 탑과 성벽 */}
-        <rect x="7" y="14" width="6" height="26" />
-        <rect x="27" y="14" width="6" height="26" />
-        <rect x="17" y="10" width="6" height="30" />
-        <rect x="11" y="21" width="18" height="19" />
-        {/* 성벽 위 톱니 */}
-        <path d="M11 21 V18 H13.5 V21 Z M14.5 21 V18 H16.5 V21 Z M23.5 21 V18 H25.5 V21 Z M26.5 21 V18 H29 V21 Z" />
-      </g>
-      <g fill="#ffd54f">
-        <rect x="9" y="17" width="2" height="3" rx="1" />
-        <rect x="29" y="17" width="2" height="3" rx="1" />
-        <rect x="19" y="13" width="2" height="3.5" rx="1" />
-      </g>
     </>
   );
 }
@@ -48,7 +32,7 @@ function Pumpkin() {
   return (
     <>
       <rect x="19.2" y="21.5" width="1.6" height="3" rx="0.6" fill="#558b2f" />
-      <ellipse cx="20" cy="30.5" rx="9" ry="7" fill="#f57c00" />
+      <ellipse cx="20" cy="30.5" rx="9" ry="7" fill="#f57c00" stroke="#3e1c00" strokeWidth="0.6" />
       <ellipse cx="20" cy="30.5" rx="4.5" ry="7" fill="#fb8c00" />
       <g fill="#3e1c00">
         <path d="M14 28 L16.5 28 L15.25 25.8 Z M23.5 28 L26 28 L24.75 25.8 Z" />
@@ -58,7 +42,7 @@ function Pumpkin() {
   );
 }
 
-// 글자 없는 묘비 두 개를 성 양옆에 세운다
+// 글자 없는 묘비 두 개를 유령 양옆에 세운다
 function Ghost() {
   return (
     <>
@@ -128,7 +112,7 @@ export default function ProfileAvatar({ avatar = null, nickname = '', size = 36 
   return (
     <Avatar sx={{ width: size, height: size }} aria-label={item.name}>
       <svg viewBox="0 0 40 40" width="100%" height="100%" aria-hidden="true">
-        <Castle id={avatar} />
+        <Sky id={avatar} />
         {item.art}
       </svg>
     </Avatar>
