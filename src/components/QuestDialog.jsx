@@ -58,6 +58,8 @@ const KIND_TEXT = {
   PUMPKIN_BOX: (n) => t('호박상자 {n}회 열기', { n }),
   WITCH_WIN: (n) => t('마녀로 {n}회 승리', { n }),
   HALLOWEEN_WIN: (n) => t('할로윈 기간에 {n}회 승리', { n }),
+  WINTER_WIN: (n) => t('겨울 기간에 {n}승 하기', { n }),
+  WINTER_KILL: (n) => t('겨울 기간에 {n}킬 하기', { n }),
 };
 
 // 직업에 따라 이름이 달라지는 퀘스트
@@ -253,7 +255,9 @@ export default function QuestDialog({ open, onClose, onRewarded, wallet }) {
           <Stack spacing={1}>
             {tab === 'EVENT' && (
               <Typography fontWeight={700}>
-                {data.halloween ? `🎃 ${t('할로윈 퀘스트')}` : t('진행 중인 이벤트가 없습니다.')}
+                {data.halloween
+                  ? `🎃 ${t('할로윈 퀘스트')}`
+                  : data.winter ? `⛄ ${t('겨울 퀘스트')}` : t('진행 중인 이벤트가 없습니다.')}
               </Typography>
             )}
             <Typography variant="caption" color="text.secondary">
@@ -262,7 +266,11 @@ export default function QuestDialog({ open, onClose, onRewarded, wallet }) {
                   ? (data.next?.EVENT
                     ? t('다음 퀘스트까지 {time} · 할로윈 기간(10월 5일 ~ 11월 1일)에 3일마다 새 퀘스트가 나옵니다. 퀘스트가 생긴 뒤의 기록만 셉니다.', { time: untilText(data.next.EVENT) })
                     : t('이번 할로윈의 마지막 퀘스트입니다. 할로윈 기간이 끝나면 보상을 받을 수 없습니다.'))
-                  : t('할로윈 기간(10월 5일 ~ 11월 1일)에 3일마다 할로윈 퀘스트가 나옵니다.'))
+                  : data.winter
+                    ? (data.next?.EVENT
+                      ? t('다음 퀘스트까지 {time} · 겨울 기간(12월 1일 ~ 2월 15일)에 3일마다 새 퀘스트가 나옵니다. 퀘스트가 생긴 뒤의 기록만 셉니다.', { time: untilText(data.next.EVENT) })
+                      : t('이번 겨울의 마지막 퀘스트입니다. 겨울 기간이 끝나면 보상을 받을 수 없습니다.'))
+                    : t('할로윈 기간(10월 5일 ~ 11월 1일)과 겨울 기간(12월 1일 ~ 2월 15일)에 3일마다 이벤트 퀘스트가 나옵니다.'))
                 : tab === 'ROLE'
                 ? t('다음 퀘스트까지 {time} · 직업마다 최대 10개이고, 넘으면 오래된 퀘스트부터 사라집니다. 퀘스트가 생긴 뒤에 {role}(으)로 끝낸 게임만 셉니다.', { time: untilText(data.next?.[tab]), role: roleInfo(role).name })
                 : t('다음 퀘스트까지 {time} · 최대 20개이고, 넘으면 오래된 퀘스트부터 사라집니다. 퀘스트가 생긴 뒤에 끝난 게임만 셉니다.', { time: untilText(data.next?.[tab]) })}

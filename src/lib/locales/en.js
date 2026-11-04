@@ -672,6 +672,12 @@ export default {
     '다음 퀘스트까지 {time} · 할로윈 기간(10월 5일 ~ 11월 1일)에 3일마다 새 퀘스트가 나옵니다. 퀘스트가 생긴 뒤의 기록만 셉니다.': 'Next quest in {time} · During Halloween (Oct 5 – Nov 1) a new quest appears every 3 days. Only progress after the quest appears counts.',
     '이번 할로윈의 마지막 퀘스트입니다. 할로윈 기간이 끝나면 보상을 받을 수 없습니다.': "This is the last quest of this Halloween. Rewards can't be claimed after Halloween ends.",
     '할로윈 기간(10월 5일 ~ 11월 1일)에 3일마다 할로윈 퀘스트가 나옵니다.': 'During Halloween (Oct 5 – Nov 1) a Halloween quest appears every 3 days.',
+    '겨울 기간에 {n}승 하기': 'Win {n} times during Winter',
+    '겨울 기간에 {n}킬 하기': 'Get {n} kills during Winter',
+    '겨울 퀘스트': 'Winter quests',
+    '다음 퀘스트까지 {time} · 겨울 기간(12월 1일 ~ 2월 15일)에 3일마다 새 퀘스트가 나옵니다. 퀘스트가 생긴 뒤의 기록만 셉니다.': 'Next quest in {time} · During Winter (Dec 1 – Feb 15) a new quest appears every 3 days. Only progress after the quest appears counts.',
+    '이번 겨울의 마지막 퀘스트입니다. 겨울 기간이 끝나면 보상을 받을 수 없습니다.': "This is the last quest of this Winter. Rewards can't be claimed after Winter ends.",
+    '할로윈 기간(10월 5일 ~ 11월 1일)과 겨울 기간(12월 1일 ~ 2월 15일)에 3일마다 이벤트 퀘스트가 나옵니다.': 'During Halloween (Oct 5 – Nov 1) and Winter (Dec 1 – Feb 15) an event quest appears every 3 days.',
     '이벤트 기간이 끝났습니다.': 'The event period has ended.',
   },
   // 서버가 숫자·이름을 넣어 보내는 오류 문구
