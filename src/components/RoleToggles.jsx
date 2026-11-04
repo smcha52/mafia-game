@@ -24,6 +24,7 @@ const NAME_COLOR = {
   SPY: 'error.main',
   ASSASSIN: 'error.main',
   FORGER: 'error.main',
+  BOMBER: 'error.main',
   SURVIVOR: '#B388FF',
   JESTER: '#FFD54F',
   KILLER: '#42A5F5',
@@ -37,7 +38,7 @@ const CITIZEN_SPECIALS = ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTE
 // 마녀는 할로윈 기간에만 목록에 나온다 (그 밖에는 서버가 끈 것으로 본다, 0071)
 const GROUPS = localized([
   { title: '시민 진영', roles: ['CITIZEN', ...CITIZEN_SPECIALS] },
-  { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'] },
+  { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BOMBER'] },
   { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR', ...(halloween ? ['WITCH'] : [])] },
 ]);
 
@@ -89,7 +90,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
   }, [room, playerCount, random, effectiveOff.join(','), JSON.stringify(roleMax)]);
 
   // 마피아 진영이 0명이면 시작할 수 없다. 미리보기가 없으면 켜진 직업으로만 판단한다.
-  const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'];
+  const MAFIA_TEAM = ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BOMBER'];
   const noMafiaTeam = preview
     ? (Array.isArray(preview)
       ? !preview.some((r) => MAFIA_TEAM.includes(r))

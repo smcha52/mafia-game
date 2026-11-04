@@ -15,6 +15,7 @@ const BG = {
   FORGER: '#4A2A3A',
   SURVIVOR: '#5B3A8C',
   WITCH: '#2E5A3A',
+  BOMBER: '#5A3A1E',
 };
 
 function Head({ y = 30 }) {
@@ -225,6 +226,23 @@ const PARTS = {
       {/* 빗자루 */}
       <path d="M50 58 l-6 -18" stroke="#6B4A2E" strokeWidth="2.4" strokeLinecap="round" />
       <path d="M46.5 56 l7.5 -2.4 l2.6 7.6 q-5 2.6 -8.4 1.4z" fill="#C9A15A" />
+    </>
+  ),
+
+  BOMBER: (
+    <>
+      <Head />
+      {SHADES}
+      {/* 비니 */}
+      <path d="M20 24 q0 -13 12 -13 q12 0 12 13z" fill="#2A2A32" />
+      <rect x="19.5" y="21.5" width="25" height="4" rx="1.5" fill="#8C2B2B" />
+      {/* 심지에 불붙은 폭탄 */}
+      <circle cx="44" cy="52" r="8" fill="#15151C" />
+      <circle cx="41.5" cy="49.5" r="2" fill="#4A4A55" />
+      <rect x="45.5" y="42" width="4" height="3.5" rx="1" fill="#3A3A44" transform="rotate(30 47.5 43.75)" />
+      <path d="M49 42 q2 -4 5 -4" stroke="#C9A15A" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+      <circle cx="54.5" cy="37.5" r="2.2" fill="#FFB300" />
+      <circle cx="54.5" cy="37.5" r="1" fill="#FFF3B0" />
     </>
   ),
 

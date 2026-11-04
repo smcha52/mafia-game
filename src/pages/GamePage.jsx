@@ -15,6 +15,7 @@ import ReplayIcon from '@mui/icons-material/Replay';
 import GameOver from '../components/GameOver';
 import PlayerPicker from '../components/PlayerPicker';
 import AssassinPanel from '../components/AssassinPanel';
+import BombPanel from '../components/BombPanel';
 import ForgePanel from '../components/ForgePanel';
 import ChatPanel from '../components/ChatPanel';
 import DeadRoles from '../components/DeadRoles';
@@ -225,13 +226,16 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
   const needsDead = TARGETS_DEAD.has(role);
   const deadCount = players.filter((p) => !p.alive).length;
   const noTargets = needsDead && deadCount === 0;
+  // 폭탄광은 준 폭탄이 터지거나 사라져야 새 폭탄을 줄 수 있다
+  const bombBusy = role === 'BOMBER' && Boolean(view?.bomber?.active);
   const canAct = isNight
-    ? Boolean(nightAction) && !spentOneShot && !noTargets
+    ? Boolean(nightAction) && !spentOneShot && !noTargets && !bombBusy
     : true;
   // 기자·자경단·보안관은 대상 없이 넘길 수 있다. 그때 nightSubmitted 는 null 이라 별도 표시가 필요하다
   const skipped = isNight && view?.nightActed && !view?.nightSubmitted;
   const submitted = isNight ? view?.nightSubmitted : view?.daySubmitted;
-  const progress = isNight ? view?.nightProgress : view?.dayProgress;
+  // 폭탄광은 제거 투표에 참여하지 않으므로 투표 진행도를 보여주지 않는다
+  const progress = isNight ? (role === 'BOMBER' ? null : view?.nightProgress) : view?.dayProgress;
 
   return (
     <Stack spacing={2.5} sx={{ maxWidth: 480, mx: 'auto' }}>
@@ -302,6 +306,25 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
           <br />
           {t('퀘스트를 깨면 즉시 승리합니다.')}
         </Alert>
+      )}
+
+      {/* 폭탄이 터져 죽은 사람 */}
+      {view?.bombExploded && (
+        <Alert severity="error">💣 {t('당신은 마지막 턴 입니다... 터져 죽습니다')}</Alert>
+      )}
+
+      {/* 폭탄을 가진 사람: 턴 안내, 밤에는 넘기기 */}
+      {alive && view?.bomb && (
+        <BombPanel
+          key={`${phase}-${day}`}
+          players={players}
+          uid={uid}
+          state={view.bomb}
+          isNight={isNight}
+          busy={busy}
+          onPass={(target) => run(target ? 'bomb-pass' : 'bomb-keep',
+            () => submitNightAction(roomId, 'BOMB_PASS', target))}
+        />
       )}
 
       {/* 지난 밤 결과 */}
@@ -578,11 +601,13 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {noTargets
                   ? t('아직 사망자가 없어 능력을 쓸 수 없습니다.')
-                  : spentOneShot
-                    ? (SPENT_NOTE[role] ?? t('능력을 이미 사용했습니다.'))
-                    : ABILITY_READY.has(role)
-                      ? t('오늘 밤 당신이 할 일은 없습니다.')
-                      : t('{role}의 능력은 아직 준비 중입니다.', { role: roleInfo(role).name })}
+                  : bombBusy
+                    ? t('준 폭탄이 아직 돌고 있어 새 폭탄을 줄 수 없습니다.')
+                    : spentOneShot
+                      ? (SPENT_NOTE[role] ?? t('능력을 이미 사용했습니다.'))
+                      : ABILITY_READY.has(role)
+                        ? t('오늘 밤 당신이 할 일은 없습니다.')
+                        : t('{role}의 능력은 아직 준비 중입니다.', { role: roleInfo(role).name })}
               </Typography>
               <LinearProgress
                 sx={{ mt: 2 }}

@@ -20,6 +20,7 @@ export const ROLES = localized({
   FORGER:    { name: '위조범', emoji: '🖋️', desc: '마피아 진영입니다. 동료와 함께 제거 대상을 고르고, 밤에 한 명을 위조하면 그 사람을 조사한 직업이 반대 진영으로 봅니다.' },
   SURVIVOR:  { name: '생존자', emoji: '🛟', desc: '중립 진영입니다. 능력은 없습니다. 목표 날의 낮이 끝날 때까지 살아 있으면 당신 혼자 승리합니다.' },
   WITCH:     { name: '마녀',   emoji: '🧙', desc: '할로윈 한정 중립 직업입니다. 게임이 시작되면 퀘스트 하나(시민 제거·마피아 제거·중립 제거·목표 날 생존)를 받습니다. 밤마다 한 명을 제거할 수 있고, 퀘스트를 깨면 즉시 당신 혼자 승리합니다.' },
+  BOMBER:    { name: '폭탄광', emoji: '💣', desc: '밤마다 폭탄을 줄 수 있습니다. 하지만 당신의 동료도 죽을 수 있습니다.' },
   SHERIFF:   { name: '보안관', emoji: '🤠', desc: '시민 진영입니다. 밤마다 한 명을 제거할 수 있습니다. 마피아·중립이면 대상만 죽지만, 시민을 쏘면 당신도 함께 죽습니다.' },
 });
 
@@ -49,7 +50,7 @@ export function didWin(winner, role, team) {
 
 // 직업의 진영
 export function roleTeam(code) {
-  if (['MAFIA', 'SPY', 'ASSASSIN', 'FORGER'].includes(code)) return 'MAFIA';
+  if (['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BOMBER'].includes(code)) return 'MAFIA';
   if (['JESTER', 'KILLER', 'SURVIVOR', 'WITCH'].includes(code)) return 'NEUTRAL';
   return 'CITIZEN';
 }
@@ -70,6 +71,7 @@ export const XP_RULES = localized({
   SPY:       ['마피아 공격에 참여하고 대상이 죽으면 2 XP', '투표로 직업을 알아낼 때마다 2 XP'],
   ASSASSIN:  ['저격에 성공하면 15 XP', '저격에 실패하면 2 XP'],
   FORGER:    ['다른 사람을 위조할 때마다 5 XP'],
+  BOMBER:    ['폭탄을 줄 때마다 2 XP', '준 폭탄이 터져 누군가 죽으면 5 XP'],
   JESTER:    ['낮 투표에서 받은 1표당 2 XP'],
   KILLER:    ['쏜 대상이 그 밤에 죽으면 3 XP'],
   WITCH:     ['마녀는 한정직업이라 XP를 안 받습니다'],
@@ -83,12 +85,12 @@ export const roleInfo = (code) => ROLES[code] ?? { name: code, emoji: '❓', des
 // 능력이 구현된 직업 (§8.2 순서로 하나씩 열린다)
 export const ABILITY_READY = new Set([
   'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'POLICE', 'DOCTOR', 'BODYGUARD',
-  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE', 'SHERIFF', 'WITCH',
+  'DETECTIVE', 'REPORTER', 'MEDIUM', 'KILLER', 'VIGILANTE', 'SHERIFF', 'WITCH', 'BOMBER',
 ]);
 
 // 저격수가 찍을 수 있는 직업 (전부). 마녀는 할로윈 기간에만 나오므로 그때만 보여준다
 export const ALL_ROLES = [
-  'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'POLICE', 'DOCTOR', 'BODYGUARD',
+  'MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BOMBER', 'POLICE', 'DOCTOR', 'BODYGUARD',
   'DETECTIVE', 'REPORTER', 'MEDIUM', 'JESTER', 'KILLER', 'SURVIVOR', ...(halloween ? ['WITCH'] : []),
   'VIGILANTE', 'SHERIFF', 'CITIZEN',
 ];
@@ -99,6 +101,7 @@ export const NIGHT_ACTION = {
   SPY: 'MAFIA_VOTE',
   ASSASSIN: 'MAFIA_VOTE',
   FORGER: 'MAFIA_VOTE',
+  BOMBER: 'BOMB',
   POLICE: 'POLICE',
   DOCTOR: 'DOCTOR',
   BODYGUARD: 'BODYGUARD',
@@ -127,6 +130,7 @@ export const NIGHT_PROMPT = localized({
   VIGILANTE: '제거할 대상을 고르세요 (게임 중 한 번)',
   SHERIFF: '제거할 대상을 고르세요 (시민을 쏘면 함께 죽습니다)',
   WITCH: '제거할 대상을 고르세요',
+  BOMBER: '폭탄을 줄 사람을 고르세요',
 });
 
 // 확정 버튼 문구
@@ -145,6 +149,7 @@ export const SUBMIT_LABEL = localized({
   VIGILANTE: '제거 확정',
   SHERIFF: '제거 확정',
   WITCH: '제거 확정',
+  BOMBER: '폭탄 주기',
 });
 
 // 제출 후 안내
@@ -163,6 +168,7 @@ export const SUBMITTED_NOTE = localized({
   VIGILANTE: '아침에 결과가 드러납니다. 이제 제거는 다시 할 수 없습니다.',
   SHERIFF: '아침에 결과가 드러납니다.',
   WITCH: '아침에 결과가 드러납니다.',
+  BOMBER: '폭탄은 3턴 뒤에 터집니다.',
 });
 
 // 대기실에서 끌 수 있는 직업. 서버 toggleable_roles() 와 일치해야 한다.
@@ -170,7 +176,7 @@ export const SUBMITTED_NOTE = localized({
 // 마피아는 끌 수 있다. 마피아 진영(마피아·스파이·저격수)이 0명이면 시작할 수 없다.
 export const TOGGLEABLE = [
   'MAFIA', 'POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM',
-  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR', 'WITCH', 'CITIZEN',
+  'SPY', 'JESTER', 'ASSASSIN', 'KILLER', 'VIGILANTE', 'SHERIFF', 'FORGER', 'SURVIVOR', 'WITCH', 'BOMBER', 'CITIZEN',
 ];
 
 // 할로윈 기간에만 켜고 끌 수 있는 직업. 기간이 아니면 서버가 끈 것으로 본다 (0071)
@@ -198,7 +204,7 @@ export const ONE_SHOT = new Set(['REPORTER', 'VIGILANTE']);
 export const SKIP_VOTE = '00000000-0000-0000-0000-000000000000';
 
 // 대상 없이 "오늘은 사용하지 않기" 로 넘길 수 있는 직업
-export const SKIPPABLE = new Set(['REPORTER', 'VIGILANTE', 'SHERIFF', 'WITCH']);
+export const SKIPPABLE = new Set(['REPORTER', 'VIGILANTE', 'SHERIFF', 'WITCH', 'BOMBER']);
 
 // 1회용 능력을 다 쓴 뒤 밤마다 보여줄 문구
 export const SPENT_NOTE = localized({
@@ -206,7 +212,7 @@ export const SPENT_NOTE = localized({
 });
 
 // 자신을 지목할 수 없는 직업
-export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF', 'WITCH']);
+export const NO_SELF_TARGET = new Set(['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BODYGUARD', 'KILLER', 'VIGILANTE', 'SHERIFF', 'WITCH', 'BOMBER']);
 
 // 같은 사람을 연속으로 지목할 수 없는 직업 -> 화면에 표시할 사유
 export const REPEAT_BLOCKED = localized({
