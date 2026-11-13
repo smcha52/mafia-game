@@ -20,7 +20,7 @@ import { OpenDialog } from './DailyRewards';
 import ProfileAvatar, { AVATARS } from './ProfileAvatar';
 import { buyItem, myShop } from '../lib/api';
 import { localized, t } from '../lib/i18n';
-import { winter } from '../theme';
+import { autumn, winter } from '../theme';
 
 const PRICE = localized({
   STAR: { key: 'stars', label: '별', icon: <StarIcon fontSize="small" sx={{ color: '#f5b301' }} /> },
@@ -150,7 +150,9 @@ export default function ShopDialog({ open, onClose, onBought, wallet }) {
               <Typography variant="caption" color="text.secondary">
                 {winter
                   ? `⛄ ${t('겨울 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.')}`
-                  : `🎃 ${t('할로윈 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.')}`}
+                  : autumn
+                    ? `🍁 ${t('가을 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.')}`
+                    : `🎃 ${t('할로윈 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.')}`}
               </Typography>
             )}
             {data.items.some((item) => item.kind === 'BOX') && (

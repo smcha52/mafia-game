@@ -256,6 +256,7 @@ export default {
     '지금 파는 물건이 없습니다.': 'Nothing is on sale right now.',
     '할로윈 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.': 'Halloween profiles · Change purchased profiles in Equip below Shop.',
     '겨울 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.': 'Winter profiles · Change purchased profiles in Equip below Shop.',
+    '가을 프로필 · 산 프로필은 상점 아래 장착에서 바꿉니다.': 'Autumn profiles · Change purchased profiles in Equip below Shop.',
     '다음 출석까지 {time} · 다음 날 안에 출석하지 않으면 0일로 돌아갑니다.': "Next check-in in {time} · If you don't check in by the next day, it resets to 0.",
     '{time} 안에 출석하지 않으면 0일로 돌아갑니다.': "If you don't check in within {time}, it resets to 0.",
     '하루에 한 번 출석합니다. 하루라도 빠지면 0일로 돌아갑니다.': 'Check in once a day. Missing even one day resets it to 0.',
