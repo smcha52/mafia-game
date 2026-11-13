@@ -17,15 +17,17 @@ import PlayerPicker from '../components/PlayerPicker';
 import AssassinPanel from '../components/AssassinPanel';
 import BombPanel from '../components/BombPanel';
 import ForgePanel from '../components/ForgePanel';
+import GiftKillPanel from '../components/GiftKillPanel';
+import RoleName from '../components/RoleName';
 import ChatPanel from '../components/ChatPanel';
 import DeadRoles from '../components/DeadRoles';
 import PrivateResults from '../components/PrivateResults';
 import RoleAvatar from '../components/RoleAvatar';
 import RoleCard from '../components/RoleCard';
 import {
-  ABILITY_READY, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
+  ABILITY_READY, KILL_ROLES, NIGHT_ACTION, NIGHT_PROMPT, NO_SELF_TARGET, ONE_SHOT,
   REPEAT_BLOCKED, SKIP_VOTE, SKIPPABLE, SPENT_NOTE, survivorTarget, SUBMITTED_NOTE, SUBMIT_LABEL, TARGETS_DEAD, TEAM_RESULT,
-  WITCH_QUEST, roleInfo,
+  SANTA_GOAL, WITCH_QUEST, roleInfo,
 } from '../lib/roles';
 import {
   leaveRoom, restartGame, skipNightAction, submitAssassination, submitDayVote,
@@ -152,6 +154,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
   const lastNight = results.find((r) => r.kind === 'NIGHT' && r.day_number === day);
   const deaths = (phase === 'DAY' ? lastNight?.payload?.nightDeaths : null) ?? [];
   const reveals = (phase === 'DAY' ? lastNight?.payload?.reporterReveal : null) ?? [];
+  // 산타의 선물(강제 진영 공개)로 드러난 진영
+  const giftReveals = (phase === 'DAY' ? lastNight?.payload?.giftReveal : null) ?? [];
   // 밤에는 직전 낮의 투표 결과를 보여준다
   const lastDay = phase === 'NIGHT'
     ? results.find((r) => r.kind === 'DAY' && r.day_number === day - 1)
@@ -228,8 +232,10 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
   const noTargets = needsDead && deadCount === 0;
   // 폭탄광은 준 폭탄이 터지거나 사라져야 새 폭탄을 줄 수 있다
   const bombBusy = role === 'BOMBER' && Boolean(view?.bomber?.active);
+  // 산타의 선물(제거 불가)을 받았으면 (마피아 진영이면 투표하는 마피아 모두) 오늘 밤 제거할 수 없다
+  const killBlocked = isNight && Boolean(view?.giftBlocked) && KILL_ROLES.has(role);
   const canAct = isNight
-    ? Boolean(nightAction) && !spentOneShot && !noTargets && !bombBusy
+    ? Boolean(nightAction) && !spentOneShot && !noTargets && !bombBusy && !killBlocked
     : true;
   // 기자·자경단·보안관은 대상 없이 넘길 수 있다. 그때 nightSubmitted 는 null 이라 별도 표시가 필요하다
   const skipped = isNight && view?.nightActed && !view?.nightSubmitted;
@@ -308,6 +314,36 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
         </Alert>
       )}
 
+      {/* 산타: 보낸 선물 수. 다 보내면 즉시 승리 */}
+      {role === 'SANTA' && view?.santa && (
+        <Alert severity="info" icon={false}>
+          🎅 <RoleName code="SANTA" /> — {t('선물 {sent} / {goal}', { sent: view.santa.sent, goal: view.santa.goal ?? SANTA_GOAL })}
+          <br />
+          {t('선물 {n}개를 보내면 즉시 승리합니다. 같은 사람에게는 한 번만 보낼 수 있습니다.', { n: view.santa.goal ?? SANTA_GOAL })}
+        </Alert>
+      )}
+
+      {/* 산타의 선물(제거 불가) */}
+      {alive && view?.giftBlocked && (
+        <Alert severity="warning">
+          🎁 {t(isNight ? '산타의 선물(제거 불가)로 오늘 밤에는 제거할 수 없습니다.' : '산타의 선물(제거 불가)로 다음 밤에는 제거할 수 없습니다.')}
+        </Alert>
+      )}
+
+      {/* 산타의 선물(제거 가능): 밤에 한 명 제거 */}
+      {alive && view?.giftKill && (
+        <GiftKillPanel
+          key={`${phase}-${day}`}
+          players={players}
+          uid={uid}
+          state={view.giftKill}
+          isNight={isNight}
+          busy={busy}
+          onSubmit={(target) => run(target ? 'gift-kill' : 'gift-skip',
+            () => submitNightAction(roomId, 'GIFT_KILL', target))}
+        />
+      )}
+
       {/* 폭탄이 터져 죽은 사람 */}
       {view?.bombExploded && (
         <Alert severity="error">💣 {t('당신은 마지막 턴 입니다... 터져 죽습니다')}</Alert>
@@ -377,6 +413,21 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                 })}
               </span>
             </Stack>
+          </Alert>
+        );
+      })}
+
+      {/* 산타의 선물(강제 진영 공개) — 모든 사람이 본다 */}
+      {giftReveals.map((r) => {
+        const team = TEAM_RESULT[r.team] ?? null;
+        return (
+          <Alert key={`gift-${r.targetUid}`} severity="warning" icon={false}>
+            <span>
+              🎁 {t('산타의 선물 — {name}님은 {team}입니다.', {
+                name: <strong>{r.targetNickname}</strong>,
+                team: team ? <Chip size="small" color={team.color} label={team.label} /> : '',
+              })}
+            </span>
           </Alert>
         );
       })}
@@ -527,6 +578,7 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
                 dead={isNight && needsDead}
                 excludeSelf={isNight && NO_SELF_TARGET.has(role)}
                 blockedUid={isNight && REPEAT_BLOCKED[role] ? view?.lastTargetId : null}
+                blockedUids={isNight && role === 'SANTA' ? (view?.santa?.gifted ?? []) : []}
                 blockedNote={REPEAT_BLOCKED[role] ?? ''}
                 skip={isNight ? null : { value: SKIP_VOTE, label: t('아무도 죽지 않음: 건너뛰기') }}
               />
@@ -601,6 +653,8 @@ export default function GamePage({ roomId, uid, onLeave, onLobby, onEnded, endHi
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {noTargets
                   ? t('아직 사망자가 없어 능력을 쓸 수 없습니다.')
+                  : killBlocked
+                    ? t('산타의 선물(제거 불가)로 오늘 밤에는 제거할 수 없습니다.')
                   : bombBusy
                     ? t('준 폭탄이 아직 돌고 있어 새 폭탄을 줄 수 없습니다.')
                     : spentOneShot

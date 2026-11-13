@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 
 import ResultChips from './ResultChips';
 import RoleAvatar from './RoleAvatar';
+import RoleName, { hasSplitColor } from './RoleName';
 import { TEAMS, WINNERS, didWin, roleInfo } from '../lib/roles';
 import { finalRoles } from '../lib/api';
 import { streakBonus } from '../lib/level';
@@ -38,7 +39,10 @@ export default function GameOver({ roomId, winner, uid }) {
       <Paper sx={{ p: 3, textAlign: 'center' }}>
         <Box sx={{ fontSize: 44, lineHeight: 1 }}>{w.emoji}</Box>
         <Typography variant="h5" sx={{ mt: 1, color: w.color }}>
-          {w.title}
+          {/* 산타는 이름을 글자마다 다른 색으로 쓴다 */}
+          {hasSplitColor(winner)
+            ? t('{name} 단독 승리', { name: <RoleName code={winner} /> })
+            : w.title}
         </Typography>
         {winner === 'DRAW' && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

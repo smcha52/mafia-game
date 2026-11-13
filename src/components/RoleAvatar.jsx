@@ -16,6 +16,7 @@ const BG = {
   SURVIVOR: '#5B3A8C',
   WITCH: '#2E5A3A',
   BOMBER: '#5A3A1E',
+  SANTA: '#1E5A3A',
 };
 
 function Head({ y = 30 }) {
@@ -226,6 +227,29 @@ const PARTS = {
       {/* 빗자루 */}
       <path d="M50 58 l-6 -18" stroke="#6B4A2E" strokeWidth="2.4" strokeLinecap="round" />
       <path d="M46.5 56 l7.5 -2.4 l2.6 7.6 q-5 2.6 -8.4 1.4z" fill="#C9A15A" />
+    </>
+  ),
+
+  SANTA: (
+    <>
+      {/* 빨간 옷 */}
+      <path d="M18 64 q0 -16 14 -16 q14 0 14 16z" fill="#C62828" />
+      <rect x="30.5" y="48" width="3" height="16" fill="#F2F0E8" />
+      <Head />
+      {EYES}
+      {/* 흰 수염과 콧수염 */}
+      <path d="M21 32 q0 15 11 17 q11 -2 11 -17 q-5 4 -11 4 q-6 0 -11 -4z" fill="#F7F7F2" />
+      <path d="M26 35 q3 -2.5 6 0 q3 -2.5 6 0 q-3 2 -6 0.6 q-3 1.4 -6 -0.6z" fill="#E6E6DE" />
+      <circle cx="32" cy="33" r="1.8" fill="#E57373" />
+      {/* 산타 모자 */}
+      <path d="M20 24 q3 -14 16 -13 q8 1 12 9 l-6 -2 q2 4 2 6z" fill="#D32F2F" />
+      <rect x="19" y="21.5" width="26" height="5" rx="2.5" fill="#F7F7F2" />
+      <circle cx="48" cy="20" r="3" fill="#F7F7F2" />
+      {/* 선물 상자 */}
+      <rect x="44" y="50" width="12" height="11" rx="1" fill="#2E7D32" />
+      <rect x="48.8" y="50" width="2.4" height="11" fill="#FDD835" />
+      <rect x="44" y="54.3" width="12" height="2.4" fill="#FDD835" />
+      <path d="M50 50 q-4 -4 -5 -1 q1 2 5 1 q4 -4 5 -1 q-1 2 -5 1z" fill="#FDD835" />
     </>
   ),
 

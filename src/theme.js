@@ -18,6 +18,10 @@ export const autumn = autumnSeason && !halloween;
 // 상점의 눈사람 프로필과 같은 기간이다 (0072)
 export const winter = month === 12 || month === 1 || (month === 2 && day <= 15);
 
+// 크리스마스 — 해마다 12월 15일부터 12월 31일이 끝날 때까지 (한국 시간). 겨울 기간 안에 있다.
+// 산타 직업과 상점의 트리 성이 이 기간에만 나온다. 서버는 is_christmas() 가 같은 기간을 본다 (0075)
+export const christmas = month === 12 && day >= 15;
+
 // 왼쪽 위 구석의 거미줄. flip 으로 뒤집어 나머지 구석에 쓴다
 function cobweb(flip) {
   const angles = [0, 22.5, 45, 67.5, 90].map((d) => (d * Math.PI) / 180);

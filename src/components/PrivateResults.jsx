@@ -4,7 +4,7 @@ import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 
-import { TEAM_RESULT, roleInfo } from '../lib/roles';
+import { GIFTS, TEAM_RESULT, roleInfo } from '../lib/roles';
 import { t } from '../lib/i18n';
 
 // 나에게만 보이는 조사 결과. 최신 것이 위에 온다.
@@ -14,6 +14,44 @@ export default function PrivateResults({ results }) {
   return (
     <Stack spacing={1}>
       {results.map((r) => {
+        // 산타의 선물을 받았다 (0075). 산타가 여럿이면 한 밤에 여러 개
+        if (r.kind === 'GIFT') {
+          return (r.payload.gifts ?? []).map((g, i) => {
+            const gift = GIFTS[g] ?? { name: g, good: true, desc: '' };
+            return (
+              <Alert key={`${r.kind}-${r.day}-${i}`} severity={gift.good ? 'success' : 'error'} icon={false}>
+                <AlertTitle sx={{ mb: 0.5 }}>
+                  {t('{day}일차 밤 · 산타의 선물', { day: r.day })}
+                </AlertTitle>
+                <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                  <span>🎁 {t('선물을 받았습니다:')}</span>
+                  <Chip size="small" color={gift.good ? 'success' : 'error'} label={gift.name} />
+                </Stack>
+                <Typography variant="body2" sx={{ mt: 0.5 }}>{gift.desc}</Typography>
+              </Alert>
+            );
+          });
+        }
+        // 산타가 보낸 선물
+        if (r.kind === 'GIFT_SENT') {
+          const gift = GIFTS[r.payload.gift] ?? { name: r.payload.gift, good: true };
+          return (
+            <Alert key={`${r.kind}-${r.day}`} severity="info" icon={false}>
+              <AlertTitle sx={{ mb: 0.5 }}>{t('{day}일차 밤 · 보낸 선물', { day: r.day })}</AlertTitle>
+              <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+                <span>
+                  🎁 {t('{name}님에게 {gift}을(를) 보냈습니다.', {
+                    name: <strong>{r.payload.targetNickname}</strong>,
+                    gift: <Chip size="small" color={gift.good ? 'success' : 'error'} label={gift.name} />,
+                  })}
+                </span>
+              </Stack>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                {t('이 정보는 당신에게만 보입니다.')}
+              </Typography>
+            </Alert>
+          );
+        }
         if (r.kind === 'DOCTOR') {
           return (
             <Alert key={`${r.kind}-${r.day}`} severity="success" icon={false}>

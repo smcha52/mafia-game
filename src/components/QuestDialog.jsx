@@ -18,6 +18,7 @@ import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import StarIcon from '@mui/icons-material/Star';
 
 import { Wallet } from './AccountBar';
+import ProfileAvatar, { AVATARS } from './ProfileAvatar';
 import { claimQuest, myQuests } from '../lib/api';
 import { roleInfo } from '../lib/roles';
 import { localized, t } from '../lib/i18n';
@@ -60,6 +61,7 @@ const KIND_TEXT = {
   HALLOWEEN_WIN: (n) => t('할로윈 기간에 {n}회 승리', { n }),
   WINTER_WIN: (n) => t('겨울 기간에 {n}승 하기', { n }),
   WINTER_KILL: (n) => t('겨울 기간에 {n}킬 하기', { n }),
+  SANTA_WIN: (n) => t('산타로 {n}회 승리', { n }),
 };
 
 // 직업에 따라 이름이 달라지는 퀘스트
@@ -107,6 +109,8 @@ export function untilText(iso) {
 function QuestCard({ q, busy, onClaim }) {
   const done = q.progress >= q.target;
   const reward = REWARD[q.rewardType];
+  // 프로필 보상 (0075). 이미 가졌으면 rewardAmount 만큼 별로 대신 받는다
+  const avatar = q.rewardType === 'AVATAR' ? AVATARS[q.rewardItem] : null;
   const difficulty = DIFFICULTY[q.difficulty];
   return (
     <Paper sx={{ p: 2 }}>
@@ -129,12 +133,21 @@ function QuestCard({ q, busy, onClaim }) {
               {q.progress} / {q.target}
             </Typography>
           </Stack>
-          <Stack direction="row" alignItems="center" spacing={0.5}>
-            {reward.icon}
-            <Typography variant="body2">
-              {reward.label} {q.rewardAmount.toLocaleString()}
-            </Typography>
-          </Stack>
+          {q.rewardType === 'AVATAR' ? (
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <ProfileAvatar avatar={q.rewardItem} size={20} />
+              <Typography variant="body2">
+                {t('{item} (이미 있으면 별 {n})', { item: avatar?.name ?? q.rewardItem, n: q.rewardAmount })}
+              </Typography>
+            </Stack>
+          ) : (
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              {reward.icon}
+              <Typography variant="body2">
+                {reward.label} {q.rewardAmount.toLocaleString()}
+              </Typography>
+            </Stack>
+          )}
         </Stack>
         {q.claimed ? (
           <Chip label={t('완료')} size="small" />

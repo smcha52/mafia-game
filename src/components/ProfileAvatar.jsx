@@ -13,9 +13,13 @@ const SKIES = {
 // 하늘 대신 흰 바탕만 까는 프로필
 const PLAIN = ['SNOWMAN'];
 
+// 하늘 대신 한 가지 색 바탕을 까는 프로필
+const SOLID = { CASTLE_TREE: '#2e7d32' };
+
 // 하늘과 달. 할로윈·가을 프로필이 함께 쓴다
 function Sky({ id }) {
   if (PLAIN.includes(id)) return <rect width="40" height="40" fill="#fff" />;
+  if (SOLID[id]) return <rect width="40" height="40" fill={SOLID[id]} />;
   const [top, bottom] = SKIES[id];
   const gradient = `castle-sky-${id}`;
   return (
@@ -121,6 +125,28 @@ function Snowman() {
   );
 }
 
+// 크리스마스 트리 (크리스마스 프로필, 0075). 초록 바탕에서 보이도록 잎을 밝은 초록·테두리로 그린다
+function Tree() {
+  return (
+    <>
+      <rect x="18" y="32" width="4" height="5" fill="#6d4c41" />
+      <g fill="#66bb6a" stroke="#1b5e20" strokeWidth="0.7" strokeLinejoin="round">
+        <path d="M20 13 L28 23 L12 23 Z" />
+        <path d="M20 17 L31 29 L9 29 Z" />
+        <path d="M20 21 L33 34 L7 34 Z" />
+      </g>
+      <path d="M20 5.4 L21.1 8.3 L24.2 8.4 L21.8 10.3 L22.6 13.3 L20 11.6 L17.4 13.3 L18.2 10.3 L15.8 8.4 L18.9 8.3 Z" fill="#fdd835" />
+      <g>
+        <circle cx="17" cy="21" r="1.1" fill="#e53935" />
+        <circle cx="23.5" cy="25.5" r="1.1" fill="#fdd835" />
+        <circle cx="14" cy="27.5" r="1.1" fill="#29b6f6" />
+        <circle cx="25" cy="31" r="1.1" fill="#e53935" />
+        <circle cx="18" cy="31.5" r="1.1" fill="#fdd835" />
+      </g>
+    </>
+  );
+}
+
 // 상점에서 파는 프로필. id 는 서버 shop_items 와 1:1로 대응한다 (0051, 0070, 0072)
 export const AVATARS = localized({
   CASTLE_PUMPKIN: { name: '호박 성', art: <Pumpkin /> },
@@ -128,6 +154,7 @@ export const AVATARS = localized({
   CASTLE_MAPLE: { name: '단풍잎 성', art: <Maple /> },
   CASTLE_GINKGO: { name: '은행잎 성', art: <Ginkgo /> },
   SNOWMAN: { name: '눈사람', art: <Snowman /> },
+  CASTLE_TREE: { name: '트리 성', art: <Tree /> },
 });
 
 // 프로필 그림. avatar 가 없거나 모르는 id 면 기본(닉네임 첫 글자)을 보여준다

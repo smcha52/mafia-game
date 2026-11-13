@@ -11,14 +11,16 @@ import Typography from '@mui/material/Typography';
 
 import RoleAvatar from './RoleAvatar';
 import RoleInfoDialog from './RoleInfoDialog';
-import { HALLOWEEN_ROLES, roleInfo, survivorTarget } from '../lib/roles';
-import { halloween } from '../theme';
+import RoleName from './RoleName';
+import { CHRISTMAS_ROLES, HALLOWEEN_ROLES, roleInfo, survivorTarget } from '../lib/roles';
+import { christmas, halloween } from '../theme';
 import {
   roleComposition, setDisabledRoles, setRandomRoles, setRoleMax, teamComposition,
 } from '../lib/api';
 import { localized, t } from '../lib/i18n';
 
 // 진영별 이름 색. 목록에 없는 직업(시민 진영)은 기본 흰색.
+// 산타는 RoleName 이 글자마다 칠한다 ('산' 흰색, '타' 빨간색)
 const NAME_COLOR = {
   MAFIA: 'error.main',
   SPY: 'error.main',
@@ -29,17 +31,18 @@ const NAME_COLOR = {
   JESTER: '#FFD54F',
   KILLER: '#42A5F5',
   WITCH: '#C68B59',
+  SANTA: '#E53935',
 };
 
 // 시민 진영 특수 직업. 시민을 끄면 시민 진영 자리를 이 직업들로만 채운다
 const CITIZEN_SPECIALS = ['POLICE', 'DOCTOR', 'BODYGUARD', 'DETECTIVE', 'REPORTER', 'MEDIUM', 'VIGILANTE', 'SHERIFF'];
 
 // 직업 설정을 진영별로 묶어 보여준다. 시민은 랜덤 구성일 때만 목록에 나온다
-// 마녀는 할로윈 기간에만 목록에 나온다 (그 밖에는 서버가 끈 것으로 본다, 0071)
+// 마녀는 할로윈, 산타는 크리스마스 기간에만 목록에 나온다 (그 밖에는 서버가 끈 것으로 본다, 0071 · 0075)
 const GROUPS = localized([
   { title: '시민 진영', roles: ['CITIZEN', ...CITIZEN_SPECIALS] },
   { title: '마피아 진영', roles: ['MAFIA', 'SPY', 'ASSASSIN', 'FORGER', 'BOMBER'] },
-  { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR', ...(halloween ? ['WITCH'] : [])] },
+  { title: '중립 진영', roles: ['JESTER', 'KILLER', 'SURVIVOR', ...(halloween ? ['WITCH'] : []), ...(christmas ? ['SANTA'] : [])] },
 ]);
 
 // 대기실에서 직업을 켜고 끈다. 스위치를 누르면 켜고 끄고, 이름을 누르면 설명이 뜬다.
@@ -58,6 +61,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
     ...disabled,
     ...(survivorBlocked ? ['SURVIVOR'] : []),
     ...(halloween ? [] : HALLOWEEN_ROLES),
+    ...(christmas ? [] : CHRISTMAS_ROLES),
   ];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -127,7 +131,7 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
           variant="body2"
           sx={{ color: NAME_COLOR[code], textDecoration: 'underline dotted', textUnderlineOffset: 3 }}
         >
-          {roleInfo(code).name}
+          <RoleName code={code} />
         </Typography>
       </Stack>
     </ButtonBase>
@@ -285,8 +289,8 @@ export default function RoleToggles({ room, isHost, playerCount, onBlockedChange
                     // 색 이름은 주황 배경에서 안 보이므로 회색 배경을 쓴다
                     color={effectiveOff.includes(code) || NAME_COLOR[code] ? 'default' : 'primary'}
                     label={random && maxOf(code) > 1 && code !== 'CITIZEN' && code !== 'MAFIA'
-                      ? `${roleInfo(code).name} ×${maxOf(code)}`
-                      : roleInfo(code).name}
+                      ? <><RoleName code={code} /> ×{maxOf(code)}</>
+                      : <RoleName code={code} />}
                     sx={{ color: NAME_COLOR[code] }}
                   />
                 ))}
